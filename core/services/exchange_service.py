@@ -1,91 +1,97 @@
 from datetime import datetime
 
-import requests
-
 from core.database import get_session
 from core.models import TasaCambio
+from core.providers import FrankfurterProvider
 
 
 class ExchangeService:
-
-    BASE_URL = "https://open.er-api.com/v6/latest/"
 
     def __init__(self):
 
         self.db = get_session()
 
+        self.provider = FrankfurterProvider()
+
     # =====================================================
-    # ACTUALIZAR TODAS LAS TASAS
+    # ACTUALIZAR TASAS
     # =====================================================
 
-    def actualizar_tasas(self, moneda_base="USD"):
+    def actualizar_tasas(
+        self,
+        moneda_base="USD"
+    ):
 
-        try:
+        tasas = self.provider.obtener_tasas(
+            moneda_base
+        )
 
-            respuesta = requests.get(
-                f"{self.BASE_URL}{moneda_base}",
-                timeout=10
-            )
-
-            respuesta.raise_for_status()
-
-            datos = respuesta.json()
-
-            if datos.get("result") != "success":
-                return False
-
-            tasas = datos["rates"]
-
-            for moneda_destino, tasa in tasas.items():
-
-                registro = (
-                    self.db.query(TasaCambio)
-                    .filter(
-                        TasaCambio.moneda_origen == moneda_base,
-                        TasaCambio.moneda_destino == moneda_destino
-                    )
-                    .first()
-                )
-
-                if registro:
-
-                    registro.tasa = tasa
-                    registro.fecha_actualizacion = datetime.now()
-
-                else:
-
-                    registro = TasaCambio(
-                        moneda_origen=moneda_base,
-                        moneda_destino=moneda_destino,
-                        tasa=tasa,
-                        fuente="open.er-api.com",
-                        fecha_actualizacion=datetime.now()
-                    )
-
-                    self.db.add(registro)
-
-            self.db.commit()
-
-            return True
-
-        except Exception as e:
-
-            print(e)
+        if not tasas:
 
             return False
 
+        print("\n================================")
+        print("Tasas descargadas")
+        print("================================")
+        print(tasas)
+        print("================================\n")
+
+        for moneda_destino, tasa in tasas.items():
+
+            registro = (
+                self.db.query(TasaCambio)
+                .filter(
+                    TasaCambio.moneda_origen == moneda_base,
+                    TasaCambio.moneda_destino == moneda_destino
+                )
+                .first()
+            )
+
+            if registro:
+
+                registro.tasa = tasa
+                registro.fecha_actualizacion = datetime.now()
+
+            else:
+
+                registro = TasaCambio(
+
+                    moneda_origen=moneda_base,
+
+                    moneda_destino=moneda_destino,
+
+                    tasa=tasa,
+
+                    fuente="Frankfurter",
+
+                    fecha_actualizacion=datetime.now()
+
+                )
+
+                self.db.add(registro)
+
+        self.db.commit()
+
+        return True
+
     # =====================================================
-    # ACTUALIZAR SOLO USD -> COP (Compatibilidad)
+    # COMPATIBILIDAD
     # =====================================================
 
     def actualizar_usd_cop(self):
 
-        ok = self.actualizar_tasas("USD")
+        ok = self.actualizar_tasas(
+            "USD"
+        )
 
         if not ok:
+
             return None
 
-        return self.obtener_tasa("USD", "COP")
+        return self.obtener_tasa(
+            "USD",
+            "COP"
+        )
 
     # =====================================================
     # OBTENER TASA
@@ -101,32 +107,47 @@ class ExchangeService:
         destino = destino.upper()
 
         if origen == destino:
+
             return 1.0
 
-        # Conversión directa
         registro = (
+
             self.db.query(TasaCambio)
+
             .filter(
+
                 TasaCambio.moneda_origen == origen,
+
                 TasaCambio.moneda_destino == destino
+
             )
+
             .first()
+
         )
 
         if registro:
+
             return registro.tasa
 
-        # Conversión inversa
         registro = (
+
             self.db.query(TasaCambio)
+
             .filter(
+
                 TasaCambio.moneda_origen == destino,
+
                 TasaCambio.moneda_destino == origen
+
             )
+
             .first()
+
         )
 
         if registro:
+
             return 1 / registro.tasa
 
         return None
@@ -148,23 +169,34 @@ class ExchangeService:
         )
 
         if tasa is None:
+
             return None
 
-        return round(valor * tasa, 2)
+        return round(
+            valor * tasa,
+            2
+        )
 
     # =====================================================
-    # OBTENER TODAS LAS TASAS
+    # TODAS LAS TASAS
     # =====================================================
 
     def obtener_tasas(self):
 
         return (
+
             self.db.query(TasaCambio)
+
             .order_by(
+
                 TasaCambio.moneda_origen,
+
                 TasaCambio.moneda_destino
+
             )
+
             .all()
+
         )
 
     # =====================================================
@@ -174,14 +206,21 @@ class ExchangeService:
     def ultima_actualizacion(self):
 
         registro = (
+
             self.db.query(TasaCambio)
+
             .order_by(
+
                 TasaCambio.fecha_actualizacion.desc()
+
             )
+
             .first()
+
         )
 
         if registro:
+
             return registro.fecha_actualizacion
 
         return None

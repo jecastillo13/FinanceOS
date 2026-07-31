@@ -118,10 +118,16 @@ class AccountService:
 
         cuenta = self.db.get(Cuenta, cuenta_id)
 
-        if cuenta:
+        if cuenta is None:
+            return False
 
-            self.db.delete(cuenta)
-            self.db.commit()
+        # Evita borrar accidentalmente el historial financiero asociado.
+        if cuenta.movimientos:
+            return False
+
+        self.db.delete(cuenta)
+        self.db.commit()
+        return True
 
     # =====================================================
     # UTILIDADES

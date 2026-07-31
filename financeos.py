@@ -12,6 +12,7 @@ from modules import cuentas
 from modules import categorias
 from modules import movimientos
 from modules import monedas
+from modules import gastos_recurrentes
 
 
 # =====================================================
@@ -68,6 +69,10 @@ elif pagina == "🏷 Categorías":
 elif pagina == "💸 Movimientos":
 
     movimientos.mostrar()
+
+elif pagina == "🔁 Gastos recurrentes":
+
+    gastos_recurrentes.mostrar()
 
 elif pagina == "🌎 Monedas":
 

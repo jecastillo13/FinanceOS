@@ -54,8 +54,12 @@ def create_database():
         Cuenta,
         Categoria,
         Movimiento,
+        GastoRecurrente,
         Meta,
-        Inversion
+        Inversion,
+        Configuracion,
+        Auditoria,
+        TasaCambio,
     )
 
     Base.metadata.create_all(bind=engine)

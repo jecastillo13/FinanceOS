@@ -155,6 +155,25 @@ class Movimiento(Base):
 
 
 # =====================================================
+# GASTOS RECURRENTES
+# =====================================================
+
+class GastoRecurrente(Base):
+    __tablename__ = "gastos_recurrentes"
+
+    id = Column(Integer, primary_key=True)
+    nombre = Column(String(120), nullable=False)
+    valor = Column(Float, nullable=False)
+    frecuencia = Column(String(20), nullable=False, default="Mensual")
+    proxima_fecha_pago = Column(Date, nullable=False)
+    ultima_fecha_pago = Column(Date)
+    activo = Column(Integer, nullable=False, default=1)
+
+    categoria_id = Column(Integer, ForeignKey("categorias.id"), nullable=False)
+    categoria = relationship("Categoria")
+
+
+# =====================================================
 # METAS
 # =====================================================
 
@@ -308,5 +327,5 @@ class TasaCambio(Base):
 
     fecha_actualizacion = Column(
         DateTime,
-        default=datetime
+        default=datetime.now
     )

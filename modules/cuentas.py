@@ -174,13 +174,13 @@ def mostrar():
                     use_container_width=True
                 ):
 
-                    service.eliminar_cuenta(cuenta.id)
-
                     del st.session_state["eliminar_cuenta"]
+                    eliminada = service.eliminar_cuenta(cuenta.id)
 
-                    service.cerrar()
-
-                    st.success("Cuenta eliminada correctamente.")
+                    if eliminada:
+                        st.success("Cuenta eliminada correctamente.")
+                    else:
+                        st.error("No se puede eliminar una cuenta que tiene movimientos registrados.")
 
                     st.rerun()
 

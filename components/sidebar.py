@@ -19,6 +19,7 @@ def mostrar():
             "🏦 Cuentas",
             "🏷 Categorías",
             "💸 Movimientos",
+            "🔁 Gastos recurrentes",
             "🎯 Metas",
             "📈 Inversiones",
              "🌎 Monedas",

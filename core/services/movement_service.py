@@ -1,7 +1,7 @@
 from sqlalchemy import func
 
 from core.database import get_session
-from core.models import Movimiento, Cuenta
+from core.models import Categoria, Movimiento, Cuenta
 
 
 class MovementService:
@@ -23,10 +23,12 @@ class MovementService:
         observaciones=""
     ):
 
+        valor_firmado = self._valor_firmado(valor, categoria_id)
+
         movimiento = Movimiento(
             fecha=fecha,
             descripcion=descripcion,
-            valor=valor,
+            valor=valor_firmado,
             cuenta_id=cuenta_id,
             categoria_id=categoria_id,
             observaciones=observaciones
@@ -36,7 +38,7 @@ class MovementService:
 
         self.actualizar_saldo(
             cuenta_id,
-            valor
+            valor_firmado
         )
 
         self.db.commit()
@@ -50,6 +52,7 @@ class MovementService:
         fecha,
         descripcion,
         valor,
+        cuenta_id,
         categoria_id,
         observaciones=""
     ):
@@ -62,18 +65,22 @@ class MovementService:
         if movimiento is None:
             return None
 
-        diferencia = valor - movimiento.valor
+        valor_firmado = self._valor_firmado(valor, categoria_id)
+        cuenta_anterior_id = movimiento.cuenta_id
+        valor_anterior = movimiento.valor
 
         movimiento.fecha = fecha
         movimiento.descripcion = descripcion
-        movimiento.valor = valor
+        movimiento.valor = valor_firmado
+        movimiento.cuenta_id = cuenta_id
         movimiento.categoria_id = categoria_id
         movimiento.observaciones = observaciones
 
-        self.actualizar_saldo(
-            movimiento.cuenta_id,
-            diferencia
-        )
+        if cuenta_anterior_id == cuenta_id:
+            self.actualizar_saldo(cuenta_id, valor_firmado - valor_anterior)
+        else:
+            self.actualizar_saldo(cuenta_anterior_id, -valor_anterior)
+            self.actualizar_saldo(cuenta_id, valor_firmado)
 
         self.db.commit()
         self.db.refresh(movimiento)
@@ -144,6 +151,23 @@ class MovementService:
         if cuenta:
 
             cuenta.saldo += valor
+
+    def _valor_firmado(self, valor, categoria_id):
+        """Deriva el signo del movimiento desde la categoría seleccionada."""
+        categoria = self.db.get(Categoria, categoria_id)
+
+        if categoria is None:
+            raise ValueError("La categoría seleccionada no existe.")
+
+        monto = abs(float(valor))
+
+        if categoria.tipo == "Ingreso":
+            return monto
+
+        if categoria.tipo == "Gasto":
+            return -monto
+
+        raise ValueError("La categoría debe ser de tipo Ingreso o Gasto.")
 
     # =====================================================
     # REPORTES
