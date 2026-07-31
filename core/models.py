@@ -273,3 +273,40 @@ class Auditoria(Base):
         DateTime,
         default=datetime.now
     )
+
+# =====================================================
+# TASAS DE CAMBIO
+# =====================================================
+
+class TasaCambio(Base):
+    __tablename__ = "tasas_cambio"
+
+    id = Column(
+        Integer,
+        primary_key=True
+    )
+
+    moneda_origen = Column(
+        String(10),
+        nullable=False
+    )
+
+    moneda_destino = Column(
+        String(10),
+        nullable=False
+    )
+
+    tasa = Column(
+        Float,
+        nullable=False
+    )
+
+    fuente = Column(
+        String(100),
+        default="ExchangeRate API"
+    )
+
+    fecha_actualizacion = Column(
+        DateTime,
+        default=datetime
+    )

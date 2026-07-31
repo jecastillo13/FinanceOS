@@ -10,14 +10,18 @@ def mostrar():
 
     st.sidebar.title("FinanceOS")
 
+    st.sidebar.markdown("## 💰 Finanzas")
+
     opcion = st.sidebar.radio(
         "Navegación",
         [
             "🏠 Dashboard",
             "🏦 Cuentas",
+            "🏷 Categorías",
             "💸 Movimientos",
             "🎯 Metas",
             "📈 Inversiones",
+             "🌎 Monedas",
             "📊 Reportes",
             "⚙ Configuración"
         ]
@@ -25,6 +29,6 @@ def mostrar():
 
     st.sidebar.divider()
 
-    st.sidebar.caption("FinanceOS v0.5")
+    st.sidebar.caption("FinanceOS v0.6")
 
     return opcion

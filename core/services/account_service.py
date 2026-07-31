@@ -1,7 +1,6 @@
-from sqlalchemy import func
-
 from core.database import get_session
 from core.models import Cuenta
+from core.services.exchange_service import ExchangeService
 
 
 class AccountService:
@@ -28,13 +27,35 @@ class AccountService:
 
     def saldo_total(self):
 
-        saldo = (
-            self.db.query(
-                func.sum(Cuenta.saldo)
-            ).scalar()
-        )
+        cuentas = self.obtener_cuentas()
 
-        return saldo or 0
+        exchange = ExchangeService()
+
+        total = 0
+
+        for cuenta in cuentas:
+
+            # Si la cuenta ya está en COP
+            if cuenta.moneda.upper() == "COP":
+                total += cuenta.saldo
+
+            else:
+
+                convertido = exchange.convertir(
+                    cuenta.saldo,
+                    cuenta.moneda.upper(),
+                    "COP"
+                )
+
+                # Si no existe una tasa, usa el saldo original
+                if convertido is None:
+                    convertido = cuenta.saldo
+
+                total += convertido
+
+        exchange.cerrar()
+
+        return round(total, 2)
 
     # =====================================================
     # CRUD
@@ -54,7 +75,7 @@ class AccountService:
             nombre=nombre,
             tipo=tipo,
             saldo=saldo,
-            moneda=moneda,
+            moneda=moneda.upper(),
             color=color,
             icono=icono
         )
@@ -84,7 +105,7 @@ class AccountService:
         cuenta.nombre = nombre
         cuenta.tipo = tipo
         cuenta.saldo = saldo
-        cuenta.moneda = moneda
+        cuenta.moneda = moneda.upper()
         cuenta.color = color
         cuenta.icono = icono
 

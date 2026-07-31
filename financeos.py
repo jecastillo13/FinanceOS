@@ -9,7 +9,9 @@ from components.ui.topbar import topbar
 
 from modules import dashboard
 from modules import cuentas
+from modules import categorias
 from modules import movimientos
+from modules import monedas
 
 
 # =====================================================
@@ -59,9 +61,17 @@ elif pagina == "🏦 Cuentas":
 
     cuentas.mostrar()
 
+elif pagina == "🏷 Categorías":
+
+    categorias.mostrar()
+
 elif pagina == "💸 Movimientos":
 
     movimientos.mostrar()
+
+elif pagina == "🌎 Monedas":
+
+    monedas.mostrar()
 
 elif pagina == "🎯 Metas":
 

@@ -1,26 +1,23 @@
 # Python
 __pycache__/
-*.py[cod]
+*.pyc
 *.pyo
+*.pyd
 
-# Virtual Environment
+# Entornos virtuales
 .venv/
 venv/
 env/
 
-# VS Code
-.vscode/
-
-# Streamlit
-.streamlit/
-
-# SQLite
+# Base de datos local (opcional)
 *.db
 *.sqlite3
 
-# Logs
-*.log
+# VS Code
+.vscode/
 
-# OS
-.DS_Store
-Thumbs.db
+# JetBrains
+.idea/
+
+# Archivos temporales
+*.log
