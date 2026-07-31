@@ -11,6 +11,8 @@ La versión actual es una base funcional para:
 - Instalar un catálogo profesional de categorías, con grupos, iconos, estado y categorías especiales preparadas para transferencias, ahorro e inversiones.
 - Registrar, editar y eliminar movimientos. El tipo de categoría determina automáticamente si el movimiento suma o resta del saldo de la cuenta.
 - Programar gastos recurrentes y marcarlos como pagados desde una cuenta; cada pago crea su movimiento automáticamente.
+- Transferir dinero entre cuentas sin alterar los totales de ingresos y gastos.
+- Crear presupuestos mensuales por categoría, con alertas al alcanzar el límite.
 - Consultar un dashboard con patrimonio, cuentas, ingresos y gastos acumulados.
 - Actualizar y consultar tasas de cambio mediante Frankfurter.
 

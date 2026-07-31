@@ -55,6 +55,8 @@ def create_database():
         Categoria,
         Movimiento,
         GastoRecurrente,
+        Transferencia,
+        Presupuesto,
         Meta,
         Inversion,
         Configuracion,

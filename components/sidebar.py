@@ -20,6 +20,8 @@ def mostrar():
             "🏷 Categorías",
             "💸 Movimientos",
             "🔁 Gastos recurrentes",
+            "🔄 Transferencias",
+            "📊 Presupuestos",
             "🎯 Metas",
             "📈 Inversiones",
              "🌎 Monedas",

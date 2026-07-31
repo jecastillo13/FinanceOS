@@ -181,6 +181,42 @@ class GastoRecurrente(Base):
 
 
 # =====================================================
+# TRANSFERENCIAS ENTRE CUENTAS
+# =====================================================
+
+class Transferencia(Base):
+    __tablename__ = "transferencias"
+
+    id = Column(Integer, primary_key=True)
+    fecha = Column(Date, default=date.today, nullable=False)
+    valor = Column(Float, nullable=False)
+    descripcion = Column(String(250))
+    cuenta_origen_id = Column(Integer, ForeignKey("cuentas.id"), nullable=False)
+    cuenta_destino_id = Column(Integer, ForeignKey("cuentas.id"), nullable=False)
+    movimiento_salida_id = Column(Integer, nullable=False)
+    movimiento_entrada_id = Column(Integer, nullable=False)
+
+    cuenta_origen = relationship("Cuenta", foreign_keys=[cuenta_origen_id])
+    cuenta_destino = relationship("Cuenta", foreign_keys=[cuenta_destino_id])
+
+
+# =====================================================
+# PRESUPUESTOS MENSUALES
+# =====================================================
+
+class Presupuesto(Base):
+    __tablename__ = "presupuestos"
+
+    id = Column(Integer, primary_key=True)
+    anio = Column(Integer, nullable=False)
+    mes = Column(Integer, nullable=False)
+    valor = Column(Float, nullable=False)
+    categoria_id = Column(Integer, ForeignKey("categorias.id"), nullable=False)
+
+    categoria = relationship("Categoria")
+
+
+# =====================================================
 # METAS
 # =====================================================
 

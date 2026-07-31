@@ -113,6 +113,8 @@ class MovementService:
 
         return (
             self.db.query(Movimiento)
+            .join(Categoria)
+            .filter(Categoria.tipo.in_(["Ingreso", "Gasto"]))
             .order_by(Movimiento.fecha.desc())
             .all()
         )
@@ -128,6 +130,8 @@ class MovementService:
 
         return (
             self.db.query(Movimiento)
+            .join(Categoria)
+            .filter(Categoria.tipo.in_(["Ingreso", "Gasto"]))
             .order_by(Movimiento.fecha.desc())
             .limit(limite)
             .all()
@@ -207,8 +211,9 @@ class MovementService:
             self.db.query(
                 func.sum(Movimiento.valor)
             )
+            .join(Categoria)
             .filter(
-                Movimiento.valor > 0
+                Categoria.tipo == "Ingreso"
             )
             .scalar()
         )
@@ -221,8 +226,9 @@ class MovementService:
             self.db.query(
                 func.sum(Movimiento.valor)
             )
+            .join(Categoria)
             .filter(
-                Movimiento.valor < 0
+                Categoria.tipo == "Gasto"
             )
             .scalar()
         )

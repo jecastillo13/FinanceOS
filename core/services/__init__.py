@@ -4,6 +4,8 @@ from .movement_service import MovementService
 from .category_service import CategoryService
 from .exchange_service import ExchangeService
 from .recurring_expense_service import RecurringExpenseService
+from .transfer_service import TransferService
+from .budget_service import BudgetService
 
 __all__ = [
     "AccountService",
@@ -12,4 +14,6 @@ __all__ = [
     "CategoryService",
     "ExchangeService",
     "RecurringExpenseService",
+    "TransferService",
+    "BudgetService",
 ]

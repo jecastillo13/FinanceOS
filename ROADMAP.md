@@ -5,6 +5,8 @@
 - [x] Cuentas y categorías.
 - [x] Movimientos con actualización de saldo.
 - [x] Catálogo de categorías agrupadas, editables y sin duplicados.
+- [x] Transferencias internas entre cuentas.
+- [x] Presupuestos mensuales por categoría.
 - [x] Gastos recurrentes con pago desde una cuenta y registro automático en movimientos.
 - [x] Dashboard de indicadores básicos.
 - [x] Tasas de cambio y conversor.
