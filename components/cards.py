@@ -8,10 +8,11 @@ def metric_card(
     help_text: str = "",
 ):
 
-    st.container(border=True)
-
-    st.metric(
-        label=f"{icon} {title}",
-        value=value,
-        help=help_text
+    help_markup = f'<div class="metric-help">{help_text}</div>' if help_text else ""
+    st.markdown(
+        f'''<div class="metric-card">
+            <div class="metric-top"><span>{title}</span><span class="metric-icon">{icon}</span></div>
+            <div class="metric-value">{value}</div>{help_markup}
+        </div>''',
+        unsafe_allow_html=True,
     )
