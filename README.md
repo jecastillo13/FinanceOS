@@ -8,6 +8,7 @@ La versión actual es una base funcional para:
 
 - Crear, editar y eliminar cuentas sin movimientos asociados.
 - Crear y consultar categorías de ingreso y gasto.
+- Instalar un catálogo profesional de categorías, con grupos, iconos, estado y categorías especiales preparadas para transferencias, ahorro e inversiones.
 - Registrar, editar y eliminar movimientos. El tipo de categoría determina automáticamente si el movimiento suma o resta del saldo de la cuenta.
 - Programar gastos recurrentes y marcarlos como pagados desde una cuenta; cada pago crea su movimiento automáticamente.
 - Consultar un dashboard con patrimonio, cuentas, ingresos y gastos acumulados.

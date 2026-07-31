@@ -19,7 +19,7 @@ def mostrar():
 
     try:
         cuentas = account_service.obtener_cuentas()
-        categorias = category_service.obtener_categorias()
+        categorias = [categoria for categoria in category_service.obtener_categorias() if categoria.activa and categoria.tipo in ("Ingreso", "Gasto")]
 
         if not cuentas:
             st.warning("Primero crea una cuenta.")

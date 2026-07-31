@@ -93,6 +93,13 @@ class Categoria(Base):
         default="#4CAF50"
     )
 
+    icono = Column(String(50), default="🏷️")
+    grupo = Column(String(80), default="Otros")
+    es_sistema = Column(Integer, nullable=False, default=0)
+    editable = Column(Integer, nullable=False, default=1)
+    activa = Column(Integer, nullable=False, default=1)
+    orden = Column(Integer, nullable=False, default=0)
+
     movimientos = relationship(
         "Movimiento",
         back_populates="categoria",
