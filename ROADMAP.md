@@ -7,6 +7,7 @@
 - [x] Catálogo de categorías agrupadas, editables y sin duplicados.
 - [x] Transferencias internas entre cuentas.
 - [x] Presupuestos mensuales por categoría.
+- [x] Dashboard Pro con flujo de caja, gastos por categoría y alertas.
 - [x] Gastos recurrentes con pago desde una cuenta y registro automático en movimientos.
 - [x] Dashboard de indicadores básicos.
 - [x] Tasas de cambio y conversor.

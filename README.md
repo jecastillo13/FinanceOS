@@ -13,6 +13,7 @@ La versión actual es una base funcional para:
 - Programar gastos recurrentes y marcarlos como pagados desde una cuenta; cada pago crea su movimiento automáticamente.
 - Transferir dinero entre cuentas sin alterar los totales de ingresos y gastos.
 - Crear presupuestos mensuales por categoría, con alertas al alcanzar el límite.
+- Consultar un Centro Financiero con flujo de caja, distribución de gastos y alertas de presupuesto.
 - Consultar un dashboard con patrimonio, cuentas, ingresos y gastos acumulados.
 - Actualizar y consultar tasas de cambio mediante Frankfurter.
 
