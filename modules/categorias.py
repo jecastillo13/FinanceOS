@@ -27,7 +27,14 @@ def mostrar():
         with c4:
             metric_card("Especiales", especiales, "✦")
 
-        if st.button("Instalar catálogo predeterminado"):
+        st.markdown('<div class="category-action-gap"></div>', unsafe_allow_html=True)
+        accion_col, ayuda_col = st.columns([1.4, 2.6])
+        with accion_col:
+            instalar_catalogo = st.button("Instalar catálogo predeterminado", use_container_width=True)
+        with ayuda_col:
+            st.caption("Agrega las categorías sugeridas sin duplicar las que ya existen.")
+
+        if instalar_catalogo:
             creadas = service.instalar_categorias_predeterminadas()
             if creadas:
                 st.success(f"Se instalaron {creadas} categorías predeterminadas.")

@@ -56,13 +56,18 @@ p, label, [data-testid="stCaptionContainer"] { color:var(--muted); }
 .metric-help { color:var(--muted); font-size:11px; margin-top:4px; }
 .account-card { margin-top:.35rem; padding:1.2rem; border:1px solid rgba(104,124,181,.34); border-radius:20px; background:radial-gradient(circle at 100% 0%,rgba(112,91,255,.20),transparent 42%),linear-gradient(145deg,rgba(35,49,87,.92),rgba(18,27,48,.95)); box-shadow:0 14px 30px rgba(0,0,0,.17),inset 0 1px rgba(255,255,255,.07); }
 .account-card-top { display:flex; align-items:center; gap:12px; }
-.account-card-icon { display:flex; align-items:center; justify-content:center; width:44px; height:44px; border-radius:14px; font-size:22px; box-shadow:inset 0 1px rgba(255,255,255,.28),0 7px 14px rgba(0,0,0,.16); }
-.account-card-name { color:#F8FAFF; font-family:'Plus Jakarta Sans',sans-serif; font-size:20px; font-weight:800; letter-spacing:-.5px; }
-.account-card-type { color:#AAB8D4; font-size:12px; margin-top:3px; }
+.account-card-brand-stack { display:flex; flex-direction:column; align-items:flex-start; gap:6px; }
+.account-card-icon { display:flex; align-items:center; gap:7px; justify-content:flex-start; min-width:82px; height:44px; padding:0 8px; border-radius:14px; font-size:18px; box-shadow:inset 0 1px rgba(255,255,255,.28),0 7px 14px rgba(0,0,0,.16); }
+.account-brand-monogram { display:flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:9px; background:rgba(8,15,31,.34); color:#FFFFFF; font-family:'Plus Jakarta Sans',sans-serif; font-size:15px; font-weight:800; }
+.account-brand-word { color:#FFFFFF; font-family:'Plus Jakarta Sans',sans-serif; font-size:10px; font-weight:800; letter-spacing:.35px; white-space:nowrap; }
+.account-card-type { color:#AAB8D4; font-size:12px; margin-left:3px; }
 .account-card-badge { margin-left:auto; padding:.35rem .55rem; border:1px solid rgba(165,180,252,.35); border-radius:999px; background:rgba(129,140,248,.12); color:#C7D2FE; font-size:11px; font-weight:800; }
 .account-card-divider { height:1px; background:linear-gradient(90deg,rgba(139,154,205,.35),transparent); margin:1.1rem 0 .85rem; }
 .account-card-label { color:#8E9DBB; font-size:10px; font-weight:800; letter-spacing:.9px; }
 .account-card-balance { color:#FFFFFF; font-family:'Plus Jakarta Sans',sans-serif; font-size:24px; font-weight:800; letter-spacing:-.8px; margin-top:6px; }
+.account-actions-gap { height:9px; }
+.account-card-bottom-gap { height:14px; }
+.category-action-gap { height:14px; }
 [data-testid="stMetric"] { min-height:108px; padding:1rem 1.05rem; border:1px solid rgba(107,125,182,.30); border-radius:18px; background:linear-gradient(145deg,rgba(35,49,85,.95),rgba(19,27,47,.95)); box-shadow:0 12px 25px rgba(0,0,0,.16),inset 0 1px rgba(255,255,255,.05); }
 [data-testid="stMetricLabel"] { color:#AEB9D2!important; font-size:13px!important; font-weight:700!important; }
 [data-testid="stMetricValue"] { color:#F7F8FF!important; font-family:'Plus Jakarta Sans',sans-serif!important; font-weight:800!important; }
