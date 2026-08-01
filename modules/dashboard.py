@@ -10,7 +10,7 @@ def mostrar():
     service = DashboardService()
     try:
         resumen = service.resumen()
-        mes = service.resumen_mes()
+        mes = resumen
         gastos_categoria, pendientes_gastos = service.gastos_por_categoria()
         flujo = service.flujo_seis_meses()
         cuentas, pendientes_cuentas = service.cuentas_por_saldo()

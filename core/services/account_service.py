@@ -18,23 +18,24 @@ class AccountService:
     def total_cuentas(self):
         return self.db.query(Cuenta).count()
 
-    def saldos_consolidados(self, moneda_base="COP"):
+    def saldos_consolidados(self, moneda_base="COP", exchange=None):
         """Devuelve saldos convertidos y cuentas que no tienen tasa disponible."""
-        exchange = ExchangeService()
+        servicio_tasas = exchange or ExchangeService()
         datos, pendientes = [], []
         try:
             for cuenta in self.obtener_cuentas():
-                convertido = exchange.convertir(cuenta.saldo, cuenta.moneda, moneda_base)
+                convertido = servicio_tasas.convertir(cuenta.saldo, cuenta.moneda, moneda_base)
                 if convertido is None:
                     pendientes.append(cuenta)
                     continue
                 datos.append({"cuenta": cuenta, "saldo_base": convertido, "moneda_base": moneda_base})
         finally:
-            exchange.cerrar()
+            if exchange is None:
+                servicio_tasas.cerrar()
         return datos, pendientes
 
-    def saldo_total(self, moneda_base="COP"):
-        datos, _ = self.saldos_consolidados(moneda_base)
+    def saldo_total(self, moneda_base="COP", exchange=None):
+        datos, _ = self.saldos_consolidados(moneda_base, exchange)
         return round(sum(dato["saldo_base"] for dato in datos), 2)
 
     def crear_cuenta(self, nombre, tipo, saldo, moneda="COP", color="#2563EB", icono="🏦"):

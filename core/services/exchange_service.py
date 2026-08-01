@@ -12,6 +12,7 @@ class ExchangeService:
         self.db = get_session()
 
         self.provider = FrankfurterProvider()
+        self._tasas_cache = {}
 
     # =====================================================
     # ACTUALIZAR TASAS
@@ -71,6 +72,7 @@ class ExchangeService:
                 self.db.add(registro)
 
         self.db.commit()
+        self._tasas_cache.clear()
 
         return True
 
@@ -105,9 +107,14 @@ class ExchangeService:
 
         origen = origen.upper()
         destino = destino.upper()
+        clave = (origen, destino)
+
+        if clave in self._tasas_cache:
+            return self._tasas_cache[clave]
 
         if origen == destino:
 
+            self._tasas_cache[clave] = 1.0
             return 1.0
 
         registro = (
@@ -128,6 +135,7 @@ class ExchangeService:
 
         if registro:
 
+            self._tasas_cache[clave] = registro.tasa
             return registro.tasa
 
         registro = (
@@ -148,7 +156,9 @@ class ExchangeService:
 
         if registro:
 
-            return 1 / registro.tasa
+            tasa = 1 / registro.tasa
+            self._tasas_cache[clave] = tasa
+            return tasa
 
         # Frankfurter guarda las tasas con USD como base. Con esas dos tasas
         # podemos convertir entre cualquier par de monedas disponible.
@@ -156,8 +166,11 @@ class ExchangeService:
         tasa_usd_destino = self._tasa_desde_usd(destino)
 
         if tasa_usd_origen is not None and tasa_usd_destino is not None:
-            return tasa_usd_destino / tasa_usd_origen
+            tasa = tasa_usd_destino / tasa_usd_origen
+            self._tasas_cache[clave] = tasa
+            return tasa
 
+        self._tasas_cache[clave] = None
         return None
 
     def _tasa_desde_usd(self, moneda):

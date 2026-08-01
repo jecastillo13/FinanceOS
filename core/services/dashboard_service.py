@@ -16,9 +16,10 @@ class DashboardService:
         self.account_service = AccountService()
         self.db = get_session()
         self.exchange = ExchangeService()
+        self._movimientos_cache = {}
 
     def patrimonio(self):
-        return self.account_service.saldo_total(self.MONEDA_BASE)
+        return self.account_service.saldo_total(self.MONEDA_BASE, self.exchange)
 
     def cuentas(self):
         return self.account_service.total_cuentas()
@@ -50,7 +51,7 @@ class DashboardService:
         return periodos
 
     def cuentas_por_saldo(self):
-        datos, pendientes = self.account_service.saldos_consolidados(self.MONEDA_BASE)
+        datos, pendientes = self.account_service.saldos_consolidados(self.MONEDA_BASE, self.exchange)
         cuentas = [
             {"cuenta": f"{dato['cuenta'].icono} {dato['cuenta'].nombre}", "saldo_cop": dato["saldo_base"], "moneda_original": dato["cuenta"].moneda}
             for dato in datos
@@ -79,10 +80,14 @@ class DashboardService:
         return {"patrimonio": self.patrimonio(), "cuentas": self.cuentas(), **resumen_mes}
 
     def cuentas_sin_tasa(self):
-        _, pendientes = self.account_service.saldos_consolidados(self.MONEDA_BASE)
+        _, pendientes = self.account_service.saldos_consolidados(self.MONEDA_BASE, self.exchange)
         return pendientes
 
     def _movimientos_convertidos(self, anio=None, mes=None):
+        clave = (anio, mes)
+        if clave in self._movimientos_cache:
+            return self._movimientos_cache[clave]
+
         consulta = (
             self.db.query(Movimiento)
             .join(Categoria)
@@ -103,7 +108,9 @@ class DashboardService:
                 "valor_cop": valor_cop, "tipo": movimiento.categoria.tipo, "categoria": f"{movimiento.categoria.icono or '🏷️'} {movimiento.categoria.nombre}",
                 "categoria_id": movimiento.categoria_id,
             })
-        return convertidos, list(pendientes.values())
+        resultado = (convertidos, list(pendientes.values()))
+        self._movimientos_cache[clave] = resultado
+        return resultado
 
     def cerrar(self):
         self.account_service.cerrar()
