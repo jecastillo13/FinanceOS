@@ -2,6 +2,7 @@ import plotly.express as px
 import streamlit as st
 
 from components.cards import metric_card
+from components.ui.page import page_header
 from core.services import DashboardService
 
 
@@ -15,8 +16,7 @@ def mostrar():
         cuentas, pendientes_cuentas = service.cuentas_por_saldo()
         alertas, pendientes_alertas = service.alertas_presupuesto()
 
-        st.title("📊 Centro Financiero")
-        st.caption("Una vista clara de tu patrimonio, flujo de caja y decisiones pendientes.")
+        page_header("📊", "Centro Financiero", "Una vista clara de tu patrimonio, flujo de caja y decisiones pendientes.", "RESUMEN GENERAL")
 
         col1, col2, col3, col4 = st.columns(4)
         with col1:

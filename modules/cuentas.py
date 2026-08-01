@@ -3,12 +3,12 @@ import streamlit as st
 from core.services.account_service import AccountService
 from components.account_card import account_card
 from components.dialogs.edit_account_dialog import edit_account_dialog
+from components.ui.page import page_header
 
 
 def mostrar():
 
-    st.title("🏦 Gestión de Cuentas")
-    st.caption("Administra todas tus cuentas financieras.")
+    page_header("🏦", "Tus cuentas", "Administra saldos, monedas y productos financieros.", "PATRIMONIO")
 
     service = AccountService()
 

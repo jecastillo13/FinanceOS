@@ -3,14 +3,14 @@ from datetime import date
 import streamlit as st
 
 from core.services import AccountService, CategoryService, RecurringExpenseService
+from components.ui.page import page_header
 
 
 FRECUENCIAS = ["Semanal", "Quincenal", "Mensual", "Anual"]
 
 
 def mostrar():
-    st.title("🔁 Gastos recurrentes")
-    st.caption("Programa tus gastos y regístralos en Movimientos cuando los pagues.")
+    page_header("🔁", "Gastos recurrentes", "Programa pagos y regístralos en Movimientos cuando los realices.", "PLANIFICACIÓN")
 
     service = RecurringExpenseService()
     account_service = AccountService()

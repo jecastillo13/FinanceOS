@@ -3,14 +3,14 @@ from datetime import date
 import streamlit as st
 
 from core.services import BudgetService, CategoryService
+from components.ui.page import page_header
 
 
 MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
 
 
 def mostrar():
-    st.title("📊 Presupuestos mensuales")
-    st.caption("Define límites en COP por categoría y controla el gasto de cada mes.")
+    page_header("📊", "Presupuestos", "Define límites en COP por categoría y controla cada mes.", "PLANIFICACIÓN")
     budget_service = BudgetService()
     category_service = CategoryService()
 

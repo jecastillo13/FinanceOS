@@ -1,14 +1,15 @@
 import streamlit as st
 
 from core.services import CategoryService
+from components.ui.page import page_header
+from components.cards import metric_card
 
 
 TIPOS = ["Ingreso", "Gasto", "Transferencia", "Ahorro", "Inversion"]
 
 
 def mostrar():
-    st.title("🏷️ Gestión de categorías")
-    st.caption("Organiza tus movimientos por tipo, grupo, icono y prioridad.")
+    page_header("🏷️", "Categorías", "Organiza tus movimientos por tipo, grupo, icono y prioridad.", "ORGANIZACIÓN")
     service = CategoryService()
 
     try:
@@ -17,10 +18,14 @@ def mostrar():
         gastos = len([c for c in categorias if c.tipo == "Gasto"])
         especiales = len(categorias) - ingresos - gastos
         c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Total", len(categorias))
-        c2.metric("Ingresos", ingresos)
-        c3.metric("Gastos", gastos)
-        c4.metric("Especiales", especiales)
+        with c1:
+            metric_card("Total", len(categorias), "🏷️")
+        with c2:
+            metric_card("Ingresos", ingresos, "⬆️")
+        with c3:
+            metric_card("Gastos", gastos, "⬇️")
+        with c4:
+            metric_card("Especiales", especiales, "✦")
 
         if st.button("Instalar catálogo predeterminado"):
             creadas = service.instalar_categorias_predeterminadas()

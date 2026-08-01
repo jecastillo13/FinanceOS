@@ -3,6 +3,7 @@ from datetime import date
 import streamlit as st
 
 from core.services import AccountService, CategoryService, MovementService
+from components.ui.page import page_header
 
 
 def _etiqueta_categoria(categoria):
@@ -10,8 +11,7 @@ def _etiqueta_categoria(categoria):
 
 
 def mostrar():
-    st.title("💸 Movimientos")
-    st.caption("Registra ingresos y gastos. El tipo de categoría define automáticamente el signo.")
+    page_header("💸", "Movimientos", "Registra ingresos y gastos; la categoría define el signo automáticamente.", "ACTIVIDAD")
 
     movement_service = MovementService()
     account_service = AccountService()

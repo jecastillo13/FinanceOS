@@ -1,11 +1,12 @@
 import streamlit as st
 
 from core.services import ExchangeService
+from components.ui.page import page_header
 
 
 def mostrar():
 
-    st.title("🌎 Monedas y Tasas de Cambio")
+    page_header("🌎", "Monedas y tasas", "Actualiza tasas y convierte valores para consolidar tu patrimonio.", "MERCADOS")
 
     service = ExchangeService()
 

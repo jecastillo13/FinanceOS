@@ -3,11 +3,11 @@ from datetime import date
 import streamlit as st
 
 from core.services import AccountService, TransferService
+from components.ui.page import page_header
 
 
 def mostrar():
-    st.title("🔄 Transferencias entre cuentas")
-    st.caption("Mueve dinero entre tus cuentas sin afectar los ingresos ni los gastos.")
+    page_header("🔄", "Transferencias", "Mueve dinero entre cuentas sin afectar tus ingresos ni gastos.", "OPERACIONES")
     transfer_service = TransferService()
     account_service = AccountService()
 

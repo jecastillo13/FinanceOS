@@ -1,3 +1,5 @@
+from sqlalchemy import func
+
 from core.database import get_session
 from core.models import Categoria, Movimiento, Presupuesto
 from core.services.exchange_service import ExchangeService
