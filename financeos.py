@@ -64,7 +64,7 @@ elif pagina == "🏦 Cuentas":
 
     cuentas.mostrar()
 
-elif pagina == "🏷 Categorías":
+elif pagina == "🏷️ Categorías":
 
     categorias.mostrar()
 
@@ -98,12 +98,12 @@ elif pagina == "📈 Inversiones":
     st.title("📈 Inversiones")
     st.info("Próximamente")
 
-elif pagina == "📊 Reportes":
+elif pagina == "📑 Reportes":
 
     st.title("📊 Reportes")
     st.info("Próximamente")
 
-elif pagina == "⚙ Configuración":
+elif pagina == "⚙️ Configuración":
 
     st.title("⚙ Configuración")
     st.info("Próximamente")

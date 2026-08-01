@@ -54,9 +54,12 @@ def mostrar():
 
         izquierda, derecha = st.columns(2)
         with izquierda:
-            st.subheader("Cuentas")
+            st.subheader("Distribución de patrimonio")
             if cuentas:
-                st.dataframe(cuentas, use_container_width=True, hide_index=True, column_config={"saldo_cop": st.column_config.NumberColumn("Saldo (COP)", format="COP $%f"), "moneda_original": "Moneda"})
+                figura = px.pie(cuentas, names="cuenta", values="saldo_cop", hole=0.58, color_discrete_sequence=["#818CF8", "#34D399", "#38BDF8", "#FBBF24", "#FB7185"])
+                figura.update_layout(template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", legend_title_text="", margin=dict(l=10, r=10, t=20, b=10))
+                st.plotly_chart(figura, use_container_width=True)
+                st.caption("Saldos convertidos y consolidados en COP.")
             else:
                 st.info("Aún no hay cuentas registradas.")
         with derecha:
