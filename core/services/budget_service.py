@@ -1,4 +1,5 @@
 from sqlalchemy import func
+from sqlalchemy.orm import joinedload
 
 from core.database import get_session
 from core.models import Categoria, Movimiento, Presupuesto
@@ -80,9 +81,38 @@ class BudgetService:
         return abs(total)
 
     def resumen(self, anio, mes):
+        presupuestos = self.obtener_presupuestos(anio, mes)
+        if not presupuestos:
+            return []
+
+        categorias = {presupuesto.categoria_id for presupuesto in presupuestos}
+        movimientos = (
+            self.db.query(Movimiento)
+            .join(Categoria)
+            .options(joinedload(Movimiento.cuenta))
+            .filter(
+                Movimiento.categoria_id.in_(categorias),
+                Categoria.tipo == "Gasto",
+                func.extract("year", Movimiento.fecha) == anio,
+                func.extract("month", Movimiento.fecha) == mes,
+            )
+            .all()
+        )
+        gastos_por_categoria = {}
+        exchange = ExchangeService()
+        try:
+            for movimiento in movimientos:
+                valor_cop = exchange.convertir(movimiento.valor, movimiento.cuenta.moneda, "COP")
+                if valor_cop is None:
+                    continue
+                gastos_por_categoria[movimiento.categoria_id] = (
+                    gastos_por_categoria.get(movimiento.categoria_id, 0) + abs(valor_cop)
+                )
+        finally:
+            exchange.cerrar()
         return [
-            {"presupuesto": presupuesto, "gastado": self.gastado(presupuesto.categoria_id, anio, mes)}
-            for presupuesto in self.obtener_presupuestos(anio, mes)
+            {"presupuesto": presupuesto, "gastado": gastos_por_categoria.get(presupuesto.categoria_id, 0)}
+            for presupuesto in presupuestos
         ]
 
     def cerrar(self):
