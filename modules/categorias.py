@@ -87,12 +87,30 @@ def mostrar():
 
         st.divider()
         buscar = st.text_input("🔍 Buscar categoría, grupo o tipo")
+        grupos = ["Todos"] + sorted({categoria.grupo or "Otros" for categoria in categorias})
+        filtro_grupo = st.selectbox("Grupo", grupos)
         if buscar:
             texto = buscar.lower()
             categorias = [c for c in categorias if texto in c.nombre.lower() or texto in (c.grupo or "").lower() or texto in c.tipo.lower()]
+        if filtro_grupo != "Todos":
+            categorias = [categoria for categoria in categorias if (categoria.grupo or "Otros") == filtro_grupo]
         if not categorias:
             st.info("No hay categorías para mostrar.")
             return
+
+        limite = st.selectbox("Categorías por página", [25, 50], index=0)
+        total_paginas = max(1, (len(categorias) + limite - 1) // limite)
+        pagina = st.number_input(
+            "Página",
+            min_value=1,
+            max_value=total_paginas,
+            value=1,
+            step=1,
+            key=f"pagina_categorias_{buscar.strip().lower() or 'todas'}_{filtro_grupo}_{limite}",
+        )
+        inicio = (pagina - 1) * limite
+        categorias = categorias[inicio:inicio + limite]
+        st.caption(f"Mostrando {len(categorias)} categorías de la selección actual.")
 
         grupo_actual = None
         for categoria in categorias:
