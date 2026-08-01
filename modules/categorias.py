@@ -3,6 +3,7 @@ import streamlit as st
 from core.services import CategoryService
 from components.ui.page import page_header
 from components.cards import metric_card
+from components.dialogs.delete_confirmation import confirm_delete
 
 
 TIPOS = ["Ingreso", "Gasto", "Transferencia", "Ahorro", "Inversion"]
@@ -100,10 +101,13 @@ def mostrar():
                             st.error(str(error))
 
                 if st.button("Eliminar categoría", key=f"eliminar_{categoria.id}"):
-                    if service.eliminar_categoria(categoria.id):
-                        st.success("Categoría eliminada.")
-                        st.rerun()
-                    else:
-                        st.error("No se puede eliminar porque tiene movimientos asociados.")
+                    confirm_delete(
+                        "¿Eliminar categoría?",
+                        f"{categoria.icono or '🏷️'} {categoria.nombre}",
+                        "Si existen movimientos asociados, FinanceOS bloqueará la eliminación para proteger tu historial.",
+                        lambda: service.eliminar_categoria(categoria.id),
+                        "Categoría eliminada.",
+                        "No se puede eliminar porque tiene movimientos asociados.",
+                    )
     finally:
         service.cerrar()

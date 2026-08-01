@@ -4,6 +4,7 @@ import streamlit as st
 
 from core.services import AccountService, TransferService
 from components.ui.page import page_header
+from components.dialogs.delete_confirmation import confirm_delete
 
 
 def mostrar():
@@ -53,9 +54,13 @@ def mostrar():
                 if transferencia.descripcion:
                     st.caption(transferencia.descripcion)
                 if st.button("Revertir transferencia", key=f"revertir_transferencia_{transferencia.id}"):
-                    transfer_service.eliminar_transferencia(transferencia.id)
-                    st.success("Transferencia revertida y saldos restaurados.")
-                    st.rerun()
+                    confirm_delete(
+                        "¿Revertir transferencia?",
+                        f"{transferencia.cuenta_origen.nombre} → {transferencia.cuenta_destino.nombre}",
+                        "Se eliminarán los dos movimientos internos y ambos saldos volverán a su estado anterior.",
+                        lambda: transfer_service.eliminar_transferencia(transferencia.id),
+                        "Transferencia revertida y saldos restaurados.",
+                    )
     finally:
         transfer_service.cerrar()
         account_service.cerrar()

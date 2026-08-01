@@ -4,6 +4,7 @@ from core.services.account_service import AccountService
 from components.account_card import account_card
 from components.dialogs.edit_account_dialog import edit_account_dialog
 from components.ui.page import page_header
+from components.dialogs.delete_confirmation import confirm_delete
 
 
 def mostrar():
@@ -130,9 +131,14 @@ def mostrar():
                     st.rerun()
 
                 if eliminar:
-
-                    st.session_state["eliminar_cuenta"] = cuenta.id
-                    st.rerun()
+                    confirm_delete(
+                        "¿Eliminar cuenta?",
+                        cuenta.nombre,
+                        "Solo podrá eliminarse si no tiene movimientos registrados. Tu historial financiero nunca se borrará desde esta acción.",
+                        lambda: service.eliminar_cuenta(cuenta.id),
+                        "Cuenta eliminada.",
+                        "No se puede eliminar una cuenta que tiene movimientos registrados.",
+                    )
 
     # =====================================================
     # EDITAR

@@ -246,6 +246,31 @@ class Meta(Base):
         Date
     )
 
+    descripcion = Column(Text, default="")
+    moneda = Column(String(10), nullable=False, default="COP")
+    activa = Column(Integer, nullable=False, default=1)
+
+    operaciones = relationship(
+        "MetaOperacion",
+        back_populates="meta",
+        cascade="all, delete-orphan",
+    )
+
+
+class MetaOperacion(Base):
+    __tablename__ = "meta_operaciones"
+
+    id = Column(Integer, primary_key=True)
+    meta_id = Column(Integer, ForeignKey("metas.id"), nullable=False)
+    movimiento_id = Column(Integer, ForeignKey("movimientos.id"), nullable=True)
+    tipo = Column(String(20), nullable=False)
+    valor_meta = Column(Float, nullable=False)
+    fecha = Column(Date, default=date.today, nullable=False)
+    descripcion = Column(String(250), default="")
+
+    meta = relationship("Meta", back_populates="operaciones")
+    movimiento = relationship("Movimiento")
+
 
 # =====================================================
 # INVERSIONES

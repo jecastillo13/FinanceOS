@@ -89,6 +89,9 @@ button[kind="primary"], [data-testid="stFormSubmitButton"] button { min-height:4
 [data-testid="stButton"] button[kind="primary"] { background:linear-gradient(135deg,#9A91FF,#605CF4)!important; border-color:rgba(190,188,255,.55)!important; color:#FFFFFF!important; box-shadow:0 10px 22px rgba(91,82,242,.34),inset 0 1px rgba(255,255,255,.28)!important; }
 button[kind="secondary"] { border-radius:12px!important; border-color:#415278!important; background:linear-gradient(145deg,#23304D,#18233B)!important; color:#EAF0FF!important; }
 [data-testid="stProgress"] > div > div > div { background:linear-gradient(90deg,#818CF8,#34D399)!important; }
+div[role="dialog"] { border:1px solid rgba(150,160,255,.48)!important; border-radius:26px!important; background:radial-gradient(circle at 0% 0%,rgba(125,110,255,.24),transparent 38%),linear-gradient(145deg,#1C294A,#10182C)!important; box-shadow:0 30px 80px rgba(0,0,0,.56),inset 0 1px rgba(255,255,255,.10)!important; backdrop-filter:blur(22px); }
+div[role="dialog"] [data-testid="stDialogHeader"] { padding-bottom:.55rem; }
+div[role="dialog"] h2 { font-size:26px!important; }
 @media(max-width:800px) { .block-container { padding:1rem; } .app-status { display:none; } }
 </style>
 """, unsafe_allow_html=True)

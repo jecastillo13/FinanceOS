@@ -15,6 +15,7 @@ from modules import monedas
 from modules import gastos_recurrentes
 from modules import transferencias
 from modules import presupuestos
+from modules import metas
 
 
 # =====================================================
@@ -90,8 +91,7 @@ elif pagina == "🌎 Monedas":
 
 elif pagina == "🎯 Metas":
 
-    st.title("🎯 Metas")
-    st.info("Próximamente")
+    metas.mostrar()
 
 elif pagina == "📈 Inversiones":
 

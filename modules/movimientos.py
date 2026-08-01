@@ -4,6 +4,7 @@ import streamlit as st
 
 from core.services import AccountService, CategoryService, MovementService
 from components.ui.page import page_header
+from components.dialogs.delete_confirmation import confirm_delete
 
 
 def _etiqueta_categoria(categoria):
@@ -117,9 +118,13 @@ def mostrar():
                         st.rerun()
 
                 if st.button("Eliminar movimiento", key=f"eliminar_movimiento_{movimiento.id}"):
-                    movement_service.eliminar_movimiento(movimiento.id)
-                    st.success("Movimiento eliminado.")
-                    st.rerun()
+                    confirm_delete(
+                        "¿Eliminar movimiento?",
+                        movimiento.descripcion or "Este movimiento no tiene descripción.",
+                        "El saldo de la cuenta se restaurará automáticamente.",
+                        lambda: movement_service.eliminar_movimiento(movimiento.id) or True,
+                        "Movimiento eliminado y saldo restaurado.",
+                    )
     finally:
         movement_service.cerrar()
         account_service.cerrar()

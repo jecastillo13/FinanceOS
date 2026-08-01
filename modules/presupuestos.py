@@ -4,6 +4,7 @@ import streamlit as st
 
 from core.services import BudgetService, CategoryService
 from components.ui.page import page_header
+from components.dialogs.delete_confirmation import confirm_delete
 
 
 MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
@@ -65,9 +66,13 @@ def mostrar():
                 st.write(f"Presupuesto: **${presupuesto.valor:,.2f}** · Gastado: **${gastado:,.2f}** · Disponible: **${presupuesto.valor - gastado:,.2f}**")
                 st.progress(progreso)
                 if st.button("Eliminar presupuesto", key=f"eliminar_presupuesto_{presupuesto.id}"):
-                    budget_service.eliminar_presupuesto(presupuesto.id)
-                    st.success("Presupuesto eliminado.")
-                    st.rerun()
+                    confirm_delete(
+                        "¿Eliminar presupuesto?",
+                        f"{presupuesto.categoria.nombre} · {MESES[mes - 1]} {anio}",
+                        "Solo se eliminará el límite presupuestado; tus movimientos y gastos permanecerán intactos.",
+                        lambda: budget_service.eliminar_presupuesto(presupuesto.id),
+                        "Presupuesto eliminado.",
+                    )
     finally:
         budget_service.cerrar()
         category_service.cerrar()

@@ -4,6 +4,7 @@ import streamlit as st
 
 from core.services import AccountService, CategoryService, RecurringExpenseService
 from components.ui.page import page_header
+from components.dialogs.delete_confirmation import confirm_delete
 
 
 FRECUENCIAS = ["Semanal", "Quincenal", "Mensual", "Anual"]
@@ -96,9 +97,13 @@ def mostrar():
                             st.rerun()
 
                 if st.button("Eliminar gasto recurrente", key=f"eliminar_gasto_{gasto.id}"):
-                    service.eliminar_gasto(gasto.id)
-                    st.success("Gasto recurrente eliminado. Los movimientos ya pagados se conservan.")
-                    st.rerun()
+                    confirm_delete(
+                        "¿Eliminar gasto recurrente?",
+                        gasto.nombre,
+                        "Se eliminará la programación futura. Los pagos registrados previamente se conservarán en Movimientos.",
+                        lambda: service.eliminar_gasto(gasto.id),
+                        "Gasto recurrente eliminado. Los pagos históricos se conservaron.",
+                    )
     finally:
         service.cerrar()
         account_service.cerrar()

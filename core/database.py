@@ -58,6 +58,7 @@ def create_database():
         Transferencia,
         Presupuesto,
         Meta,
+        MetaOperacion,
         Inversion,
         Configuracion,
         Auditoria,
@@ -93,9 +94,23 @@ def _crear_indices_operativos(conexion):
         "CREATE INDEX IF NOT EXISTS idx_auditoria_fecha ON auditoria(fecha)",
         "CREATE INDEX IF NOT EXISTS idx_tasas_par ON tasas_cambio(moneda_origen, moneda_destino)",
         "CREATE INDEX IF NOT EXISTS idx_presupuestos_periodo ON presupuestos(anio, mes, categoria_id)",
+        "CREATE INDEX IF NOT EXISTS idx_meta_operaciones_meta_fecha ON meta_operaciones(meta_id, fecha)",
     )
     for sentencia in indices:
         conexion.execute(text(sentencia))
+
+
+def _migrar_metas(conexion):
+    """Amplia metas existentes sin eliminar los objetivos ya creados."""
+    columnas = {columna["name"] for columna in inspect(engine).get_columns("metas")}
+    campos = {
+        "descripcion": "TEXT DEFAULT ''",
+        "moneda": "VARCHAR(10) NOT NULL DEFAULT 'COP'",
+        "activa": "INTEGER NOT NULL DEFAULT 1",
+    }
+    for nombre, definicion in campos.items():
+        if nombre not in columnas:
+            conexion.execute(text(f"ALTER TABLE metas ADD COLUMN {nombre} {definicion}"))
 
 
 def _ejecutar_migraciones():
@@ -103,6 +118,7 @@ def _ejecutar_migraciones():
     migraciones = (
         ("001_categoria_enriquecida", _migrar_categoria),
         ("002_indices_operativos", _crear_indices_operativos),
+        ("003_metas_inteligentes", _migrar_metas),
     )
     with engine.begin() as conexion:
         conexion.execute(text("""
