@@ -31,22 +31,17 @@ class ExchangeService:
 
             return False
 
-        print("\n================================")
-        print("Tasas descargadas")
-        print("================================")
-        print(tasas)
-        print("================================\n")
+        existentes = {
+            registro.moneda_destino: registro
+            for registro in (
+                self.db.query(TasaCambio)
+                .filter(TasaCambio.moneda_origen == moneda_base)
+                .all()
+            )
+        }
 
         for moneda_destino, tasa in tasas.items():
-
-            registro = (
-                self.db.query(TasaCambio)
-                .filter(
-                    TasaCambio.moneda_origen == moneda_base,
-                    TasaCambio.moneda_destino == moneda_destino
-                )
-                .first()
-            )
+            registro = existentes.get(moneda_destino)
 
             if registro:
 
