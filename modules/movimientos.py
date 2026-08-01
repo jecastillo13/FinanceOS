@@ -84,10 +84,28 @@ def mostrar():
                     st.success("Movimiento registrado correctamente.")
                     st.rerun()
 
-        limite_historial = st.selectbox("Movimientos visibles", [50, 100, 200], index=0)
-        movimientos = movement_service.obtener_movimientos(limite_historial)
         st.divider()
         st.subheader("Historial")
+
+        filtro_columna, limite_columna = st.columns([3, 1])
+        with filtro_columna:
+            busqueda = st.text_input("Buscar en historial", placeholder="Descripción, categoría o cuenta")
+        with limite_columna:
+            limite_historial = st.selectbox("Por página", [25, 50, 100], index=1)
+
+        total_movimientos = movement_service.contar_movimientos(busqueda)
+        total_paginas = max(1, (total_movimientos + limite_historial - 1) // limite_historial)
+        pagina_actual = st.number_input(
+            "Página",
+            min_value=1,
+            max_value=total_paginas,
+            value=1,
+            step=1,
+            key=f"pagina_movimientos_{busqueda.strip().lower() or 'todos'}_{limite_historial}",
+        )
+        desplazamiento = (pagina_actual - 1) * limite_historial
+        movimientos = movement_service.obtener_movimientos(limite_historial, desplazamiento, busqueda)
+        st.caption(f"Mostrando {len(movimientos)} de {total_movimientos} movimiento(s).")
 
         if not movimientos:
             st.info("Todavía no hay movimientos registrados.")

@@ -1,4 +1,4 @@
-from sqlalchemy import func
+from sqlalchemy import func, or_
 
 from core.database import get_session
 from core.models import Categoria, Movimiento, Cuenta
@@ -133,16 +133,46 @@ class MovementService:
     # CONSULTAS
     # =====================================================
 
-    def obtener_movimientos(self, limite=None):
+    def obtener_movimientos(self, limite=None, desplazamiento=0, busqueda=""):
         consulta = (
             self.db.query(Movimiento)
             .join(Categoria)
+            .join(Cuenta, Movimiento.cuenta_id == Cuenta.id)
             .filter(Categoria.tipo.in_(["Ingreso", "Gasto"]))
             .order_by(Movimiento.fecha.desc())
         )
+        if busqueda:
+            termino = f"%{busqueda.strip()}%"
+            consulta = consulta.filter(
+                or_(
+                    Movimiento.descripcion.ilike(termino),
+                    Categoria.nombre.ilike(termino),
+                    Cuenta.nombre.ilike(termino),
+                )
+            )
+        if desplazamiento:
+            consulta = consulta.offset(desplazamiento)
         if limite:
             consulta = consulta.limit(limite)
         return consulta.all()
+
+    def contar_movimientos(self, busqueda=""):
+        consulta = (
+            self.db.query(Movimiento)
+            .join(Categoria)
+            .join(Cuenta, Movimiento.cuenta_id == Cuenta.id)
+            .filter(Categoria.tipo.in_(["Ingreso", "Gasto"]))
+        )
+        if busqueda:
+            termino = f"%{busqueda.strip()}%"
+            consulta = consulta.filter(
+                or_(
+                    Movimiento.descripcion.ilike(termino),
+                    Categoria.nombre.ilike(termino),
+                    Cuenta.nombre.ilike(termino),
+                )
+            )
+        return consulta.count()
 
     def obtener_movimiento(self, movimiento_id):
 
