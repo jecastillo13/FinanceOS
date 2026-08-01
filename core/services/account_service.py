@@ -1,5 +1,7 @@
 from core.database import get_session
 from core.models import Cuenta
+from core.services.audit_service import registrar_auditoria
+from core.services.validation import moneda_valida, texto_requerido
 from core.services.exchange_service import ExchangeService
 
 
@@ -36,8 +38,12 @@ class AccountService:
         return round(sum(dato["saldo_base"] for dato in datos), 2)
 
     def crear_cuenta(self, nombre, tipo, saldo, moneda="COP", color="#2563EB", icono="🏦"):
-        cuenta = Cuenta(nombre=nombre, tipo=tipo, saldo=saldo, moneda=moneda.upper(), color=color, icono=icono)
+        nombre = texto_requerido(nombre, "El nombre de la cuenta", 100)
+        tipo = texto_requerido(tipo, "El tipo de cuenta", 50)
+        moneda = moneda_valida(moneda)
+        cuenta = Cuenta(nombre=nombre, tipo=tipo, saldo=float(saldo), moneda=moneda, color=color, icono=icono)
         self.db.add(cuenta)
+        registrar_auditoria(self.db, "CUENTA_CREADA", f"Cuenta creada: {nombre} ({moneda.upper()}).")
         self.db.commit()
         self.db.refresh(cuenta)
         return cuenta
@@ -46,10 +52,15 @@ class AccountService:
         cuenta = self.db.get(Cuenta, cuenta_id)
         if cuenta is None:
             return None
-        if cuenta.movimientos and (saldo != cuenta.saldo or moneda.upper() != cuenta.moneda.upper()):
+        nombre = texto_requerido(nombre, "El nombre de la cuenta", 100)
+        tipo = texto_requerido(tipo, "El tipo de cuenta", 50)
+        moneda = moneda_valida(moneda)
+        saldo = float(saldo)
+        if cuenta.movimientos and (saldo != cuenta.saldo or moneda != cuenta.moneda.upper()):
             raise ValueError("No puedes cambiar el saldo ni la moneda de una cuenta con movimientos. Registra un ajuste como movimiento.")
         cuenta.nombre, cuenta.tipo, cuenta.saldo = nombre, tipo, saldo
-        cuenta.moneda, cuenta.color, cuenta.icono = moneda.upper(), color, icono
+        cuenta.moneda, cuenta.color, cuenta.icono = moneda, color, icono
+        registrar_auditoria(self.db, "CUENTA_ACTUALIZADA", f"Cuenta #{cuenta.id} actualizada: {nombre} ({moneda}).")
         self.db.commit()
         self.db.refresh(cuenta)
         return cuenta
@@ -58,6 +69,7 @@ class AccountService:
         cuenta = self.db.get(Cuenta, cuenta_id)
         if cuenta is None or cuenta.movimientos:
             return False
+        registrar_auditoria(self.db, "CUENTA_ELIMINADA", f"Cuenta #{cuenta.id} eliminada: {cuenta.nombre}.")
         self.db.delete(cuenta)
         self.db.commit()
         return True

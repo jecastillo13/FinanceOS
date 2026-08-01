@@ -65,10 +65,10 @@ def create_database():
     )
 
     Base.metadata.create_all(bind=engine)
-    _migrar_categoria()
+    _ejecutar_migraciones()
 
 
-def _migrar_categoria():
+def _migrar_categoria(conexion):
     """Añade los campos nuevos sin eliminar las categorías existentes."""
     columnas = {columna["name"] for columna in inspect(engine).get_columns("categorias")}
     campos = {
@@ -79,7 +79,47 @@ def _migrar_categoria():
         "activa": "INTEGER NOT NULL DEFAULT 1",
         "orden": "INTEGER NOT NULL DEFAULT 0",
     }
+    for nombre, definicion in campos.items():
+        if nombre not in columnas:
+            conexion.execute(text(f"ALTER TABLE categorias ADD COLUMN {nombre} {definicion}"))
+
+
+def _crear_indices_operativos(conexion):
+    """Crea indices compatibles con instalaciones existentes de SQLite."""
+    indices = (
+        "CREATE INDEX IF NOT EXISTS idx_movimientos_fecha ON movimientos(fecha)",
+        "CREATE INDEX IF NOT EXISTS idx_movimientos_cuenta_fecha ON movimientos(cuenta_id, fecha)",
+        "CREATE INDEX IF NOT EXISTS idx_movimientos_categoria_fecha ON movimientos(categoria_id, fecha)",
+        "CREATE INDEX IF NOT EXISTS idx_auditoria_fecha ON auditoria(fecha)",
+        "CREATE INDEX IF NOT EXISTS idx_tasas_par ON tasas_cambio(moneda_origen, moneda_destino)",
+        "CREATE INDEX IF NOT EXISTS idx_presupuestos_periodo ON presupuestos(anio, mes, categoria_id)",
+    )
+    for sentencia in indices:
+        conexion.execute(text(sentencia))
+
+
+def _ejecutar_migraciones():
+    """Aplica migraciones idempotentes y registra la version local."""
+    migraciones = (
+        ("001_categoria_enriquecida", _migrar_categoria),
+        ("002_indices_operativos", _crear_indices_operativos),
+    )
     with engine.begin() as conexion:
-        for nombre, definicion in campos.items():
-            if nombre not in columnas:
-                conexion.execute(text(f"ALTER TABLE categorias ADD COLUMN {nombre} {definicion}"))
+        conexion.execute(text("""
+            CREATE TABLE IF NOT EXISTS schema_migrations (
+                version VARCHAR(100) PRIMARY KEY,
+                aplicada_en DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        aplicadas = {
+            fila[0]
+            for fila in conexion.execute(text("SELECT version FROM schema_migrations"))
+        }
+        for version, migracion in migraciones:
+            if version in aplicadas:
+                continue
+            migracion(conexion)
+            conexion.execute(
+                text("INSERT INTO schema_migrations (version) VALUES (:version)"),
+                {"version": version},
+            )

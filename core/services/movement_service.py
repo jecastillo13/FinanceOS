@@ -2,6 +2,8 @@ from sqlalchemy import func
 
 from core.database import get_session
 from core.models import Categoria, Movimiento, Cuenta
+from core.services.audit_service import registrar_auditoria
+from core.services.validation import monto_positivo, texto_requerido
 
 
 class MovementService:
@@ -23,7 +25,10 @@ class MovementService:
         observaciones=""
     ):
 
+        descripcion = texto_requerido(descripcion, "La descripcion", 250)
         valor_firmado = self._valor_firmado(valor, categoria_id)
+        if self.db.get(Cuenta, cuenta_id) is None:
+            raise ValueError("La cuenta seleccionada no existe.")
 
         movimiento = Movimiento(
             fecha=fecha,
@@ -39,6 +44,11 @@ class MovementService:
         self.actualizar_saldo(
             cuenta_id,
             valor_firmado
+        )
+        registrar_auditoria(
+            self.db,
+            "MOVIMIENTO_CREADO",
+            f"Movimiento #{movimiento.id or 'nuevo'}: {descripcion} ({valor_firmado:.2f}) en cuenta #{cuenta_id}.",
         )
 
         self.db.commit()
@@ -65,7 +75,10 @@ class MovementService:
         if movimiento is None:
             return None
 
+        descripcion = texto_requerido(descripcion, "La descripcion", 250)
         valor_firmado = self._valor_firmado(valor, categoria_id)
+        if self.db.get(Cuenta, cuenta_id) is None:
+            raise ValueError("La cuenta seleccionada no existe.")
         cuenta_anterior_id = movimiento.cuenta_id
         valor_anterior = movimiento.valor
 
@@ -81,6 +94,12 @@ class MovementService:
         else:
             self.actualizar_saldo(cuenta_anterior_id, -valor_anterior)
             self.actualizar_saldo(cuenta_id, valor_firmado)
+
+        registrar_auditoria(
+            self.db,
+            "MOVIMIENTO_ACTUALIZADO",
+            f"Movimiento #{movimiento.id} actualizado: {descripcion} ({valor_firmado:.2f}) en cuenta #{cuenta_id}.",
+        )
 
         self.db.commit()
         self.db.refresh(movimiento)
@@ -102,6 +121,11 @@ class MovementService:
             -movimiento.valor
         )
 
+        registrar_auditoria(
+            self.db,
+            "MOVIMIENTO_ELIMINADO",
+            f"Movimiento #{movimiento.id} eliminado: {movimiento.descripcion} ({movimiento.valor:.2f}).",
+        )
         self.db.delete(movimiento)
         self.db.commit()
 
@@ -163,7 +187,7 @@ class MovementService:
         if categoria is None:
             raise ValueError("La categoría seleccionada no existe.")
 
-        monto = abs(float(valor))
+        monto = monto_positivo(valor)
 
         if categoria.tipo == "Ingreso":
             return monto

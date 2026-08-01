@@ -1,5 +1,7 @@
 from core.database import get_session
 from core.models import Categoria, Cuenta, Movimiento, Transferencia
+from core.services.audit_service import registrar_auditoria
+from core.services.validation import monto_positivo
 
 
 class TransferService:
@@ -20,9 +22,7 @@ class TransferService:
         if origen.moneda.upper() != destino.moneda.upper():
             raise ValueError("Por ahora las transferencias solo se permiten entre cuentas de la misma moneda.")
 
-        monto = abs(float(valor))
-        if monto == 0:
-            raise ValueError("El valor debe ser mayor que cero.")
+        monto = monto_positivo(valor)
 
         categoria = self._categoria_transferencia()
         detalle = descripcion.strip() or "Transferencia entre cuentas"
@@ -57,6 +57,11 @@ class TransferService:
             movimiento_entrada_id=entrada.id,
         )
         self.db.add(transferencia)
+        registrar_auditoria(
+            self.db,
+            "TRANSFERENCIA_CREADA",
+            f"Transferencia #{transferencia.id or 'nueva'}: {origen.nombre} → {destino.nombre} ({monto:.2f} {origen.moneda}).",
+        )
         self.db.commit()
         self.db.refresh(transferencia)
         return transferencia
@@ -77,6 +82,11 @@ class TransferService:
             self.db.delete(salida)
         if entrada:
             self.db.delete(entrada)
+        registrar_auditoria(
+            self.db,
+            "TRANSFERENCIA_REVERTIDA",
+            f"Transferencia #{transferencia.id} revertida ({transferencia.valor:.2f}).",
+        )
         self.db.delete(transferencia)
         self.db.commit()
         return True

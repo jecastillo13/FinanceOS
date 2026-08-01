@@ -56,3 +56,28 @@ core/providers/       Integraciones externas, como Frankfurter
 components/           Componentes reutilizables de interfaz
 database/             Base de datos local (ignorada por Git)
 ```
+
+## Arquitectura y crecimiento
+
+FinanceOS mantiene la interfaz de Streamlit separada de las reglas financieras:
+
+- `modules/` y `components/` solo presentan datos y capturan acciones de la persona usuaria.
+- `core/services/` contiene las reglas de negocio reutilizables: saldos, signos de movimientos, presupuestos, transferencias y conversiones.
+- `core/models.py` define el contrato de datos y `core/database.py` administra la base local y las migraciones versionadas.
+- `core/providers/` aísla servicios externos, de modo que una futura API no dependa de la interfaz.
+
+Esta separación permite conservar las reglas actuales cuando se agregue una API web o una aplicación móvil. La evolución prevista es:
+
+1. Mantener SQLite para uso personal sin conexión y migraciones idempotentes para cada actualización.
+2. Exponer los servicios existentes mediante una API (por ejemplo, FastAPI) sin duplicar reglas de cálculo.
+3. Añadir autenticación, usuarios y PostgreSQL cuando haya sincronización entre dispositivos.
+4. Conectar una interfaz web/móvil a esa API, manteniendo Streamlit como panel local o administrativo.
+
+### Integridad y trazabilidad
+
+- Las migraciones quedan registradas en la tabla local `schema_migrations`; se aplican al iniciar la aplicación.
+- Los índices operativos aceleran consultas de movimientos, presupuestos, tasas y auditoría.
+- Las operaciones de cuentas, categorías, movimientos, pagos recurrentes, transferencias y presupuestos dejan registro en `auditoria` dentro de la misma transacción.
+- Los servicios validan los datos esenciales antes de guardarlos: nombres, montos, moneda, período y frecuencia.
+
+Para una versión multiusuario se recomienda migrar los importes de `Float` a `Decimal`/`NUMERIC`, conservar la tasa aplicada en cada movimiento y utilizar PostgreSQL. Es un cambio contable que debe hacerse con una migración y pruebas de datos, no como una modificación visual.

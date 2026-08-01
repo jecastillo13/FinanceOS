@@ -3,6 +3,8 @@ from datetime import date, timedelta
 
 from core.database import get_session
 from core.models import Categoria, Cuenta, GastoRecurrente, Movimiento
+from core.services.audit_service import registrar_auditoria
+from core.services.validation import FRECUENCIAS_RECURRENCIA, monto_positivo, texto_requerido
 
 
 class RecurringExpenseService:
@@ -17,14 +19,18 @@ class RecurringExpenseService:
 
     def crear_gasto(self, nombre, valor, frecuencia, proxima_fecha_pago, categoria_id):
         self._validar_categoria_gasto(categoria_id)
+        nombre = texto_requerido(nombre, "El nombre del gasto recurrente", 120)
+        valor = monto_positivo(valor)
+        self._validar_frecuencia(frecuencia)
         gasto = GastoRecurrente(
-            nombre=nombre.strip(),
-            valor=abs(float(valor)),
+            nombre=nombre,
+            valor=valor,
             frecuencia=frecuencia,
             proxima_fecha_pago=proxima_fecha_pago,
             categoria_id=categoria_id,
         )
         self.db.add(gasto)
+        registrar_auditoria(self.db, "GASTO_RECURRENTE_CREADO", f"Gasto recurrente creado: {gasto.nombre} ({gasto.valor:.2f}).")
         self.db.commit()
         self.db.refresh(gasto)
         return gasto
@@ -35,12 +41,14 @@ class RecurringExpenseService:
             return None
 
         self._validar_categoria_gasto(categoria_id)
-        gasto.nombre = nombre.strip()
-        gasto.valor = abs(float(valor))
+        gasto.nombre = texto_requerido(nombre, "El nombre del gasto recurrente", 120)
+        gasto.valor = monto_positivo(valor)
+        self._validar_frecuencia(frecuencia)
         gasto.frecuencia = frecuencia
         gasto.proxima_fecha_pago = proxima_fecha_pago
         gasto.categoria_id = categoria_id
         gasto.activo = 1 if activo else 0
+        registrar_auditoria(self.db, "GASTO_RECURRENTE_ACTUALIZADO", f"Gasto recurrente #{gasto.id} actualizado: {gasto.nombre}.")
         self.db.commit()
         self.db.refresh(gasto)
         return gasto
@@ -49,6 +57,7 @@ class RecurringExpenseService:
         gasto = self.db.get(GastoRecurrente, gasto_id)
         if gasto is None:
             return False
+        registrar_auditoria(self.db, "GASTO_RECURRENTE_ELIMINADO", f"Gasto recurrente #{gasto.id} eliminado: {gasto.nombre}.")
         self.db.delete(gasto)
         self.db.commit()
         return True
@@ -79,6 +88,11 @@ class RecurringExpenseService:
         cuenta.saldo += valor
         gasto.ultima_fecha_pago = fecha_pago
         gasto.proxima_fecha_pago = self._siguiente_fecha(gasto.proxima_fecha_pago, gasto.frecuencia)
+        registrar_auditoria(
+            self.db,
+            "GASTO_RECURRENTE_PAGADO",
+            f"Pago de gasto recurrente: {gasto.nombre} ({abs(valor):.2f}) desde {cuenta.nombre}.",
+        )
         self.db.commit()
         self.db.refresh(movimiento)
         return movimiento
@@ -87,6 +101,11 @@ class RecurringExpenseService:
         categoria = self.db.get(Categoria, categoria_id)
         if categoria is None or categoria.tipo != "Gasto":
             raise ValueError("Selecciona una categoría de tipo Gasto.")
+
+    @staticmethod
+    def _validar_frecuencia(frecuencia):
+        if frecuencia not in FRECUENCIAS_RECURRENCIA:
+            raise ValueError("La frecuencia seleccionada no es valida.")
 
     @staticmethod
     def _siguiente_fecha(fecha, frecuencia):

@@ -2,6 +2,8 @@ from sqlalchemy import func
 
 from core.database import get_session
 from core.models import Categoria, Movimiento, Presupuesto
+from core.services.audit_service import registrar_auditoria
+from core.services.validation import monto_positivo, periodo_valido
 from core.services.exchange_service import ExchangeService
 
 
@@ -18,6 +20,7 @@ class BudgetService:
         )
 
     def guardar_presupuesto(self, anio, mes, categoria_id, valor):
+        anio, mes = periodo_valido(anio, mes)
         categoria = self.db.get(Categoria, categoria_id)
         if categoria is None or categoria.tipo != "Gasto":
             raise ValueError("Solo puedes crear presupuestos para categorías de gasto.")
@@ -28,10 +31,15 @@ class BudgetService:
             .first()
         )
         if presupuesto is None:
-            presupuesto = Presupuesto(anio=anio, mes=mes, categoria_id=categoria_id, valor=abs(float(valor)))
+            presupuesto = Presupuesto(anio=anio, mes=mes, categoria_id=categoria_id, valor=monto_positivo(valor, "El presupuesto"))
             self.db.add(presupuesto)
         else:
-            presupuesto.valor = abs(float(valor))
+            presupuesto.valor = monto_positivo(valor, "El presupuesto")
+        registrar_auditoria(
+            self.db,
+            "PRESUPUESTO_GUARDADO",
+            f"Presupuesto de {categoria.nombre} para {mes:02d}/{anio}: {presupuesto.valor:.2f} COP.",
+        )
         self.db.commit()
         self.db.refresh(presupuesto)
         return presupuesto
@@ -40,6 +48,11 @@ class BudgetService:
         presupuesto = self.db.get(Presupuesto, presupuesto_id)
         if presupuesto is None:
             return False
+        registrar_auditoria(
+            self.db,
+            "PRESUPUESTO_ELIMINADO",
+            f"Presupuesto #{presupuesto.id} eliminado ({presupuesto.mes:02d}/{presupuesto.anio}).",
+        )
         self.db.delete(presupuesto)
         self.db.commit()
         return True

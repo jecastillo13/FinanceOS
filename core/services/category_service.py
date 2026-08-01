@@ -1,6 +1,8 @@
 from core.database import get_session
 from core.models import Categoria
 from core.default_categories import CATEGORIAS_PREDETERMINADAS, COLORES_POR_TIPO
+from core.services.audit_service import registrar_auditoria
+from core.services.validation import TIPOS_CATEGORIA, texto_requerido
 
 
 class CategoryService:
@@ -43,6 +45,12 @@ class CategoryService:
         orden=0,
     ):
 
+        nombre = texto_requerido(nombre, "El nombre de la categoria", 80)
+        if tipo not in TIPOS_CATEGORIA:
+            raise ValueError("El tipo de categoria no es valido.")
+        if self.db.query(Categoria).filter(Categoria.nombre.ilike(nombre), Categoria.tipo == tipo).first():
+            raise ValueError("Ya existe una categoria con ese nombre y tipo.")
+
         categoria = Categoria(
             nombre=nombre,
             tipo=tipo,
@@ -54,6 +62,7 @@ class CategoryService:
         )
 
         self.db.add(categoria)
+        registrar_auditoria(self.db, "CATEGORIA_CREADA", f"Categoria creada: {nombre} ({tipo}).")
         self.db.commit()
         self.db.refresh(categoria)
 
@@ -85,6 +94,8 @@ class CategoryService:
             ))
             creadas += 1
 
+        if creadas:
+            registrar_auditoria(self.db, "CATALOGO_INSTALADO", f"Se instalaron {creadas} categorias predeterminadas.")
         self.db.commit()
         return creadas
 
@@ -108,6 +119,17 @@ class CategoryService:
         if categoria is None:
             return None
 
+        nombre = texto_requerido(nombre, "El nombre de la categoria", 80)
+        if tipo not in TIPOS_CATEGORIA:
+            raise ValueError("El tipo de categoria no es valido.")
+        duplicada = (
+            self.db.query(Categoria)
+            .filter(Categoria.nombre.ilike(nombre), Categoria.tipo == tipo, Categoria.id != categoria_id)
+            .first()
+        )
+        if duplicada:
+            raise ValueError("Ya existe una categoria con ese nombre y tipo.")
+
         if categoria.movimientos and categoria.tipo != tipo:
             raise ValueError("No puedes cambiar el tipo de una categoría que ya tiene movimientos.")
 
@@ -119,6 +141,7 @@ class CategoryService:
         categoria.activa = 1 if activa else 0
         categoria.orden = orden
 
+        registrar_auditoria(self.db, "CATEGORIA_ACTUALIZADA", f"Categoria #{categoria.id} actualizada: {nombre} ({tipo}).")
         self.db.commit()
         self.db.refresh(categoria)
 
@@ -140,6 +163,7 @@ class CategoryService:
         if categoria.movimientos:
             return False
 
+        registrar_auditoria(self.db, "CATEGORIA_ELIMINADA", f"Categoria #{categoria.id} eliminada: {categoria.nombre}.")
         self.db.delete(categoria)
         self.db.commit()
 
