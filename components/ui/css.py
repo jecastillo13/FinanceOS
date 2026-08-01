@@ -11,17 +11,27 @@ html, body, [class*="css"] { font-family:'DM Sans', sans-serif; }
 [data-testid="stHeader"] { display:none; }
 [data-testid="stAppViewContainer"] .main { padding-top:0; }
 .block-container { max-width:1500px; padding:1.5rem 2.25rem 3rem; }
-[data-testid="stSidebar"] { background:#0D1426; border-right:1px solid var(--border); }
-[data-testid="stSidebar"] > div:first-child { background:linear-gradient(180deg,#111A31 0%,#0D1426 55%); }
-[data-testid="stSidebar"] .block-container { padding:1.25rem .9rem; }
-.brand { padding:.55rem .7rem 1.25rem; }
-.brand-mark { display:inline-flex; align-items:center; justify-content:center; width:42px; height:42px; border-radius:13px; background:linear-gradient(135deg,#818CF8,#4F46E5); font-size:22px; box-shadow:0 10px 25px rgba(99,102,241,.35); }
-.brand-title { font-family:'Plus Jakarta Sans',sans-serif; font-size:21px; font-weight:800; letter-spacing:-.8px; margin:10px 0 2px; color:var(--text); }
-.brand-subtitle { color:var(--muted); font-size:12px; }
-[data-testid="stSidebar"] [data-testid="stRadio"] > label { color:var(--muted); padding:.55rem .65rem; border-radius:10px; margin:.1rem 0; transition:.18s ease; }
-[data-testid="stSidebar"] [data-testid="stRadio"] > label:hover { background:#1A233A; color:var(--text); }
-[data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked) { background:linear-gradient(90deg,rgba(129,140,248,.22),rgba(129,140,248,.07)); color:#E6E9FF; font-weight:700; }
-[data-testid="stSidebar"] [data-testid="stRadio"] input { display:none; }
+[data-testid="stSidebar"] { background:#0A1020; border-right:1px solid rgba(100,116,139,.22); }
+[data-testid="stSidebar"] > div:first-child { background:radial-gradient(circle at 10% 0%,#273765 0,transparent 32%),linear-gradient(180deg,#111B34 0%,#0A1020 60%); }
+[data-testid="stSidebar"] .block-container { padding:1rem .75rem 1.15rem; }
+.brand { padding:.7rem .65rem .75rem; }
+.brand-row { display:flex; align-items:center; gap:10px; }
+.brand-mark { display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px; border-radius:15px; background:linear-gradient(145deg,#9B9CFF,#5B5CEB); font-size:21px; box-shadow:0 12px 24px rgba(79,70,229,.38),inset 0 1px 1px rgba(255,255,255,.32); }
+.brand-title { font-family:'Plus Jakarta Sans',sans-serif; font-size:19px; font-weight:800; letter-spacing:-.8px; color:var(--text); }
+.brand-subtitle { color:#9AA9C7; font-size:11px; margin-top:2px; }
+.sidebar-section { color:#70809F; font-size:10px; font-weight:800; letter-spacing:1.1px; padding:.7rem .7rem .45rem; }
+[data-testid="stSidebar"] [data-testid="stRadio"] { gap:2px; }
+[data-testid="stSidebar"] [data-testid="stRadio"] label[data-baseweb="radio"] { position:relative; color:#AEB9D2; padding:.67rem .72rem; border-radius:14px; margin:2px 0; min-height:40px; transition:background .18s ease,transform .18s ease,box-shadow .18s ease; }
+[data-testid="stSidebar"] [data-testid="stRadio"] label[data-baseweb="radio"] > div:first-child { display:none!important; }
+[data-testid="stSidebar"] [data-testid="stRadio"] label[data-baseweb="radio"] > div:last-child { margin-left:0!important; }
+[data-testid="stSidebar"] [data-testid="stRadio"] label[data-baseweb="radio"] p { font-size:13px; font-weight:600; letter-spacing:-.1px; }
+[data-testid="stSidebar"] [data-testid="stRadio"] label[data-baseweb="radio"]:hover { background:rgba(137,150,190,.10); color:#F1F5FF; transform:translateX(2px); }
+[data-testid="stSidebar"] [data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) { background:linear-gradient(135deg,rgba(129,140,248,.92),rgba(99,102,241,.82)); color:white; box-shadow:0 9px 18px rgba(67,56,202,.28),inset 0 1px 1px rgba(255,255,255,.23); }
+[data-testid="stSidebar"] [data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked)::after { content:""; position:absolute; right:13px; top:50%; width:6px; height:6px; transform:translateY(-50%); border-radius:50%; background:white; box-shadow:0 0 10px white; }
+.sidebar-insight { margin:.9rem .35rem .5rem; padding:.85rem .9rem; border-radius:16px; background:linear-gradient(145deg,rgba(35,50,84,.88),rgba(20,29,52,.88)); border:1px solid rgba(131,148,190,.22); box-shadow:inset 0 1px rgba(255,255,255,.04); }
+.sidebar-insight-label { color:#9AA9C7; font-size:10px; font-weight:700; letter-spacing:.7px; }
+.sidebar-insight-text { color:#E8ECFF; font-size:12px; font-weight:700; margin-top:5px; }
+.sidebar-footer { color:#61708D; font-size:10px; text-align:center; padding-top:.2rem; }
 .app-header { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:.3rem 0 1.3rem; border-bottom:1px solid rgba(39,52,81,.7); margin-bottom:1.5rem; }
 .app-header-title { font-family:'Plus Jakarta Sans',sans-serif; font-size:18px; font-weight:800; letter-spacing:-.5px; color:var(--text); }
 .app-header-subtitle { color:var(--muted); font-size:13px; margin-top:3px; }

@@ -39,13 +39,18 @@ def edit_account_dialog(cuenta):
         "Saldo",
         value=float(cuenta.saldo),
         step=1000.0,
+        disabled=bool(cuenta.movimientos),
         key=f"edit_saldo_{cuenta.id}"
     )
+
+    if cuenta.movimientos:
+        st.caption("El saldo se calcula con los movimientos registrados. Para corregirlo, crea un movimiento de ajuste.")
 
     moneda = st.selectbox(
         "Moneda",
         monedas,
         index=monedas.index(cuenta.moneda),
+        disabled=bool(cuenta.movimientos),
         key=f"edit_moneda_{cuenta.id}"
     )
 
@@ -75,15 +80,19 @@ def edit_account_dialog(cuenta):
             use_container_width=True
         ):
 
-            service.actualizar_cuenta(
-                cuenta.id,
-                nombre,
-                tipo,
-                saldo,
-                moneda,
-                cuenta.color,
-                cuenta.icono
-            )
+            try:
+                service.actualizar_cuenta(
+                    cuenta.id,
+                    nombre,
+                    tipo,
+                    saldo,
+                    moneda,
+                    cuenta.color,
+                    cuenta.icono
+                )
+            except ValueError as error:
+                st.error(str(error))
+                return
 
             service.cerrar()
 

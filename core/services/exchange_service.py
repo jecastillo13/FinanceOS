@@ -150,7 +150,29 @@ class ExchangeService:
 
             return 1 / registro.tasa
 
+        # Frankfurter guarda las tasas con USD como base. Con esas dos tasas
+        # podemos convertir entre cualquier par de monedas disponible.
+        tasa_usd_origen = self._tasa_desde_usd(origen)
+        tasa_usd_destino = self._tasa_desde_usd(destino)
+
+        if tasa_usd_origen is not None and tasa_usd_destino is not None:
+            return tasa_usd_destino / tasa_usd_origen
+
         return None
+
+    def _tasa_desde_usd(self, moneda):
+        if moneda == "USD":
+            return 1.0
+
+        registro = (
+            self.db.query(TasaCambio)
+            .filter(
+                TasaCambio.moneda_origen == "USD",
+                TasaCambio.moneda_destino == moneda,
+            )
+            .first()
+        )
+        return registro.tasa if registro else None
 
     # =====================================================
     # CONVERTIR

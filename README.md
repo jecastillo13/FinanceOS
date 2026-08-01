@@ -40,7 +40,10 @@ La base de datos SQLite se crea localmente en `database/finance.db` y no se vers
 - Una categoría de tipo **Ingreso** guarda el valor como positivo.
 - Una categoría de tipo **Gasto** guarda el valor como negativo.
 - El saldo de una cuenta se actualiza al crear, editar o eliminar un movimiento.
-- El patrimonio se expresa en COP usando las tasas almacenadas. Si falta una tasa de una moneda, esa cuenta requiere revisión antes de confiar en el total consolidado.
+- Un movimiento conserva siempre la moneda de su cuenta. Por ejemplo, un gasto de USD 20 se guarda como USD 20.
+- El patrimonio, los presupuestos, las alertas y los gráficos del Dashboard se expresan en COP usando las tasas almacenadas.
+- Si falta una tasa de cambio, FinanceOS excluye ese valor del total consolidado y muestra una alerta; actualiza las tasas desde Monedas.
+- No se puede cambiar el saldo ni la moneda de una cuenta que ya tiene movimientos, para conservar la trazabilidad contable.
 
 ## Estructura
 

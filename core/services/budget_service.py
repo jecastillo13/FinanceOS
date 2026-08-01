@@ -1,7 +1,6 @@
-from sqlalchemy import func
-
 from core.database import get_session
 from core.models import Categoria, Movimiento, Presupuesto
+from core.services.exchange_service import ExchangeService
 
 
 class BudgetService:
@@ -44,8 +43,8 @@ class BudgetService:
         return True
 
     def gastado(self, categoria_id, anio, mes):
-        total = (
-            self.db.query(func.sum(Movimiento.valor))
+        movimientos = (
+            self.db.query(Movimiento)
             .join(Categoria)
             .filter(
                 Movimiento.categoria_id == categoria_id,
@@ -53,9 +52,17 @@ class BudgetService:
                 func.extract("year", Movimiento.fecha) == anio,
                 func.extract("month", Movimiento.fecha) == mes,
             )
-            .scalar()
+            .all()
         )
-        return abs(total or 0)
+        exchange = ExchangeService()
+        try:
+            total = sum(
+                exchange.convertir(movimiento.valor, movimiento.cuenta.moneda, "COP") or 0
+                for movimiento in movimientos
+            )
+        finally:
+            exchange.cerrar()
+        return abs(total)
 
     def resumen(self, anio, mes):
         return [

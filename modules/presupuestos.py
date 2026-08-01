@@ -10,7 +10,7 @@ MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto
 
 def mostrar():
     st.title("📊 Presupuestos mensuales")
-    st.caption("Define límites por categoría y controla el gasto de cada mes.")
+    st.caption("Define límites en COP por categoría y controla el gasto de cada mes.")
     budget_service = BudgetService()
     category_service = CategoryService()
 
@@ -32,7 +32,7 @@ def mostrar():
         with st.expander("➕ Crear o actualizar presupuesto", expanded=True):
             with st.form("guardar_presupuesto", clear_on_submit=True):
                 categoria_id = st.selectbox("Categoría", categoria_ids, format_func=lambda item: f"{categorias_por_id[item].icono or '🏷️'} {categorias_por_id[item].nombre}")
-                valor = st.number_input("Presupuesto mensual", min_value=0.01, value=1.0, step=10000.0, format="%.2f")
+                valor = st.number_input("Presupuesto mensual (COP)", min_value=0.01, value=1.0, step=10000.0, format="%.2f")
                 if st.form_submit_button("Guardar presupuesto", use_container_width=True):
                     budget_service.guardar_presupuesto(anio, mes, categoria_id, valor)
                     st.success("Presupuesto guardado.")
