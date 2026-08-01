@@ -133,15 +133,16 @@ class MovementService:
     # CONSULTAS
     # =====================================================
 
-    def obtener_movimientos(self):
-
-        return (
+    def obtener_movimientos(self, limite=None):
+        consulta = (
             self.db.query(Movimiento)
             .join(Categoria)
             .filter(Categoria.tipo.in_(["Ingreso", "Gasto"]))
             .order_by(Movimiento.fecha.desc())
-            .all()
         )
+        if limite:
+            consulta = consulta.limit(limite)
+        return consulta.all()
 
     def obtener_movimiento(self, movimiento_id):
 

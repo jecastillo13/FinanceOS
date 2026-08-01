@@ -9,6 +9,28 @@ from components.dialogs.delete_confirmation import confirm_delete
 TIPOS = ["Ingreso", "Gasto", "Transferencia", "Ahorro", "Inversion"]
 
 
+@st.dialog("✏️ Editar categoría")
+def editar_categoria_dialog(service, categoria):
+    with st.form(f"editar_categoria_{categoria.id}"):
+        col1, col2 = st.columns(2)
+        with col1:
+            nombre_editado = st.text_input("Nombre", value=categoria.nombre, key=f"nombre_{categoria.id}")
+            tipo_editado = st.selectbox("Tipo", TIPOS, index=TIPOS.index(categoria.tipo) if categoria.tipo in TIPOS else 0, key=f"tipo_{categoria.id}")
+            grupo_editado = st.text_input("Grupo", value=categoria.grupo or "Otros", key=f"grupo_{categoria.id}")
+        with col2:
+            icono_editado = st.text_input("Icono", value=categoria.icono or "🏷️", max_chars=10, key=f"icono_{categoria.id}")
+            color_editado = st.color_picker("Color", value=categoria.color or "#2196F3", key=f"color_{categoria.id}")
+            activa_editada = st.checkbox("Activa", value=bool(categoria.activa), key=f"activa_{categoria.id}")
+            orden_editado = st.number_input("Orden", min_value=0, value=categoria.orden or 0, step=1, key=f"orden_{categoria.id}")
+        if st.form_submit_button("Guardar cambios", use_container_width=True):
+            try:
+                service.actualizar_categoria(categoria.id, nombre_editado.strip(), tipo_editado, color_editado, icono_editado or "🏷️", grupo_editado.strip() or "Otros", activa_editada, orden_editado)
+                st.success("Categoría actualizada.")
+                st.rerun()
+            except ValueError as error:
+                st.error(str(error))
+
+
 def mostrar():
     page_header("🏷️", "Categorías", "Organiza tus movimientos por tipo, grupo, icono y prioridad.", "ORGANIZACIÓN")
     service = CategoryService()
@@ -81,24 +103,8 @@ def mostrar():
             estado = "Activa" if categoria.activa else "Inactiva"
             sistema = " · Sistema" if categoria.es_sistema else ""
             with st.expander(f"{categoria.icono or '🏷️'} {categoria.nombre} · {estado}{sistema}"):
-                with st.form(f"editar_categoria_{categoria.id}"):
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        nombre_editado = st.text_input("Nombre", value=categoria.nombre, key=f"nombre_{categoria.id}")
-                        tipo_editado = st.selectbox("Tipo", TIPOS, index=TIPOS.index(categoria.tipo) if categoria.tipo in TIPOS else 0, key=f"tipo_{categoria.id}")
-                        grupo_editado = st.text_input("Grupo", value=categoria.grupo or "Otros", key=f"grupo_{categoria.id}")
-                    with col2:
-                        icono_editado = st.text_input("Icono", value=categoria.icono or "🏷️", max_chars=10, key=f"icono_{categoria.id}")
-                        color_editado = st.color_picker("Color", value=categoria.color or "#2196F3", key=f"color_{categoria.id}")
-                        activa_editada = st.checkbox("Activa", value=bool(categoria.activa), key=f"activa_{categoria.id}")
-                        orden_editado = st.number_input("Orden", min_value=0, value=categoria.orden or 0, step=1, key=f"orden_{categoria.id}")
-                    if st.form_submit_button("Guardar cambios"):
-                        try:
-                            service.actualizar_categoria(categoria.id, nombre_editado.strip(), tipo_editado, color_editado, icono_editado or "🏷️", grupo_editado.strip() or "Otros", activa_editada, orden_editado)
-                            st.success("Categoría actualizada.")
-                            st.rerun()
-                        except ValueError as error:
-                            st.error(str(error))
+                if st.button("Editar categoría", key=f"editar_categoria_{categoria.id}"):
+                    editar_categoria_dialog(service, categoria)
 
                 if st.button("Eliminar categoría", key=f"eliminar_{categoria.id}"):
                     confirm_delete(

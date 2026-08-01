@@ -39,7 +39,14 @@ load_css()
 # BASE DE DATOS
 # =====================================================
 
-create_database()
+@st.cache_resource
+def inicializar_base_datos():
+    """Evita revisar el esquema de SQLite en cada interacción de Streamlit."""
+    create_database()
+    return True
+
+
+inicializar_base_datos()
 
 # =====================================================
 # SIDEBAR

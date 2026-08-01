@@ -17,6 +17,7 @@ class DashboardService:
         self.db = get_session()
         self.exchange = ExchangeService()
         self._movimientos_cache = {}
+        self._movimientos_recientes = None
 
     def patrimonio(self):
         return self.account_service.saldo_total(self.MONEDA_BASE, self.exchange)
@@ -25,12 +26,16 @@ class DashboardService:
         return self.account_service.total_cuentas()
 
     def resumen_mes(self, anio=None, mes=None):
+        hoy = date.today()
+        anio, mes = anio or hoy.year, mes or hoy.month
         movimientos, pendientes = self._movimientos_convertidos(anio, mes)
         ingresos = sum(m["valor_cop"] for m in movimientos if m["tipo"] == "Ingreso")
         gastos = abs(sum(m["valor_cop"] for m in movimientos if m["tipo"] == "Gasto"))
         return {"ingresos": ingresos, "gastos": gastos, "balance": ingresos - gastos, "pendientes": pendientes}
 
     def gastos_por_categoria(self, anio=None, mes=None):
+        hoy = date.today()
+        anio, mes = anio or hoy.year, mes or hoy.month
         movimientos, pendientes = self._movimientos_convertidos(anio, mes)
         totales = {}
         for movimiento in movimientos:
@@ -83,7 +88,7 @@ class DashboardService:
         _, pendientes = self.account_service.saldos_consolidados(self.MONEDA_BASE, self.exchange)
         return pendientes
 
-    def _movimientos_convertidos(self, anio=None, mes=None):
+    def _movimientos_convertidos_legacy(self, anio=None, mes=None):
         clave = (anio, mes)
         if clave in self._movimientos_cache:
             return self._movimientos_cache[clave]
@@ -111,6 +116,58 @@ class DashboardService:
         resultado = (convertidos, list(pendientes.values()))
         self._movimientos_cache[clave] = resultado
         return resultado
+
+    def _cargar_movimientos_recientes(self):
+        """Carga una sola vez los datos necesarios para el Dashboard."""
+        if self._movimientos_recientes is not None:
+            return self._movimientos_recientes
+
+        hoy = date.today()
+        indice_inicio = hoy.year * 12 + hoy.month - 1 - 5
+        anio_inicio, mes_inicio_cero = divmod(indice_inicio, 12)
+        fecha_inicio = date(anio_inicio, mes_inicio_cero + 1, 1)
+        consulta = (
+            self.db.query(Movimiento)
+            .join(Categoria)
+            .options(joinedload(Movimiento.cuenta), joinedload(Movimiento.categoria))
+            .filter(
+                Categoria.tipo.in_(["Ingreso", "Gasto"]),
+                Movimiento.fecha >= fecha_inicio,
+            )
+        )
+        convertidos, pendientes = [], {}
+        for movimiento in consulta.all():
+            valor_cop = self.exchange.convertir(
+                movimiento.valor,
+                movimiento.cuenta.moneda,
+                self.MONEDA_BASE,
+            )
+            if valor_cop is None:
+                pendientes[movimiento.cuenta.id] = movimiento.cuenta
+                continue
+            convertidos.append({
+                "fecha": movimiento.fecha,
+                "valor_cop": valor_cop,
+                "tipo": movimiento.categoria.tipo,
+                "categoria": f"{movimiento.categoria.icono or '🏷️'} {movimiento.categoria.nombre}",
+                "categoria_id": movimiento.categoria_id,
+            })
+        self._movimientos_recientes = (convertidos, list(pendientes.values()))
+        return self._movimientos_recientes
+
+    def _movimientos_convertidos(self, anio=None, mes=None):
+        """Filtra en memoria los movimientos ya convertidos del periodo pedido."""
+        movimientos, pendientes = self._cargar_movimientos_recientes()
+        if anio is None or mes is None:
+            return movimientos, pendientes
+        return (
+            [
+                movimiento
+                for movimiento in movimientos
+                if movimiento["fecha"].year == anio and movimiento["fecha"].month == mes
+            ],
+            pendientes,
+        )
 
     def cerrar(self):
         self.account_service.cerrar()

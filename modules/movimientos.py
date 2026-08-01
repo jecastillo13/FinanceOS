@@ -11,6 +11,26 @@ def _etiqueta_categoria(categoria):
     return f"{categoria.tipo}: {categoria.nombre}"
 
 
+@st.dialog("✏️ Editar movimiento")
+def editar_movimiento_dialog(service, movimiento, cuentas_por_id, categorias_por_id):
+    cuenta_ids = list(cuentas_por_id)
+    categoria_ids = list(categorias_por_id)
+    with st.form(f"editar_movimiento_{movimiento.id}"):
+        edit_col1, edit_col2 = st.columns(2)
+        with edit_col1:
+            fecha_editada = st.date_input("Fecha", value=movimiento.fecha, key=f"fecha_{movimiento.id}")
+            cuenta_editada = st.selectbox("Cuenta", cuenta_ids, index=cuenta_ids.index(movimiento.cuenta_id), format_func=lambda item: f"{cuentas_por_id[item].nombre} ({cuentas_por_id[item].moneda})", key=f"cuenta_{movimiento.id}")
+            categoria_editada = st.selectbox("Categoría", categoria_ids, index=categoria_ids.index(movimiento.categoria_id), format_func=lambda item: _etiqueta_categoria(categorias_por_id[item]), key=f"categoria_{movimiento.id}")
+        with edit_col2:
+            descripcion_editada = st.text_input("Descripción", value=movimiento.descripcion or "", key=f"descripcion_{movimiento.id}")
+            valor_editado = st.number_input("Valor", min_value=0.01, value=abs(movimiento.valor), step=1000.0, format="%.2f", key=f"valor_{movimiento.id}")
+            observaciones_editadas = st.text_area("Observaciones", value=movimiento.observaciones or "", key=f"observaciones_{movimiento.id}")
+        if st.form_submit_button("Guardar cambios", use_container_width=True):
+            service.actualizar_movimiento(movimiento.id, fecha_editada, descripcion_editada.strip(), valor_editado, cuenta_editada, categoria_editada, observaciones_editadas.strip())
+            st.success("Movimiento actualizado.")
+            st.rerun()
+
+
 def mostrar():
     page_header("💸", "Movimientos", "Registra ingresos y gastos; la categoría define el signo automáticamente.", "ACTIVIDAD")
 
@@ -64,7 +84,8 @@ def mostrar():
                     st.success("Movimiento registrado correctamente.")
                     st.rerun()
 
-        movimientos = movement_service.obtener_movimientos()
+        limite_historial = st.selectbox("Movimientos visibles", [50, 100, 200], index=0)
+        movimientos = movement_service.obtener_movimientos(limite_historial)
         st.divider()
         st.subheader("Historial")
 
@@ -89,33 +110,8 @@ def mostrar():
                 if movimiento.observaciones:
                     st.caption(movimiento.observaciones)
 
-                with st.form(f"editar_movimiento_{movimiento.id}"):
-                    edit_col1, edit_col2 = st.columns(2)
-                    with edit_col1:
-                        fecha_editada = st.date_input("Fecha", value=movimiento.fecha, key=f"fecha_{movimiento.id}")
-                        cuenta_editada = st.selectbox(
-                            "Cuenta", cuenta_ids, index=cuenta_ids.index(movimiento.cuenta_id),
-                            format_func=lambda item: f"{cuentas_por_id[item].nombre} ({cuentas_por_id[item].moneda})",
-                            key=f"cuenta_{movimiento.id}",
-                        )
-                        categoria_editada = st.selectbox(
-                            "Categoría", categoria_ids, index=categoria_ids.index(movimiento.categoria_id),
-                            format_func=lambda item: _etiqueta_categoria(categorias_por_id[item]),
-                            key=f"categoria_{movimiento.id}",
-                        )
-                    with edit_col2:
-                        descripcion_editada = st.text_input("Descripción", value=movimiento.descripcion or "", key=f"descripcion_{movimiento.id}")
-                        valor_editado = st.number_input("Valor", min_value=0.01, value=abs(movimiento.valor), step=1000.0, format="%.2f", key=f"valor_{movimiento.id}")
-                        observaciones_editadas = st.text_area("Observaciones", value=movimiento.observaciones or "", key=f"observaciones_{movimiento.id}")
-
-                    guardar_cambios = st.form_submit_button("Guardar cambios")
-                    if guardar_cambios:
-                        movement_service.actualizar_movimiento(
-                            movimiento.id, fecha_editada, descripcion_editada.strip(), valor_editado,
-                            cuenta_editada, categoria_editada, observaciones_editadas.strip(),
-                        )
-                        st.success("Movimiento actualizado.")
-                        st.rerun()
+                if st.button("Editar movimiento", key=f"editar_movimiento_{movimiento.id}"):
+                    editar_movimiento_dialog(movement_service, movimiento, cuentas_por_id, categorias_por_id)
 
                 if st.button("Eliminar movimiento", key=f"eliminar_movimiento_{movimiento.id}"):
                     confirm_delete(
