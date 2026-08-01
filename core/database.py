@@ -54,6 +54,7 @@ def create_database():
         Cuenta,
         Categoria,
         Movimiento,
+        AdjuntoMovimiento,
         GastoRecurrente,
         Transferencia,
         Presupuesto,

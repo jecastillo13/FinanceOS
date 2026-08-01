@@ -160,6 +160,26 @@ class Movimiento(Base):
         back_populates="movimientos"
     )
 
+    adjuntos = relationship(
+        "AdjuntoMovimiento",
+        back_populates="movimiento",
+        cascade="all, delete-orphan",
+    )
+
+
+class AdjuntoMovimiento(Base):
+    __tablename__ = "adjuntos_movimiento"
+
+    id = Column(Integer, primary_key=True)
+    movimiento_id = Column(Integer, ForeignKey("movimientos.id"), nullable=False)
+    nombre = Column(String(255), nullable=False)
+    ruta = Column(String(500), nullable=False)
+    tipo_mime = Column(String(100), nullable=False)
+    tamano = Column(Integer, nullable=False)
+    fecha = Column(DateTime, default=datetime.now, nullable=False)
+
+    movimiento = relationship("Movimiento", back_populates="adjuntos")
+
 
 # =====================================================
 # GASTOS RECURRENTES

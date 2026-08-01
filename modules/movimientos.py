@@ -2,7 +2,7 @@ from datetime import date
 
 import streamlit as st
 
-from core.services import AccountService, CategoryService, MovementService
+from core.services import AccountService, AttachmentService, CategoryService, MovementService
 from components.ui.page import page_header
 from components.dialogs.delete_confirmation import confirm_delete
 
@@ -12,7 +12,7 @@ def _etiqueta_categoria(categoria):
 
 
 @st.dialog("✏️ Editar movimiento")
-def editar_movimiento_dialog(service, movimiento, cuentas_por_id, categorias_por_id):
+def editar_movimiento_dialog(service, attachment_service, movimiento, cuentas_por_id, categorias_por_id):
     cuenta_ids = list(cuentas_por_id)
     categoria_ids = list(categorias_por_id)
     with st.form(f"editar_movimiento_{movimiento.id}"):
@@ -25,16 +25,28 @@ def editar_movimiento_dialog(service, movimiento, cuentas_por_id, categorias_por
             descripcion_editada = st.text_input("Descripción", value=movimiento.descripcion or "", key=f"descripcion_{movimiento.id}")
             valor_editado = st.number_input("Valor", min_value=0.01, value=abs(movimiento.valor), step=1000.0, format="%.2f", key=f"valor_{movimiento.id}")
             observaciones_editadas = st.text_area("Observaciones", value=movimiento.observaciones or "", key=f"observaciones_{movimiento.id}")
+            comprobante = st.file_uploader("Añadir comprobante", type=["jpg", "jpeg", "png", "webp", "pdf"], key=f"comprobante_{movimiento.id}")
         if st.form_submit_button("Guardar cambios", use_container_width=True):
             service.actualizar_movimiento(movimiento.id, fecha_editada, descripcion_editada.strip(), valor_editado, cuenta_editada, categoria_editada, observaciones_editadas.strip())
+            if comprobante:
+                attachment_service.guardar(movimiento.id, comprobante.name, comprobante.getvalue(), comprobante.type)
             st.success("Movimiento actualizado.")
             st.rerun()
+
+    adjuntos = attachment_service.obtener_por_movimiento(movimiento.id)
+    if adjuntos:
+        st.caption(f"Comprobantes adjuntos: {len(adjuntos)}")
+        for adjunto in adjuntos:
+            contenido = attachment_service.leer(adjunto)
+            if contenido:
+                st.download_button(f"Descargar {adjunto.nombre}", data=contenido, file_name=adjunto.nombre, mime=adjunto.tipo_mime, key=f"descargar_adjunto_{adjunto.id}")
 
 
 def mostrar():
     page_header("💸", "Movimientos", "Registra ingresos y gastos; la categoría define el signo automáticamente.", "ACTIVIDAD")
 
     movement_service = MovementService()
+    attachment_service = AttachmentService()
     account_service = AccountService()
     category_service = CategoryService()
 
@@ -74,13 +86,16 @@ def mostrar():
                     descripcion = st.text_input("Descripción", placeholder="Ej: Nómina de julio")
                     valor = st.number_input("Valor", min_value=0.01, value=1.0, step=1000.0, format="%.2f")
                     observaciones = st.text_area("Observaciones", placeholder="Opcional")
+                    comprobante = st.file_uploader("Comprobante (opcional)", type=["jpg", "jpeg", "png", "webp", "pdf"])
 
                 guardar = st.form_submit_button("Guardar movimiento", use_container_width=True)
 
                 if guardar:
-                    movement_service.registrar_movimiento(
+                    movimiento = movement_service.registrar_movimiento(
                         fecha, descripcion.strip(), valor, cuenta_id, categoria_id, observaciones.strip()
                     )
+                    if comprobante:
+                        attachment_service.guardar(movimiento.id, comprobante.name, comprobante.getvalue(), comprobante.type)
                     st.success("Movimiento registrado correctamente.")
                     st.rerun()
 
@@ -129,7 +144,7 @@ def mostrar():
                     st.caption(movimiento.observaciones)
 
                 if st.button("Editar movimiento", key=f"editar_movimiento_{movimiento.id}"):
-                    editar_movimiento_dialog(movement_service, movimiento, cuentas_por_id, categorias_por_id)
+                    editar_movimiento_dialog(movement_service, attachment_service, movimiento, cuentas_por_id, categorias_por_id)
 
                 if st.button("Eliminar movimiento", key=f"eliminar_movimiento_{movimiento.id}"):
                     confirm_delete(
@@ -141,5 +156,6 @@ def mostrar():
                     )
     finally:
         movement_service.cerrar()
+        attachment_service.cerrar()
         account_service.cerrar()
         category_service.cerrar()
