@@ -3,6 +3,7 @@ from sqlalchemy import func, or_
 from core.database import get_session
 from core.models import Categoria, Movimiento, Cuenta
 from core.services.audit_service import registrar_auditoria
+from core.services.attachment_service import eliminar_archivos_adjuntos
 from core.services.validation import monto_positivo, texto_requerido
 
 
@@ -126,6 +127,7 @@ class MovementService:
             "MOVIMIENTO_ELIMINADO",
             f"Movimiento #{movimiento.id} eliminado: {movimiento.descripcion} ({movimiento.valor:.2f}).",
         )
+        eliminar_archivos_adjuntos(movimiento)
         self.db.delete(movimiento)
         self.db.commit()
 

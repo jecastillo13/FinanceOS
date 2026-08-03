@@ -3,6 +3,7 @@ from sqlalchemy.orm import joinedload
 from core.database import get_session
 from core.models import Categoria, Cuenta, Meta, MetaOperacion, Movimiento
 from core.services.audit_service import registrar_auditoria
+from core.services.attachment_service import eliminar_archivos_adjuntos
 from core.services.exchange_service import ExchangeService
 from core.services.validation import moneda_valida, monto_positivo, texto_requerido
 
@@ -129,6 +130,7 @@ class GoalService:
             cuenta = self.db.get(Cuenta, movimiento.cuenta_id)
             if cuenta:
                 cuenta.saldo -= movimiento.valor
+            eliminar_archivos_adjuntos(movimiento)
             self.db.delete(movimiento)
         registrar_auditoria(
             self.db,
@@ -160,6 +162,7 @@ class GoalService:
                 cuenta = self.db.get(Cuenta, movimiento.cuenta_id)
                 if cuenta:
                     cuenta.saldo -= movimiento.valor
+                eliminar_archivos_adjuntos(movimiento)
                 self.db.delete(operacion)
                 self.db.delete(movimiento)
                 pagos_eliminados += 1

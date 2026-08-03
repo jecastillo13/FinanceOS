@@ -7,8 +7,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
 from api.schemas import (
-    CategoriaRespuesta, ConversionRespuesta, CuentaCrear, CuentaRespuesta,
-    AdjuntoRespuesta, GastoRecurrenteCrear, GastoRecurrenteRespuesta,
+    AdjuntoRespuesta, CategoriaActualizar, CategoriaGuardar, CategoriaRespuesta,
+    ConversionRespuesta, CuentaActualizar, CuentaCrear, CuentaRespuesta,
+    GastoRecurrenteActualizar, GastoRecurrenteCrear, GastoRecurrenteRespuesta,
     MetaCrear, MetaDetalleRespuesta, MetaOperacionCrear, MetaOperacionRespuesta,
     MetaPagoCrear, MetaRespuesta, MovimientoCrear, MovimientoRespuesta, PagoRecurrenteCrear,
     PresupuestoGuardar, PresupuestoRespuesta, TransferenciaCrear, TransferenciaRespuesta,
@@ -71,12 +72,89 @@ def crear_cuenta(datos: CuentaCrear):
         service.cerrar()
 
 
+@app.get("/api/v1/cuentas/{cuenta_id}", response_model=CuentaRespuesta)
+def detalle_cuenta(cuenta_id: int):
+    service = AccountService()
+    try:
+        cuenta = service.obtener_cuenta(cuenta_id)
+        if cuenta is None:
+            raise HTTPException(status_code=404, detail="La cuenta no existe.")
+        return cuenta
+    finally:
+        service.cerrar()
+
+
+@app.put("/api/v1/cuentas/{cuenta_id}", response_model=CuentaRespuesta)
+def actualizar_cuenta(cuenta_id: int, datos: CuentaActualizar):
+    service = AccountService()
+    try:
+        cuenta = service.obtener_cuenta(cuenta_id)
+        if cuenta is None:
+            raise HTTPException(status_code=404, detail="La cuenta no existe.")
+        return service.actualizar_cuenta(cuenta_id, saldo=cuenta.saldo, **datos.model_dump())
+    except ValueError as error:
+        _error_negocio(error)
+    finally:
+        service.cerrar()
+
+
+@app.delete("/api/v1/cuentas/{cuenta_id}", status_code=204, response_class=Response)
+def eliminar_cuenta(cuenta_id: int):
+    service = AccountService()
+    try:
+        if service.obtener_cuenta(cuenta_id) is None:
+            raise HTTPException(status_code=404, detail="La cuenta no existe.")
+        if not service.eliminar_cuenta(cuenta_id):
+            raise HTTPException(status_code=409, detail="La cuenta tiene movimientos y no puede eliminarse.")
+        return Response(status_code=204)
+    finally:
+        service.cerrar()
+
+
 @app.get("/api/v1/categorias", response_model=list[CategoriaRespuesta])
 def listar_categorias(solo_activas: bool = True):
     service = CategoryService()
     try:
         categorias = service.obtener_categorias()
         return [categoria for categoria in categorias if categoria.activa] if solo_activas else categorias
+    finally:
+        service.cerrar()
+
+
+@app.post("/api/v1/categorias", response_model=CategoriaRespuesta, status_code=201)
+def crear_categoria(datos: CategoriaGuardar):
+    service = CategoryService()
+    try:
+        return service.crear_categoria(**datos.model_dump())
+    except ValueError as error:
+        _error_negocio(error)
+    finally:
+        service.cerrar()
+
+
+@app.put("/api/v1/categorias/{categoria_id}", response_model=CategoriaRespuesta)
+def actualizar_categoria(categoria_id: int, datos: CategoriaActualizar):
+    service = CategoryService()
+    try:
+        categoria = service.actualizar_categoria(categoria_id, **datos.model_dump())
+        if categoria is None:
+            raise HTTPException(status_code=404, detail="La categoría no existe.")
+        return categoria
+    except ValueError as error:
+        _error_negocio(error)
+    finally:
+        service.cerrar()
+
+
+@app.delete("/api/v1/categorias/{categoria_id}", status_code=204, response_class=Response)
+def eliminar_categoria(categoria_id: int):
+    service = CategoryService()
+    try:
+        if service.obtener_categoria(categoria_id) is None:
+            raise HTTPException(status_code=404, detail="La categoría no existe.")
+        if not service.eliminar_categoria(categoria_id):
+            raise HTTPException(status_code=409, detail="La categoría está relacionada con movimientos y no puede eliminarse.")
+        return Response(status_code=204)
     finally:
         service.cerrar()
 
@@ -98,6 +176,44 @@ def crear_movimiento(datos: MovimientoCrear):
         return _serializar_movimiento(service.registrar_movimiento(**datos.model_dump()))
     except ValueError as error:
         _error_negocio(error)
+    finally:
+        service.cerrar()
+
+
+@app.get("/api/v1/movimientos/{movimiento_id}", response_model=MovimientoRespuesta)
+def detalle_movimiento(movimiento_id: int):
+    service = MovementService()
+    try:
+        movimiento = service.obtener_movimiento(movimiento_id)
+        if movimiento is None:
+            raise HTTPException(status_code=404, detail="El movimiento no existe.")
+        return _serializar_movimiento(movimiento)
+    finally:
+        service.cerrar()
+
+
+@app.put("/api/v1/movimientos/{movimiento_id}", response_model=MovimientoRespuesta)
+def actualizar_movimiento(movimiento_id: int, datos: MovimientoCrear):
+    service = MovementService()
+    try:
+        movimiento = service.actualizar_movimiento(movimiento_id, **datos.model_dump())
+        if movimiento is None:
+            raise HTTPException(status_code=404, detail="El movimiento no existe.")
+        return _serializar_movimiento(movimiento)
+    except ValueError as error:
+        _error_negocio(error)
+    finally:
+        service.cerrar()
+
+
+@app.delete("/api/v1/movimientos/{movimiento_id}", status_code=204, response_class=Response)
+def eliminar_movimiento(movimiento_id: int):
+    service = MovementService()
+    try:
+        if service.obtener_movimiento(movimiento_id) is None:
+            raise HTTPException(status_code=404, detail="El movimiento no existe.")
+        service.eliminar_movimiento(movimiento_id)
+        return Response(status_code=204)
     finally:
         service.cerrar()
 
@@ -248,6 +364,31 @@ def crear_gasto_recurrente(datos: GastoRecurrenteCrear):
         service.cerrar()
 
 
+@app.put("/api/v1/gastos-recurrentes/{gasto_id}", response_model=GastoRecurrenteRespuesta)
+def actualizar_gasto_recurrente(gasto_id: int, datos: GastoRecurrenteActualizar):
+    service = RecurringExpenseService()
+    try:
+        gasto = service.actualizar_gasto(gasto_id, **datos.model_dump())
+        if gasto is None:
+            raise HTTPException(status_code=404, detail="El gasto recurrente no existe.")
+        return _serializar_recurrente(gasto)
+    except ValueError as error:
+        _error_negocio(error)
+    finally:
+        service.cerrar()
+
+
+@app.delete("/api/v1/gastos-recurrentes/{gasto_id}", status_code=204, response_class=Response)
+def eliminar_gasto_recurrente(gasto_id: int):
+    service = RecurringExpenseService()
+    try:
+        if not service.eliminar_gasto(gasto_id):
+            raise HTTPException(status_code=404, detail="El gasto recurrente no existe.")
+        return Response(status_code=204)
+    finally:
+        service.cerrar()
+
+
 @app.post("/api/v1/gastos-recurrentes/{gasto_id}/pagar", response_model=MovimientoRespuesta)
 def pagar_gasto_recurrente(gasto_id: int, datos: PagoRecurrenteCrear):
     service = RecurringExpenseService()
@@ -279,6 +420,17 @@ def crear_transferencia(datos: TransferenciaCrear):
         service.cerrar()
 
 
+@app.delete("/api/v1/transferencias/{transferencia_id}", status_code=204, response_class=Response)
+def eliminar_transferencia(transferencia_id: int):
+    service = TransferService()
+    try:
+        if not service.eliminar_transferencia(transferencia_id):
+            raise HTTPException(status_code=404, detail="La transferencia no existe.")
+        return Response(status_code=204)
+    finally:
+        service.cerrar()
+
+
 @app.get("/api/v1/presupuestos", response_model=list[PresupuestoRespuesta])
 def listar_presupuestos(anio: int = Query(ge=2000, le=2100), mes: int = Query(ge=1, le=12)):
     service = BudgetService()
@@ -296,6 +448,17 @@ def guardar_presupuesto(datos: PresupuestoGuardar):
         return _serializar_presupuesto({"presupuesto": presupuesto, "gastado": service.gastado(presupuesto.categoria_id, presupuesto.anio, presupuesto.mes)})
     except ValueError as error:
         _error_negocio(error)
+    finally:
+        service.cerrar()
+
+
+@app.delete("/api/v1/presupuestos/{presupuesto_id}", status_code=204, response_class=Response)
+def eliminar_presupuesto(presupuesto_id: int):
+    service = BudgetService()
+    try:
+        if not service.eliminar_presupuesto(presupuesto_id):
+            raise HTTPException(status_code=404, detail="El presupuesto no existe.")
+        return Response(status_code=204)
     finally:
         service.cerrar()
 

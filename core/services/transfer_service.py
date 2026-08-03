@@ -1,6 +1,7 @@
 from core.database import get_session
 from core.models import Categoria, Cuenta, Movimiento, Transferencia
 from core.services.audit_service import registrar_auditoria
+from core.services.attachment_service import eliminar_archivos_adjuntos
 from core.services.validation import monto_positivo
 
 
@@ -79,8 +80,10 @@ class TransferService:
             origen.saldo += transferencia.valor
             destino.saldo -= transferencia.valor
         if salida:
+            eliminar_archivos_adjuntos(salida)
             self.db.delete(salida)
         if entrada:
+            eliminar_archivos_adjuntos(entrada)
             self.db.delete(entrada)
         registrar_auditoria(
             self.db,

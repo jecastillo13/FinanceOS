@@ -26,6 +26,27 @@ class CuentaRespuesta(ORMResponse):
     icono: str
 
 
+class CuentaActualizar(BaseModel):
+    nombre: str = Field(min_length=1, max_length=100)
+    tipo: str = Field(min_length=1, max_length=50)
+    moneda: str = "COP"
+    color: str = "#2563EB"
+    icono: str = "🏦"
+
+
+class CategoriaGuardar(BaseModel):
+    nombre: str = Field(min_length=1, max_length=80)
+    tipo: str
+    color: str = "#4CAF50"
+    icono: str = "🏷️"
+    grupo: str = "Otros"
+    orden: int = 0
+
+
+class CategoriaActualizar(CategoriaGuardar):
+    activa: bool = True
+
+
 class CategoriaRespuesta(ORMResponse):
     id: int
     nombre: str
@@ -124,6 +145,10 @@ class GastoRecurrenteRespuesta(ORMResponse):
     activo: bool
     categoria_id: int
     categoria: str
+
+
+class GastoRecurrenteActualizar(GastoRecurrenteCrear):
+    activo: bool = True
 
 
 class PagoRecurrenteCrear(BaseModel):

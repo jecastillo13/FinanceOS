@@ -6,6 +6,14 @@ from core.models import AdjuntoMovimiento, Movimiento
 from core.services.audit_service import registrar_auditoria
 
 
+def eliminar_archivos_adjuntos(movimiento):
+    """Elimina del disco los comprobantes que desaparecerán con un movimiento."""
+    for adjunto in list(movimiento.adjuntos):
+        ruta = Path(BASE_DIR) / adjunto.ruta
+        if ruta.is_file():
+            ruta.unlink()
+
+
 class AttachmentService:
     """Guarda comprobantes locales vinculados a movimientos financieros."""
 

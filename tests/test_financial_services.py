@@ -88,13 +88,42 @@ class FinancialServicesTest(unittest.TestCase):
         destino_id = self._crear_cuenta("Destino", 200)
         service = TransferService()
         try:
-            service.crear_transferencia(date.today(), origen_id, destino_id, 300, "Prueba")
+            transferencia = service.crear_transferencia(date.today(), origen_id, destino_id, 300, "Prueba")
+            transferencia_id = transferencia.id
         finally:
             service.cerrar()
 
         self.assertEqual(self._saldo(origen_id), 700)
         self.assertEqual(self._saldo(destino_id), 500)
         self.assertEqual(self._saldo(origen_id) + self._saldo(destino_id), 1200)
+
+        service = TransferService()
+        try:
+            self.assertTrue(service.eliminar_transferencia(transferencia_id))
+        finally:
+            service.cerrar()
+        self.assertEqual(self._saldo(origen_id), 1000)
+        self.assertEqual(self._saldo(destino_id), 200)
+
+    def test_editar_movimiento_entre_cuentas_recalcula_ambos_saldos(self):
+        origen_id = self._crear_cuenta("Cuenta anterior", 1000)
+        destino_id = self._crear_cuenta("Cuenta nueva", 500)
+        service = MovementService()
+        try:
+            movimiento = service.registrar_movimiento(date.today(), "Compra inicial", 100, origen_id, self.gasto_id)
+            service.actualizar_movimiento(
+                movimiento.id,
+                date.today(),
+                "Compra corregida",
+                250,
+                destino_id,
+                self.gasto_id,
+            )
+        finally:
+            service.cerrar()
+
+        self.assertEqual(self._saldo(origen_id), 1000)
+        self.assertEqual(self._saldo(destino_id), 250)
 
     def test_pago_recurrente_crea_gasto_y_avanza_fecha(self):
         cuenta_id = self._crear_cuenta(saldo=1000)
