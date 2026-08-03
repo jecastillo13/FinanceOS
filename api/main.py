@@ -20,7 +20,7 @@ from core.database import create_database
 from core.services import (
     AccountService, AttachmentService, BudgetService, CategoryService, DashboardService,
     ExchangeService, GoalService, InvestmentService, MovementService,
-    RecurringExpenseService, TransferService,
+    RecurringExpenseService, ReportService, TransferService,
 )
 
 
@@ -543,6 +543,39 @@ def resumen_dashboard():
             for cuenta in pendientes
         ]
         return resumen
+    finally:
+        service.cerrar()
+
+
+@app.get("/api/v1/reportes/{anio}/{mes}/resumen")
+def resumen_reporte(anio: int, mes: int):
+    if not 2000 <= anio <= 2100 or not 1 <= mes <= 12:
+        raise HTTPException(status_code=400, detail="El período solicitado no es válido.")
+    service = ReportService()
+    try:
+        reporte = service.obtener_reporte(anio, mes)
+        return {clave: valor for clave, valor in reporte.items() if clave != "filas"} | {"movimientos": len(reporte["filas"])}
+    finally:
+        service.cerrar()
+
+
+@app.get("/api/v1/reportes/{anio}/{mes}/{formato}")
+def descargar_reporte(anio: int, mes: int, formato: str):
+    if not 2000 <= anio <= 2100 or not 1 <= mes <= 12:
+        raise HTTPException(status_code=400, detail="El período solicitado no es válido.")
+    generadores = {
+        "csv": ("generar_csv", "text/csv"),
+        "xlsx": ("generar_excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+        "pdf": ("generar_pdf", "application/pdf"),
+    }
+    if formato not in generadores:
+        raise HTTPException(status_code=404, detail="Formato no disponible. Usa csv, xlsx o pdf.")
+    service = ReportService()
+    try:
+        metodo, tipo_mime = generadores[formato]
+        contenido = getattr(service, metodo)(service.obtener_reporte(anio, mes))
+        nombre = f"financeos_{anio}_{mes:02d}.{formato}"
+        return Response(contenido, media_type=tipo_mime, headers={"Content-Disposition": f'attachment; filename="{nombre}"'})
     finally:
         service.cerrar()
 

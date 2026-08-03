@@ -20,6 +20,7 @@ from core.services import (  # noqa: E402
     InvestmentService,
     MovementService,
     RecurringExpenseService,
+    ReportService,
     TransferService,
 )
 
@@ -207,6 +208,28 @@ class FinancialServicesTest(unittest.TestCase):
         self.assertEqual(resumen["cuentas_cop"], 1000)
         self.assertEqual(resumen["inversiones_cop"], 300)
         self.assertEqual(resumen["patrimonio"], 1300)
+
+    def test_reporte_mensual_resume_y_exporta_movimientos(self):
+        cuenta_id = self._crear_cuenta()
+        movimientos = MovementService()
+        try:
+            movimientos.registrar_movimiento(date.today(), "Nómina reporte", 500, cuenta_id, self.ingreso_id)
+            movimientos.registrar_movimiento(date.today(), "Mercado reporte", 125, cuenta_id, self.gasto_id)
+        finally:
+            movimientos.cerrar()
+
+        reportes = ReportService()
+        try:
+            reporte = reportes.obtener_reporte(date.today().year, date.today().month)
+            csv = reportes.generar_csv(reporte).decode("utf-8-sig")
+        finally:
+            reportes.cerrar()
+
+        self.assertEqual(reporte["ingresos_cop"], 500)
+        self.assertEqual(reporte["gastos_cop"], 125)
+        self.assertEqual(reporte["balance_cop"], 375)
+        self.assertIn("Nómina reporte", csv)
+        self.assertIn("Mercado reporte", csv)
 
 
 if __name__ == "__main__":
