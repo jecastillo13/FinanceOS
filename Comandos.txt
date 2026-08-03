@@ -1,0 +1,119 @@
+FINANCEOS - COMANDOS ÚTILES
+===========================
+
+Todos los comandos deben ejecutarse desde:
+C:\Users\USUARIO\FinanceOS
+
+
+1. EJECUTAR LA APLICACIÓN WEB
+-----------------------------
+
+streamlit run financeos.py
+
+Abrir en el computador:
+http://localhost:8501
+
+Para permitir acceso desde otro dispositivo de la misma red:
+
+streamlit run financeos.py --server.address 0.0.0.0 --server.port 8501
+
+Consultar la IP privada del computador:
+
+ipconfig
+
+En el teléfono se abre:
+http://IP-DEL-COMPUTADOR:8501
+
+
+2. EJECUTAR LA API
+------------------
+
+uvicorn api.main:app --reload --port 8000
+
+Documentación interactiva:
+http://127.0.0.1:8000/docs
+
+Para permitir conexión desde la aplicación móvil:
+
+uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
+
+En el teléfono o aplicación móvil:
+http://IP-DEL-COMPUTADOR:8000
+
+
+3. DETENER STREAMLIT O LA API
+-----------------------------
+
+Presionar:
+Ctrl + C
+
+
+4. EJECUTAR PRUEBAS
+-------------------
+
+python -m unittest discover -s tests -v
+
+El resultado correcto termina con:
+OK
+
+
+5. REVISAR CAMBIOS DE GIT
+-------------------------
+
+git status
+
+Ver las diferencias del código:
+
+git diff
+
+
+6. CREAR UN COMMIT
+------------------
+
+Agregar únicamente los archivos indicados para cada cambio:
+
+git add ruta-del-archivo-1 ruta-del-archivo-2
+
+Crear el commit:
+
+git commit -m "feat: descripción del cambio en español"
+
+Subirlo a la rama principal:
+
+git push origin main
+
+Confirmar el resultado:
+
+git status
+
+
+7. RETIRAR UN ARCHIVO DEL COMMIT SIN BORRARLO
+---------------------------------------------
+
+git restore --staged ruta-del-archivo
+
+
+8. ARCHIVOS QUE NO DEBEN AGREGARSE
+----------------------------------
+
+No agregar manualmente:
+
+database/finance.db
+__pycache__/
+*.pyc
+uploads/
+.venv/
+
+Estos archivos contienen datos locales, archivos generados o dependencias.
+
+
+9. INSTALAR DEPENDENCIAS
+------------------------
+
+python -m pip install -r requirements.txt
+
+
+NOTA
+----
+
+Los avisos de Git sobre LF y CRLF son normales en Windows y no representan un error.
