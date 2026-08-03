@@ -208,3 +208,40 @@ class AdjuntoRespuesta(ORMResponse):
     tamano: int
     fecha: datetime
     url_descarga: str
+
+
+class InversionGuardar(BaseModel):
+    activo: str = Field(min_length=1, max_length=100)
+    tipo: str = Field(min_length=1, max_length=50)
+    cantidad: float = Field(gt=0)
+    precio_compra: float = Field(gt=0)
+    precio_actual: float = Field(gt=0)
+    broker: str = ""
+    moneda: str = "USD"
+    valores_totales: bool = False
+
+
+class InversionRespuesta(ORMResponse):
+    id: int
+    activo: str
+    tipo: str
+    cantidad: float
+    precio_compra: float
+    precio_actual: float
+    broker: str | None
+    moneda: str
+    costo: float
+    valor: float
+    ganancia: float
+    rentabilidad: float
+    costo_cop: float | None
+    valor_cop: float | None
+
+
+class PortafolioRespuesta(BaseModel):
+    costo_total_cop: float
+    valor_total_cop: float
+    ganancia_total_cop: float
+    rentabilidad: float
+    posiciones: list[InversionRespuesta]
+    monedas_sin_tasa: list[str]

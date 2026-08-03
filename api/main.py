@@ -10,14 +10,17 @@ from api.schemas import (
     AdjuntoRespuesta, CategoriaActualizar, CategoriaGuardar, CategoriaRespuesta,
     ConversionRespuesta, CuentaActualizar, CuentaCrear, CuentaRespuesta,
     GastoRecurrenteActualizar, GastoRecurrenteCrear, GastoRecurrenteRespuesta,
+    InversionGuardar, InversionRespuesta,
     MetaCrear, MetaDetalleRespuesta, MetaOperacionCrear, MetaOperacionRespuesta,
     MetaPagoCrear, MetaRespuesta, MovimientoCrear, MovimientoRespuesta, PagoRecurrenteCrear,
-    PresupuestoGuardar, PresupuestoRespuesta, TransferenciaCrear, TransferenciaRespuesta,
+    PortafolioRespuesta, PresupuestoGuardar, PresupuestoRespuesta,
+    TransferenciaCrear, TransferenciaRespuesta,
 )
 from core.database import create_database
 from core.services import (
     AccountService, AttachmentService, BudgetService, CategoryService, DashboardService,
-    ExchangeService, GoalService, MovementService, RecurringExpenseService, TransferService,
+    ExchangeService, GoalService, InvestmentService, MovementService,
+    RecurringExpenseService, TransferService,
 )
 
 
@@ -463,6 +466,60 @@ def eliminar_presupuesto(presupuesto_id: int):
         service.cerrar()
 
 
+@app.get("/api/v1/inversiones", response_model=PortafolioRespuesta)
+def listar_inversiones():
+    service = InvestmentService()
+    try:
+        resumen = service.resumen("COP")
+        return PortafolioRespuesta(
+            costo_total_cop=resumen["costo_total"],
+            valor_total_cop=resumen["valor_total"],
+            ganancia_total_cop=resumen["ganancia_total"],
+            rentabilidad=resumen["rentabilidad"],
+            posiciones=[_serializar_inversion(service.resumen_posicion(inversion, "COP")) for inversion in service.obtener_inversiones()],
+            monedas_sin_tasa=sorted({inversion.moneda for inversion in resumen["sin_tasa"]}),
+        )
+    finally:
+        service.cerrar()
+
+
+@app.post("/api/v1/inversiones", response_model=InversionRespuesta, status_code=201)
+def crear_inversion(datos: InversionGuardar):
+    service = InvestmentService()
+    try:
+        inversion = service.crear_inversion(**datos.model_dump())
+        return _serializar_inversion(service.resumen_posicion(inversion, "COP"))
+    except ValueError as error:
+        _error_negocio(error)
+    finally:
+        service.cerrar()
+
+
+@app.put("/api/v1/inversiones/{inversion_id}", response_model=InversionRespuesta)
+def actualizar_inversion(inversion_id: int, datos: InversionGuardar):
+    service = InvestmentService()
+    try:
+        inversion = service.actualizar_inversion(inversion_id, **datos.model_dump())
+        if inversion is None:
+            raise HTTPException(status_code=404, detail="La inversión no existe.")
+        return _serializar_inversion(service.resumen_posicion(inversion, "COP"))
+    except ValueError as error:
+        _error_negocio(error)
+    finally:
+        service.cerrar()
+
+
+@app.delete("/api/v1/inversiones/{inversion_id}", status_code=204, response_class=Response)
+def eliminar_inversion(inversion_id: int):
+    service = InvestmentService()
+    try:
+        if not service.eliminar_inversion(inversion_id):
+            raise HTTPException(status_code=404, detail="La inversión no existe.")
+        return Response(status_code=204)
+    finally:
+        service.cerrar()
+
+
 @app.get("/api/v1/monedas/convertir", response_model=ConversionRespuesta)
 def convertir_moneda(valor: float = Query(gt=0), origen: str = "USD", destino: str = "COP"):
     service = ExchangeService()
@@ -523,3 +580,23 @@ def _serializar_transferencia(transferencia):
 def _serializar_presupuesto(item):
     presupuesto = item["presupuesto"]
     return PresupuestoRespuesta(id=presupuesto.id, anio=presupuesto.anio, mes=presupuesto.mes, valor=presupuesto.valor, categoria_id=presupuesto.categoria_id, categoria=presupuesto.categoria.nombre, gastado=item["gastado"])
+
+
+def _serializar_inversion(item):
+    inversion = item["inversion"]
+    return InversionRespuesta(
+        id=inversion.id,
+        activo=inversion.activo,
+        tipo=inversion.tipo,
+        cantidad=inversion.cantidad,
+        precio_compra=inversion.precio_compra,
+        precio_actual=inversion.precio_actual,
+        broker=inversion.broker,
+        moneda=inversion.moneda,
+        costo=item["costo"],
+        valor=item["valor"],
+        ganancia=item["ganancia"],
+        rentabilidad=item["rentabilidad"],
+        costo_cop=item["costo_base"],
+        valor_cop=item["valor_base"],
+    )

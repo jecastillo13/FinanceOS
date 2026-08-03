@@ -16,6 +16,7 @@ from core.models import Categoria  # noqa: E402
 from core.services import (  # noqa: E402
     AccountService,
     GoalService,
+    InvestmentService,
     MovementService,
     RecurringExpenseService,
     TransferService,
@@ -153,6 +154,40 @@ class FinancialServicesTest(unittest.TestCase):
             service.cerrar()
 
         self.assertEqual(self._saldo(cuenta_id), 1000)
+
+    def test_inversion_calcula_valor_y_rentabilidad(self):
+        service = InvestmentService()
+        try:
+            inversion = service.crear_inversion("ETF prueba", "ETF", 10, 100, 120, "Broker", "COP")
+            resumen = service.resumen("COP")
+            self.assertEqual(resumen["costo_total"], 1000)
+            self.assertEqual(resumen["valor_total"], 1200)
+            self.assertEqual(resumen["ganancia_total"], 200)
+            self.assertEqual(resumen["rentabilidad"], 20)
+            self.assertTrue(service.eliminar_inversion(inversion.id))
+        finally:
+            service.cerrar()
+
+    def test_inversion_acepta_montos_totales_del_broker(self):
+        service = InvestmentService()
+        try:
+            inversion = service.crear_inversion(
+                "SCHD prueba",
+                "ETF",
+                15.47671,
+                452.89,
+                518.77,
+                "Broker",
+                "USD",
+                valores_totales=True,
+            )
+            posicion = service.resumen_posicion(inversion, "USD")
+        finally:
+            service.cerrar()
+
+        self.assertAlmostEqual(posicion["costo"], 452.89, places=2)
+        self.assertAlmostEqual(posicion["valor"], 518.77, places=2)
+        self.assertAlmostEqual(posicion["ganancia"], 65.88, places=2)
 
 
 if __name__ == "__main__":
