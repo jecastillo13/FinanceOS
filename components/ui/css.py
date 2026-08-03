@@ -4,9 +4,8 @@ import streamlit as st
 def load_css():
     st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
 :root { --bg:#0B1020; --surface:#141B2E; --surface2:#1A233A; --border:#273451; --text:#F5F7FF; --muted:#99A7C2; --primary:#818CF8; --success:#34D399; }
-html, body, [class*="css"] { font-family:'DM Sans', sans-serif; }
+html, body, [class*="css"] { font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif; }
 [data-testid="stAppViewContainer"] { background:radial-gradient(circle at 75% -10%, #202c56 0, transparent 30%),var(--bg); color:var(--text); }
 [data-testid="stHeader"] { display:none; }
 [data-testid="stAppViewContainer"] .main { padding-top:0; }
@@ -21,7 +20,7 @@ html, body, [class*="css"] { font-family:'DM Sans', sans-serif; }
 .brand { padding:.8rem .8rem 1rem; }
 .brand-row { display:flex; align-items:center; gap:10px; }
 .brand-mark { display:inline-flex; align-items:center; justify-content:center; width:56px; height:56px; border-radius:19px; background:linear-gradient(145deg,#9B9CFF,#5B5CEB); font-size:27px; box-shadow:0 12px 24px rgba(79,70,229,.38),inset 0 1px 1px rgba(255,255,255,.32); }
-.brand-title { font-family:'Plus Jakarta Sans',sans-serif; font-size:24px; font-weight:800; letter-spacing:-.8px; color:var(--text); }
+.brand-title { font-family:Inter,system-ui,sans-serif; font-size:24px; font-weight:800; letter-spacing:-.8px; color:var(--text); }
 .brand-subtitle { color:#9AA9C7; font-size:13px; margin-top:3px; }
 .sidebar-section { color:#8492B0; font-size:12px; font-weight:800; letter-spacing:1.1px; padding:1.1rem .8rem .65rem; }
 [data-testid="stSidebar"] [data-testid="stRadio"] { gap:2px; }
@@ -43,34 +42,34 @@ html, body, [class*="css"] { font-family:'DM Sans', sans-serif; }
 .page-hero { display:flex; align-items:center; gap:15px; padding:1.35rem 1.5rem; margin:0 0 1.4rem; border-radius:22px; border:1px solid rgba(133,148,210,.30); background:radial-gradient(circle at 0% 50%,rgba(110,91,255,.20),transparent 35%),linear-gradient(115deg,rgba(36,51,91,.98),rgba(19,27,48,.96)); box-shadow:0 18px 38px rgba(0,0,0,.25),inset 0 1px rgba(255,255,255,.08); }
 .page-hero-icon { display:flex; align-items:center; justify-content:center; width:52px; height:52px; flex:0 0 52px; border-radius:17px; font-size:25px; background:linear-gradient(145deg,rgba(129,140,248,.95),rgba(79,70,229,.9)); box-shadow:0 10px 20px rgba(79,70,229,.28),inset 0 1px rgba(255,255,255,.25); }
 .page-hero-label { color:#A5B4FC; font-size:10px; font-weight:800; letter-spacing:1.2px; margin-bottom:3px; }
-.page-hero-title { font-family:'Plus Jakarta Sans',sans-serif; color:#F7F8FF; font-size:24px; font-weight:800; letter-spacing:-.7px; }
+.page-hero-title { font-family:Inter,system-ui,sans-serif; color:#F7F8FF; font-size:24px; font-weight:800; letter-spacing:-.7px; }
 .page-hero-description { color:#AEB9D2; font-size:13px; margin-top:4px; }
-h1,h2,h3 { font-family:'Plus Jakarta Sans',sans-serif !important; letter-spacing:-.6px; color:var(--text) !important; }
+h1,h2,h3 { font-family:Inter,system-ui,sans-serif !important; letter-spacing:-.6px; color:var(--text) !important; }
 h1 { font-size:28px !important; margin-bottom:.15rem !important; }
 p, label, [data-testid="stCaptionContainer"] { color:var(--muted); }
 .metric-card { background:linear-gradient(145deg,rgba(30,41,68,.95),rgba(20,27,46,.95)); border:1px solid var(--border); border-radius:18px; padding:1rem 1.05rem; min-height:118px; box-shadow:0 12px 28px rgba(0,0,0,.14); transition:.18s ease; }
 .metric-card:hover { transform:translateY(-2px); border-color:#5866A0; }
 .metric-top { display:flex; align-items:center; justify-content:space-between; color:var(--muted); font-size:13px; font-weight:600; }
 .metric-icon { width:34px; height:34px; display:flex; align-items:center; justify-content:center; border-radius:11px; background:rgba(129,140,248,.14); font-size:17px; }
-.metric-value { color:var(--text); font-family:'Plus Jakarta Sans',sans-serif; font-size:25px; font-weight:800; margin-top:16px; letter-spacing:-1px; }
+.metric-value { color:var(--text); font-family:Inter,system-ui,sans-serif; font-size:25px; font-weight:800; margin-top:16px; letter-spacing:-1px; }
 .metric-help { color:var(--muted); font-size:11px; margin-top:4px; }
 .account-card { margin-top:.35rem; padding:1.2rem; border:1px solid rgba(104,124,181,.34); border-radius:20px; background:radial-gradient(circle at 100% 0%,rgba(112,91,255,.20),transparent 42%),linear-gradient(145deg,rgba(35,49,87,.92),rgba(18,27,48,.95)); box-shadow:0 14px 30px rgba(0,0,0,.17),inset 0 1px rgba(255,255,255,.07); }
 .account-card-top { display:flex; align-items:center; gap:12px; }
 .account-card-brand-stack { display:flex; flex-direction:column; align-items:flex-start; gap:6px; }
 .account-card-icon { display:flex; align-items:center; gap:7px; justify-content:flex-start; min-width:82px; height:44px; padding:0 8px; border-radius:14px; font-size:18px; box-shadow:inset 0 1px rgba(255,255,255,.28),0 7px 14px rgba(0,0,0,.16); }
-.account-brand-monogram { display:flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:9px; background:rgba(8,15,31,.34); color:#FFFFFF; font-family:'Plus Jakarta Sans',sans-serif; font-size:15px; font-weight:800; }
-.account-brand-word { color:#FFFFFF; font-family:'Plus Jakarta Sans',sans-serif; font-size:10px; font-weight:800; letter-spacing:.35px; white-space:nowrap; }
+.account-brand-monogram { display:flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:9px; background:rgba(8,15,31,.34); color:#FFFFFF; font-family:Inter,system-ui,sans-serif; font-size:15px; font-weight:800; }
+.account-brand-word { color:#FFFFFF; font-family:Inter,system-ui,sans-serif; font-size:10px; font-weight:800; letter-spacing:.35px; white-space:nowrap; }
 .account-card-type { color:#AAB8D4; font-size:12px; margin-left:3px; }
 .account-card-badge { margin-left:auto; padding:.35rem .55rem; border:1px solid rgba(165,180,252,.35); border-radius:999px; background:rgba(129,140,248,.12); color:#C7D2FE; font-size:11px; font-weight:800; }
 .account-card-divider { height:1px; background:linear-gradient(90deg,rgba(139,154,205,.35),transparent); margin:1.1rem 0 .85rem; }
 .account-card-label { color:#8E9DBB; font-size:10px; font-weight:800; letter-spacing:.9px; }
-.account-card-balance { color:#FFFFFF; font-family:'Plus Jakarta Sans',sans-serif; font-size:24px; font-weight:800; letter-spacing:-.8px; margin-top:6px; }
+.account-card-balance { color:#FFFFFF; font-family:Inter,system-ui,sans-serif; font-size:24px; font-weight:800; letter-spacing:-.8px; margin-top:6px; }
 .account-actions-gap { height:9px; }
 .account-card-bottom-gap { height:14px; }
 .category-action-gap { height:14px; }
 [data-testid="stMetric"] { min-height:108px; padding:1rem 1.05rem; border:1px solid rgba(107,125,182,.30); border-radius:18px; background:linear-gradient(145deg,rgba(35,49,85,.95),rgba(19,27,47,.95)); box-shadow:0 12px 25px rgba(0,0,0,.16),inset 0 1px rgba(255,255,255,.05); }
 [data-testid="stMetricLabel"] { color:#AEB9D2!important; font-size:13px!important; font-weight:700!important; }
-[data-testid="stMetricValue"] { color:#F7F8FF!important; font-family:'Plus Jakarta Sans',sans-serif!important; font-weight:800!important; }
+[data-testid="stMetricValue"] { color:#F7F8FF!important; font-family:Inter,system-ui,sans-serif!important; font-weight:800!important; }
 [data-testid="stExpander"] { background:linear-gradient(105deg,rgba(35,48,82,.66),rgba(17,25,44,.58)); border:1px solid rgba(91,111,170,.36)!important; border-left:3px solid rgba(129,140,248,.75)!important; border-radius:14px!important; overflow:hidden; box-shadow:0 6px 14px rgba(0,0,0,.10); backdrop-filter:blur(10px); margin-bottom:7px; }
 [data-testid="stExpander"]:hover { border-color:rgba(150,160,255,.72)!important; background:linear-gradient(105deg,rgba(48,64,108,.82),rgba(24,34,59,.72)); transform:translateX(2px); }
 [data-testid="stExpander"] summary { padding:.18rem .15rem; font-size:15px; font-weight:700; color:#EAF0FF!important; }

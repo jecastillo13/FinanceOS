@@ -26,10 +26,12 @@ def editar_movimiento_dialog(service, attachment_service, movimiento, cuentas_po
             valor_editado = st.number_input("Valor", min_value=0.01, value=abs(movimiento.valor), step=1000.0, format="%.2f", key=f"valor_{movimiento.id}")
             observaciones_editadas = st.text_area("Observaciones", value=movimiento.observaciones or "", key=f"observaciones_{movimiento.id}")
             comprobante = st.file_uploader("Añadir comprobante", type=["jpg", "jpeg", "png", "webp", "pdf"], key=f"comprobante_{movimiento.id}")
+            foto_comprobante = st.camera_input("O tomar foto del comprobante", key=f"foto_comprobante_{movimiento.id}")
         if st.form_submit_button("Guardar cambios", use_container_width=True):
             service.actualizar_movimiento(movimiento.id, fecha_editada, descripcion_editada.strip(), valor_editado, cuenta_editada, categoria_editada, observaciones_editadas.strip())
-            if comprobante:
-                attachment_service.guardar(movimiento.id, comprobante.name, comprobante.getvalue(), comprobante.type)
+            archivo = foto_comprobante or comprobante
+            if archivo:
+                attachment_service.guardar(movimiento.id, archivo.name, archivo.getvalue(), archivo.type)
             st.success("Movimiento actualizado.")
             st.rerun()
 
@@ -87,6 +89,7 @@ def mostrar():
                     valor = st.number_input("Valor", min_value=0.01, value=1.0, step=1000.0, format="%.2f")
                     observaciones = st.text_area("Observaciones", placeholder="Opcional")
                     comprobante = st.file_uploader("Comprobante (opcional)", type=["jpg", "jpeg", "png", "webp", "pdf"])
+                    foto_comprobante = st.camera_input("O tomar foto del comprobante")
 
                 guardar = st.form_submit_button("Guardar movimiento", use_container_width=True)
 
@@ -94,8 +97,9 @@ def mostrar():
                     movimiento = movement_service.registrar_movimiento(
                         fecha, descripcion.strip(), valor, cuenta_id, categoria_id, observaciones.strip()
                     )
-                    if comprobante:
-                        attachment_service.guardar(movimiento.id, comprobante.name, comprobante.getvalue(), comprobante.type)
+                    archivo = foto_comprobante or comprobante
+                    if archivo:
+                        attachment_service.guardar(movimiento.id, archivo.name, archivo.getvalue(), archivo.type)
                     st.success("Movimiento registrado correctamente.")
                     st.rerun()
 
