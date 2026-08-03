@@ -15,17 +15,20 @@ os.makedirs(DB_FOLDER, exist_ok=True)
 
 DATABASE_PATH = os.path.join(DB_FOLDER, "finance.db")
 
-DATABASE_URL = f"sqlite:///{DATABASE_PATH}"
+DEFAULT_DATABASE_URL = f"sqlite:///{DATABASE_PATH}"
+DATABASE_URL = os.getenv("FINANCEOS_DATABASE_URL", DEFAULT_DATABASE_URL).strip()
 
 # ===========================
 # Engine
 # ===========================
 
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    echo=False
-)
+opciones_engine = {"echo": False}
+if DATABASE_URL.startswith("sqlite"):
+    opciones_engine["connect_args"] = {"check_same_thread": False}
+else:
+    opciones_engine["pool_pre_ping"] = True
+
+engine = create_engine(DATABASE_URL, **opciones_engine)
 
 SessionLocal = sessionmaker(
     autocommit=False,
@@ -67,7 +70,8 @@ def create_database():
     )
 
     Base.metadata.create_all(bind=engine)
-    _ejecutar_migraciones()
+    if engine.dialect.name == "sqlite":
+        _ejecutar_migraciones()
 
 
 def _migrar_categoria(conexion):

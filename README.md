@@ -12,6 +12,16 @@ Consulta la documentación interactiva en `http://localhost:8000/docs`. Los endp
 
 > Esta API es local y todavía no tiene usuarios ni autenticación. No debe exponerse a Internet hasta completar PostgreSQL, JWT, almacenamiento seguro y control de acceso.
 
+## Pruebas de integridad financiera
+
+Las pruebas usan automáticamente una base SQLite temporal y nunca modifican `database/finance.db`:
+
+```powershell
+python -m unittest discover -s tests -v
+```
+
+La conexión puede configurarse con `FINANCEOS_DATABASE_URL`. Esto permite ejecutar pruebas aisladas y prepara la migración futura a PostgreSQL.
+
 Aplicación personal de finanzas construida con Streamlit y SQLite. Permite administrar cuentas, categorías, movimientos y tasas de cambio en una interfaz local.
 
 ## Estado actual
