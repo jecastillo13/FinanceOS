@@ -154,6 +154,54 @@ h3 { font-size:22px!important; }
 button:disabled, button:disabled * { color:#A8B2C8!important; opacity:.76!important; }
 [data-testid="stDownloadButton"] button { width:100%; border:1px solid #4E6596!important; border-radius:13px!important; background:linear-gradient(145deg,#293B64,#192642)!important; color:#F7F8FF!important; font-weight:750!important; }
 
+/* Datos importantes sin cortes y con jerarquía consistente */
+.metric-value { font-size:clamp(20px,1.45vw,25px); line-height:1.15; overflow-wrap:anywhere; }
+.account-card-balance { font-size:clamp(21px,1.5vw,25px); line-height:1.2; }
+[data-testid="stMetricValue"] { font-size:clamp(22px,1.7vw,29px)!important; line-height:1.15!important; }
+[data-testid="stMetricDelta"] { font-size:13px!important; }
+
+/* Formularios dentro de expandibles: una sola superficie, no cajas duplicadas */
+[data-testid="stExpanderDetails"] [data-testid="stForm"] {
+  border-color:rgba(116,134,190,.18); border-radius:16px;
+  background:radial-gradient(circle at 90% 0%,rgba(98,87,225,.10),transparent 36%),rgba(17,26,48,.38);
+  box-shadow:inset 0 1px rgba(255,255,255,.035);
+}
+[data-testid="stForm"] [data-testid="stHorizontalBlock"] { gap:1rem!important; }
+
+/* Radios horizontales como selectores de aplicación moderna */
+[data-testid="stMain"] [data-testid="stRadio"] > div[role="radiogroup"] { gap:8px!important; }
+[data-testid="stMain"] [data-testid="stRadio"] label[data-baseweb="radio"] {
+  min-height:45px; padding:.62rem .9rem; border:1px solid rgba(86,105,159,.42);
+  border-radius:13px; background:rgba(18,28,51,.72); transition:.18s ease;
+}
+[data-testid="stMain"] [data-testid="stRadio"] label[data-baseweb="radio"]:hover { border-color:#7183BE; background:rgba(38,52,88,.75); }
+[data-testid="stMain"] [data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) {
+  border-color:rgba(145,154,255,.72); background:linear-gradient(135deg,rgba(112,102,241,.46),rgba(43,117,190,.30));
+  box-shadow:0 8px 18px rgba(48,44,160,.18),inset 0 1px rgba(255,255,255,.12);
+}
+[data-testid="stMain"] [data-testid="stRadio"] label[data-baseweb="radio"] p { color:#DCE4F7!important; font-size:14px!important; font-weight:750!important; }
+
+/* Controles numéricos y paginación visibles */
+[data-testid="stNumberInput"] button { min-width:42px!important; min-height:46px!important; border-color:#34476D!important; background:#18243E!important; color:#E8EDFF!important; }
+[data-testid="stNumberInput"] button:hover { background:#26375D!important; color:#FFFFFF!important; }
+[data-testid="stNumberInput"] input { font-variant-numeric:tabular-nums; }
+
+/* Interruptores y casillas con mejor área táctil */
+[data-testid="stCheckbox"] label, [data-testid="stToggle"] label { min-height:42px; padding:.35rem .2rem; }
+[data-testid="stCheckbox"] p, [data-testid="stToggle"] p { color:#D5DDEF!important; font-size:15px!important; }
+
+/* Scrollbars discretos con acento de la interfaz */
+* { scrollbar-width:thin; scrollbar-color:#5264A3 rgba(11,16,32,.35); }
+*::-webkit-scrollbar { width:9px; height:9px; }
+*::-webkit-scrollbar-track { background:rgba(11,16,32,.35); }
+*::-webkit-scrollbar-thumb { border:2px solid transparent; border-radius:999px; background:linear-gradient(#6D72DB,#405486); background-clip:padding-box; }
+*::-webkit-scrollbar-thumb:hover { background:#7C83EE; background-clip:padding-box; }
+
+/* Separación uniforme entre columnas y bloques */
+[data-testid="stHorizontalBlock"] { gap:1rem; }
+[data-testid="stVerticalBlock"] { gap:.55rem; }
+[data-testid="stElementContainer"] { scroll-margin-top:1rem; }
+
 /* Tablas, alertas y carga de archivos */
 [data-testid="stDataFrame"] { border-radius:18px!important; border-color:rgba(100,120,177,.42)!important; box-shadow:0 14px 30px rgba(0,0,0,.13); }
 [data-testid="stAlert"] { padding:1rem 1.15rem!important; border-radius:16px!important; font-size:15px!important; }
@@ -174,6 +222,9 @@ button:disabled, button:disabled * { color:#A8B2C8!important; opacity:.76!import
   .page-hero-description { font-size:12px; }
   .metric-card { min-height:108px; padding:.9rem; }
   .metric-value { font-size:21px; }
+  [data-testid="stHorizontalBlock"] { gap:.65rem; }
+  [data-testid="stMain"] [data-testid="stRadio"] > div[role="radiogroup"] { flex-wrap:wrap; }
+  [data-testid="stMain"] [data-testid="stRadio"] label[data-baseweb="radio"] { flex:1 1 145px; }
   [data-testid="stSidebar"][aria-expanded="true"], [data-testid="stSidebar"][aria-expanded="true"] > div:first-child { min-width:min(86vw,320px)!important; max-width:min(86vw,320px)!important; width:min(86vw,320px)!important; }
 }
 </style>
