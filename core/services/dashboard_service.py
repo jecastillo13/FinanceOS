@@ -4,7 +4,7 @@ from datetime import date
 from sqlalchemy.orm import joinedload
 
 from core.database import get_session
-from core.models import Categoria, Movimiento, Presupuesto
+from core.models import Categoria, Inversion, Movimiento, Presupuesto
 from core.services.account_service import AccountService
 from core.services.exchange_service import ExchangeService
 
@@ -18,9 +18,21 @@ class DashboardService:
         self.exchange = ExchangeService()
         self._movimientos_cache = {}
         self._movimientos_recientes = None
+        self._inversiones_cache = None
 
     def patrimonio(self):
-        return self.account_service.saldo_total(self.MONEDA_BASE, self.exchange)
+        detalle = self.patrimonio_detalle()
+        return round(detalle["cuentas_cop"] + detalle["inversiones_cop"], 2)
+
+    def patrimonio_detalle(self):
+        cuentas_cop = self.account_service.saldo_total(self.MONEDA_BASE, self.exchange)
+        inversiones, pendientes = self.inversiones_por_saldo()
+        return {
+            "cuentas_cop": cuentas_cop,
+            "inversiones_cop": round(sum(item["saldo_cop"] for item in inversiones), 2),
+            "inversiones": inversiones,
+            "inversiones_sin_tasa": pendientes,
+        }
 
     def cuentas(self):
         return self.account_service.total_cuentas()
@@ -63,6 +75,25 @@ class DashboardService:
         ]
         return cuentas, pendientes
 
+    def inversiones_por_saldo(self):
+        if self._inversiones_cache is not None:
+            return self._inversiones_cache
+        posiciones, pendientes = [], []
+        for inversion in self.db.query(Inversion).order_by(Inversion.activo).all():
+            valor = inversion.cantidad * inversion.precio_actual
+            valor_cop = self.exchange.convertir(valor, inversion.moneda, self.MONEDA_BASE)
+            if valor_cop is None:
+                pendientes.append(inversion)
+                continue
+            posiciones.append({
+                "cuenta": f"📈 {inversion.activo}",
+                "saldo_cop": valor_cop,
+                "moneda_original": inversion.moneda,
+                "tipo": "Inversión",
+            })
+        self._inversiones_cache = (posiciones, pendientes)
+        return self._inversiones_cache
+
     def alertas_presupuesto(self, anio=None, mes=None):
         hoy = date.today()
         anio, mes = anio or hoy.year, mes or hoy.month
@@ -82,7 +113,18 @@ class DashboardService:
 
     def resumen(self):
         resumen_mes = self.resumen_mes()
-        return {"patrimonio": self.patrimonio(), "cuentas": self.cuentas(), **resumen_mes}
+        patrimonio = self.patrimonio_detalle()
+        return {
+            "patrimonio": round(patrimonio["cuentas_cop"] + patrimonio["inversiones_cop"], 2),
+            "cuentas_cop": patrimonio["cuentas_cop"],
+            "inversiones_cop": patrimonio["inversiones_cop"],
+            "inversiones_sin_tasa": [
+                {"id": inversion.id, "activo": inversion.activo, "moneda": inversion.moneda}
+                for inversion in patrimonio["inversiones_sin_tasa"]
+            ],
+            "cuentas": self.cuentas(),
+            **resumen_mes,
+        }
 
     def cuentas_sin_tasa(self):
         _, pendientes = self.account_service.saldos_consolidados(self.MONEDA_BASE, self.exchange)

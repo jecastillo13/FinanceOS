@@ -15,6 +15,7 @@ from core.database import Base, create_database, engine, get_session  # noqa: E4
 from core.models import Categoria  # noqa: E402
 from core.services import (  # noqa: E402
     AccountService,
+    DashboardService,
     GoalService,
     InvestmentService,
     MovementService,
@@ -188,6 +189,24 @@ class FinancialServicesTest(unittest.TestCase):
         self.assertAlmostEqual(posicion["costo"], 452.89, places=2)
         self.assertAlmostEqual(posicion["valor"], 518.77, places=2)
         self.assertAlmostEqual(posicion["ganancia"], 65.88, places=2)
+
+    def test_dashboard_suma_cuentas_e_inversiones_al_patrimonio(self):
+        self._crear_cuenta(saldo=1000)
+        inversiones = InvestmentService()
+        try:
+            inversiones.crear_inversion("ETF patrimonio", "ETF", 2, 100, 150, "Broker", "COP")
+        finally:
+            inversiones.cerrar()
+
+        dashboard = DashboardService()
+        try:
+            resumen = dashboard.resumen()
+        finally:
+            dashboard.cerrar()
+
+        self.assertEqual(resumen["cuentas_cop"], 1000)
+        self.assertEqual(resumen["inversiones_cop"], 300)
+        self.assertEqual(resumen["patrimonio"], 1300)
 
 
 if __name__ == "__main__":

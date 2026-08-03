@@ -31,6 +31,7 @@ def mostrar():
         movil = _es_movil()
         resumen = service.resumen()
         cuentas, pendientes_cuentas = service.cuentas_por_saldo()
+        inversiones, pendientes_inversiones = service.inversiones_por_saldo()
         alertas, pendientes_alertas = service.alertas_presupuesto()
         gastos_categoria, pendientes_gastos, flujo = [], [], []
         if not movil:
@@ -40,7 +41,7 @@ def mostrar():
         page_header("📊", "Centro Financiero", "Una vista clara de tu patrimonio, flujo de caja y decisiones pendientes.", "RESUMEN GENERAL")
         columnas = st.columns(2) if movil else st.columns(4)
         metricas = [
-            ("Patrimonio", f"COP ${resumen['patrimonio']:,.2f}", "💰", "Consolidado en pesos colombianos"),
+            ("Patrimonio", f"COP ${resumen['patrimonio']:,.2f}", "💰", f"Cuentas ${resumen['cuentas_cop']:,.0f} · inversiones ${resumen['inversiones_cop']:,.0f}"),
             ("Balance del mes", f"COP ${resumen['balance']:,.2f}", "⚖️", ""),
             ("Ingresos del mes", f"COP ${resumen['ingresos']:,.2f}", "⬆️", ""),
             ("Gastos del mes", f"COP ${resumen['gastos']:,.2f}", "⬇️", ""),
@@ -56,6 +57,9 @@ def mostrar():
         if pendientes:
             nombres = ", ".join(f"{cuenta.nombre} ({cuenta.moneda})" for cuenta in pendientes.values())
             st.warning(f"Algunos valores no se consolidaron en COP porque falta una tasa para: {nombres}. Actualízala en Monedas.")
+        if pendientes_inversiones:
+            activos = ", ".join(f"{inversion.activo} ({inversion.moneda})" for inversion in pendientes_inversiones)
+            st.warning(f"No se incluyeron estas inversiones en el patrimonio por falta de tasa: {activos}.")
 
         st.divider()
         if movil:
@@ -63,6 +67,10 @@ def mostrar():
             st.subheader("Tus cuentas")
             for cuenta in cuentas[:5]:
                 st.write(f"**{cuenta['cuenta']}** · COP ${cuenta['saldo_cop']:,.2f}")
+            if inversiones:
+                st.subheader("Tus inversiones")
+                for inversion in inversiones[:5]:
+                    st.write(f"**{inversion['cuenta']}** · COP ${inversion['saldo_cop']:,.2f}")
             st.subheader("Alertas de presupuesto")
             _mostrar_alertas(alertas, compacto=True)
             return
@@ -88,13 +96,14 @@ def mostrar():
         izquierda, derecha = st.columns(2)
         with izquierda:
             st.subheader("Distribución de patrimonio")
-            if cuentas:
-                figura = px.pie(cuentas, names="cuenta", values="saldo_cop", hole=0.58, color_discrete_sequence=["#818CF8", "#34D399", "#38BDF8", "#FBBF24", "#FB7185"])
+            distribucion = cuentas + inversiones
+            if distribucion:
+                figura = px.pie(distribucion, names="cuenta", values="saldo_cop", hole=0.58, color_discrete_sequence=["#818CF8", "#34D399", "#38BDF8", "#FBBF24", "#FB7185"])
                 figura.update_layout(template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", legend_title_text="", margin=dict(l=10, r=10, t=20, b=10))
                 st.plotly_chart(figura, use_container_width=True)
-                st.caption("Saldos convertidos y consolidados en COP.")
+                st.caption("Cuentas e inversiones convertidas y consolidadas en COP.")
             else:
-                st.info("Aún no hay cuentas registradas.")
+                st.info("Aún no hay cuentas ni inversiones registradas.")
         with derecha:
             st.subheader("Alertas de presupuesto")
             _mostrar_alertas(alertas)
