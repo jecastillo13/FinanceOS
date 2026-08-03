@@ -1,5 +1,17 @@
 # FinanceOS
 
+## API local para móvil y web
+
+La primera API vive en `api/main.py` y reutiliza los servicios financieros existentes. Streamlit continúa funcionando sobre la misma base local durante la transición.
+
+```powershell
+uvicorn api.main:app --reload --port 8000
+```
+
+Consulta la documentación interactiva en `http://localhost:8000/docs`. Los endpoints iniciales viven bajo `/api/v1` e incluyen cuentas, categorías, movimientos, metas y el resumen del Dashboard.
+
+> Esta API es local y todavía no tiene usuarios ni autenticación. No debe exponerse a Internet hasta completar PostgreSQL, JWT, almacenamiento seguro y control de acceso.
+
 Aplicación personal de finanzas construida con Streamlit y SQLite. Permite administrar cuentas, categorías, movimientos y tasas de cambio en una interfaz local.
 
 ## Estado actual
