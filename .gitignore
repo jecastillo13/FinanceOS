@@ -15,6 +15,7 @@ env/
 
 # Comprobantes locales de movimientos
 uploads/
+backups/
 
 # VS Code
 .vscode/

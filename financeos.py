@@ -18,6 +18,7 @@ from modules import presupuestos
 from modules import metas
 from modules import inversiones
 from modules import reportes
+from modules import configuracion
 
 
 # =====================================================
@@ -112,5 +113,4 @@ elif pagina == "📑 Reportes":
 
 elif pagina == "⚙️ Configuración":
 
-    st.title("⚙ Configuración")
-    st.info("Próximamente")
+    configuracion.mostrar()

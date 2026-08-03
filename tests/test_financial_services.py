@@ -15,6 +15,7 @@ from core.database import Base, create_database, engine, get_session  # noqa: E4
 from core.models import Categoria  # noqa: E402
 from core.services import (  # noqa: E402
     AccountService,
+    BackupService,
     DashboardService,
     GoalService,
     InvestmentService,
@@ -230,6 +231,16 @@ class FinancialServicesTest(unittest.TestCase):
         self.assertEqual(reporte["balance_cop"], 375)
         self.assertIn("Nómina reporte", csv)
         self.assertIn("Mercado reporte", csv)
+
+    def test_respaldo_incluye_base_y_manifiesto(self):
+        from io import BytesIO
+        from zipfile import ZipFile
+
+        self._crear_cuenta()
+        contenido = BackupService().crear_respaldo()
+        with ZipFile(BytesIO(contenido)) as archivo:
+            self.assertIn("database/finance.db", archivo.namelist())
+            self.assertIn("manifest.json", archivo.namelist())
 
 
 if __name__ == "__main__":
