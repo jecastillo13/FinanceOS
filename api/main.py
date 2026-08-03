@@ -1,19 +1,22 @@
 """Punto de entrada de la API local de FinanceOS."""
 
-from fastapi import FastAPI, HTTPException, Query
+from urllib.parse import quote
+
+from fastapi import FastAPI, File, HTTPException, Query, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
 from api.schemas import (
     CategoriaRespuesta, ConversionRespuesta, CuentaCrear, CuentaRespuesta,
-    GastoRecurrenteCrear, GastoRecurrenteRespuesta, MetaCrear, MetaRespuesta,
-    MovimientoCrear, MovimientoRespuesta, PagoRecurrenteCrear,
+    AdjuntoRespuesta, GastoRecurrenteCrear, GastoRecurrenteRespuesta,
+    MetaCrear, MetaDetalleRespuesta, MetaOperacionCrear, MetaOperacionRespuesta,
+    MetaPagoCrear, MetaRespuesta, MovimientoCrear, MovimientoRespuesta, PagoRecurrenteCrear,
     PresupuestoGuardar, PresupuestoRespuesta, TransferenciaCrear, TransferenciaRespuesta,
 )
 from core.database import create_database
 from core.services import (
-    AccountService, BudgetService, CategoryService, DashboardService, ExchangeService,
-    GoalService, MovementService, RecurringExpenseService, TransferService,
+    AccountService, AttachmentService, BudgetService, CategoryService, DashboardService,
+    ExchangeService, GoalService, MovementService, RecurringExpenseService, TransferService,
 )
 
 
@@ -21,6 +24,7 @@ app = FastAPI(title="FinanceOS API", version="0.1.0", description="API local pre
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:8501", "http://localhost:3000", "http://localhost:5173"],
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -114,6 +118,112 @@ def crear_meta(datos: MetaCrear):
         return _serializar_meta(service.resumen(service.crear_meta(**datos.model_dump())))
     except ValueError as error:
         _error_negocio(error)
+    finally:
+        service.cerrar()
+
+
+@app.get("/api/v1/metas/{meta_id}", response_model=MetaDetalleRespuesta)
+def detalle_meta(meta_id: int):
+    service = GoalService()
+    try:
+        meta = service.obtener_meta(meta_id)
+        if meta is None:
+            raise HTTPException(status_code=404, detail="La meta no existe.")
+        return _serializar_meta_detalle(service.resumen(meta))
+    finally:
+        service.cerrar()
+
+
+@app.post("/api/v1/metas/{meta_id}/aportes", response_model=MetaOperacionRespuesta, status_code=201)
+def aportar_meta(meta_id: int, datos: MetaOperacionCrear):
+    service = GoalService()
+    try:
+        return _serializar_operacion(service.aportar(meta_id, **datos.model_dump()))
+    except ValueError as error:
+        _error_negocio(error)
+    finally:
+        service.cerrar()
+
+
+@app.post("/api/v1/metas/{meta_id}/pagos", response_model=MetaOperacionRespuesta, status_code=201)
+def pagar_meta(meta_id: int, datos: MetaPagoCrear):
+    service = GoalService()
+    try:
+        return _serializar_operacion(service.registrar_pago(meta_id, **datos.model_dump()))
+    except ValueError as error:
+        _error_negocio(error)
+    finally:
+        service.cerrar()
+
+
+@app.delete("/api/v1/metas/operaciones/{operacion_id}", status_code=204, response_class=Response)
+def eliminar_operacion_meta(operacion_id: int):
+    service = GoalService()
+    try:
+        if not service.eliminar_operacion(operacion_id):
+            raise HTTPException(status_code=404, detail="La operación de la meta no existe.")
+        return Response(status_code=204)
+    finally:
+        service.cerrar()
+
+
+@app.delete("/api/v1/metas/{meta_id}", status_code=204, response_class=Response)
+def eliminar_meta(meta_id: int):
+    service = GoalService()
+    try:
+        if not service.eliminar_meta(meta_id):
+            raise HTTPException(status_code=404, detail="La meta no existe.")
+        return Response(status_code=204)
+    finally:
+        service.cerrar()
+
+
+@app.get("/api/v1/movimientos/{movimiento_id}/comprobantes", response_model=list[AdjuntoRespuesta])
+def listar_comprobantes(movimiento_id: int):
+    service = AttachmentService()
+    try:
+        return [_serializar_adjunto(adjunto) for adjunto in service.obtener_por_movimiento(movimiento_id)]
+    finally:
+        service.cerrar()
+
+
+@app.post("/api/v1/movimientos/{movimiento_id}/comprobantes", response_model=AdjuntoRespuesta, status_code=201)
+async def adjuntar_comprobante(movimiento_id: int, archivo: UploadFile = File(...)):
+    service = AttachmentService()
+    try:
+        contenido = await archivo.read(service.TAMANO_MAXIMO + 1)
+        adjunto = service.guardar(movimiento_id, archivo.filename or "comprobante", contenido, archivo.content_type or "")
+        return _serializar_adjunto(adjunto)
+    except ValueError as error:
+        _error_negocio(error)
+    finally:
+        await archivo.close()
+        service.cerrar()
+
+
+@app.get("/api/v1/comprobantes/{adjunto_id}")
+def descargar_comprobante(adjunto_id: int):
+    service = AttachmentService()
+    try:
+        adjunto = service.obtener(adjunto_id)
+        if adjunto is None:
+            raise HTTPException(status_code=404, detail="El comprobante no existe.")
+        contenido = service.leer(adjunto)
+        if contenido is None:
+            raise HTTPException(status_code=404, detail="El archivo del comprobante no está disponible.")
+        nombre = quote(adjunto.nombre)
+        return Response(content=contenido, media_type=adjunto.tipo_mime, headers={"Content-Disposition": f"attachment; filename*=UTF-8''{nombre}"})
+    finally:
+        service.cerrar()
+
+
+@app.delete("/api/v1/comprobantes/{adjunto_id}", status_code=204, response_class=Response)
+def eliminar_comprobante(adjunto_id: int):
+    service = AttachmentService()
+    try:
+        if not service.eliminar(adjunto_id):
+            raise HTTPException(status_code=404, detail="El comprobante no existe.")
+        return Response(status_code=204)
     finally:
         service.cerrar()
 
@@ -224,6 +334,19 @@ def _serializar_movimiento(movimiento):
 def _serializar_meta(resumen):
     meta = resumen["meta"]
     return MetaRespuesta(id=meta.id, nombre=meta.nombre, objetivo=meta.objetivo, moneda=meta.moneda, fecha_limite=meta.fecha_limite, descripcion=meta.descripcion, pagado=resumen["pagado"], aportado=resumen["aportado"], pendiente=resumen["pendiente"], porcentaje=resumen["porcentaje"])
+
+
+def _serializar_meta_detalle(resumen):
+    meta = _serializar_meta(resumen)
+    return MetaDetalleRespuesta(**meta.model_dump(), operaciones=[_serializar_operacion(operacion) for operacion in resumen["operaciones"]])
+
+
+def _serializar_operacion(operacion):
+    return MetaOperacionRespuesta.model_validate(operacion)
+
+
+def _serializar_adjunto(adjunto):
+    return AdjuntoRespuesta(id=adjunto.id, movimiento_id=adjunto.movimiento_id, nombre=adjunto.nombre, tipo_mime=adjunto.tipo_mime, tamano=adjunto.tamano, fecha=adjunto.fecha, url_descarga=f"/api/v1/comprobantes/{adjunto.id}")
 
 
 def _serializar_recurrente(gasto):

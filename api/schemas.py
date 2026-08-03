@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -80,6 +80,32 @@ class MetaRespuesta(ORMResponse):
     porcentaje: float
 
 
+class MetaOperacionCrear(BaseModel):
+    fecha: date
+    valor: float = Field(gt=0)
+    descripcion: str = ""
+
+
+class MetaPagoCrear(MetaOperacionCrear):
+    cuenta_id: int
+    categoria_id: int
+    observaciones: str = ""
+
+
+class MetaOperacionRespuesta(ORMResponse):
+    id: int
+    meta_id: int
+    movimiento_id: int | None
+    tipo: str
+    valor_meta: float
+    fecha: date
+    descripcion: str | None
+
+
+class MetaDetalleRespuesta(MetaRespuesta):
+    operaciones: list[MetaOperacionRespuesta]
+
+
 class GastoRecurrenteCrear(BaseModel):
     nombre: str = Field(min_length=1, max_length=120)
     valor: float = Field(gt=0)
@@ -147,3 +173,13 @@ class ConversionRespuesta(BaseModel):
     origen: str
     destino: str
     valor_convertido: float
+
+
+class AdjuntoRespuesta(ORMResponse):
+    id: int
+    movimiento_id: int
+    nombre: str
+    tipo_mime: str
+    tamano: int
+    fecha: datetime
+    url_descarga: str

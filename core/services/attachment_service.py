@@ -55,6 +55,9 @@ class AttachmentService:
             .all()
         )
 
+    def obtener(self, adjunto_id):
+        return self.db.get(AdjuntoMovimiento, adjunto_id)
+
     def leer(self, adjunto):
         ruta = Path(BASE_DIR) / adjunto.ruta
         return ruta.read_bytes() if ruta.is_file() else None

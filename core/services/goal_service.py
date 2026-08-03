@@ -20,6 +20,9 @@ class GoalService:
             consulta = consulta.filter(Meta.activa == 1)
         return consulta.order_by(Meta.fecha_limite.is_(None), Meta.fecha_limite, Meta.nombre).all()
 
+    def obtener_meta(self, meta_id):
+        return self.db.get(Meta, meta_id)
+
     def crear_meta(self, nombre, objetivo, moneda="COP", fecha_limite=None, descripcion=""):
         meta = Meta(
             nombre=texto_requerido(nombre, "El nombre de la meta", 100),

@@ -15,6 +15,7 @@ from core.database import Base, create_database, engine, get_session  # noqa: E4
 from core.models import Categoria  # noqa: E402
 from core.services import (  # noqa: E402
     AccountService,
+    GoalService,
     MovementService,
     RecurringExpenseService,
     TransferService,
@@ -108,6 +109,21 @@ class FinancialServicesTest(unittest.TestCase):
         self.assertEqual(movimiento.valor, -100)
         self.assertEqual(self._saldo(cuenta_id), 900)
         self.assertGreater(siguiente_fecha, date.today())
+
+    def test_eliminar_meta_restaura_pagos_vinculados(self):
+        cuenta_id = self._crear_cuenta(saldo=1000)
+        service = GoalService()
+        try:
+            meta = service.crear_meta("Viaje prueba", 500, "COP")
+            service.aportar(meta.id, 100, date.today(), "Reserva")
+            service.registrar_pago(meta.id, date.today(), cuenta_id, self.gasto_id, 200, "Pago del viaje")
+            self.assertEqual(self._saldo(cuenta_id), 800)
+            self.assertTrue(service.eliminar_meta(meta.id))
+            self.assertIsNone(service.obtener_meta(meta.id))
+        finally:
+            service.cerrar()
+
+        self.assertEqual(self._saldo(cuenta_id), 1000)
 
 
 if __name__ == "__main__":
