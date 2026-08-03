@@ -91,6 +91,90 @@ button[kind="secondary"] { border-radius:12px!important; border-color:#415278!im
 div[role="dialog"] { border:1px solid rgba(150,160,255,.48)!important; border-radius:26px!important; background:radial-gradient(circle at 0% 0%,rgba(125,110,255,.24),transparent 38%),linear-gradient(145deg,#1C294A,#10182C)!important; box-shadow:0 30px 80px rgba(0,0,0,.56),inset 0 1px rgba(255,255,255,.10)!important; backdrop-filter:blur(22px); }
 div[role="dialog"] [data-testid="stDialogHeader"] { padding-bottom:.55rem; }
 div[role="dialog"] h2 { font-size:26px!important; }
-@media(max-width:800px) { .block-container { padding:1rem; } .app-status { display:none; } }
+
+/* FinanceOS UI 2.0: escala, claridad y superficies adaptables */
+html { font-size:17px; }
+body { line-height:1.5; }
+.block-container { width:100%; max-width:1600px; padding:1.7rem 2.6rem 4rem; }
+[data-testid="stMainBlockContainer"] > div { gap:.35rem; }
+h2 { font-size:27px!important; margin-top:1.2rem!important; }
+h3 { font-size:22px!important; }
+[data-testid="stCaptionContainer"], [data-testid="stCaptionContainer"] p { font-size:13px!important; line-height:1.5!important; }
+
+/* Navegación: selección completa sin elementos superpuestos */
+[data-testid="stSidebar"] [data-testid="stRadio"] > div { gap:7px!important; }
+[data-testid="stSidebar"] [data-testid="stRadio"] label[data-baseweb="radio"] {
+  display:flex!important; align-items:center!important; width:100%!important; min-height:58px;
+  box-sizing:border-box; padding:1rem 1.15rem!important; margin:0!important; overflow:hidden;
+  border:1px solid transparent; border-radius:18px;
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] label[data-baseweb="radio"] p {
+  width:100%; margin:0!important; font-size:16px!important; line-height:1.3!important;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) {
+  padding-left:1.35rem!important; border-color:rgba(190,196,255,.42);
+  background:radial-gradient(circle at 90% 15%,rgba(93,230,255,.18),transparent 30%),linear-gradient(135deg,#7777F6,#5355D8);
+  box-shadow:0 12px 28px rgba(67,56,202,.34),inset 0 1px rgba(255,255,255,.26);
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) p { color:#FFFFFF!important; text-shadow:0 1px 2px rgba(0,0,0,.20); }
+[data-testid="stSidebar"] [data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked)::before {
+  content:""; position:absolute; left:7px; top:16px; bottom:16px; width:4px; border-radius:999px;
+  background:linear-gradient(#7DEBFF,#FFFFFF); box-shadow:0 0 14px rgba(125,235,255,.85);
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked)::after { display:none!important; }
+
+/* Formularios y controles más cómodos */
+[data-testid="stTextInput"] input, [data-testid="stNumberInput"] input,
+[data-testid="stDateInput"] input, [data-testid="stTextArea"] textarea,
+[data-baseweb="select"] > div { min-height:48px!important; border-radius:14px!important; }
+[data-testid="stTextArea"] textarea { padding:.85rem 1rem!important; }
+[data-testid="stWidgetLabel"] p { font-size:15px!important; margin-bottom:5px!important; }
+[data-baseweb="popover"] { border-radius:18px!important; overflow:hidden; box-shadow:0 24px 60px rgba(0,0,0,.45)!important; }
+[role="listbox"] { padding:7px!important; background:#111A2F!important; border:1px solid #34466D!important; }
+[role="option"] { min-height:46px!important; padding:.7rem .85rem!important; border-radius:11px!important; font-size:15px!important; }
+[role="option"]:hover, [role="option"][aria-selected="true"] { background:linear-gradient(135deg,rgba(129,140,248,.34),rgba(67,208,238,.13))!important; }
+
+/* Listas y expandibles dejan de parecer líneas comprimidas */
+[data-testid="stExpander"] { margin:0 0 12px!important; border-radius:18px!important; border-left:1px solid rgba(91,111,170,.46)!important; transition:transform .18s ease,border-color .18s ease,background .18s ease; }
+[data-testid="stExpander"]:hover { transform:translateY(-1px); }
+[data-testid="stExpander"] summary { min-height:58px; padding:.72rem 1rem!important; box-sizing:border-box; }
+[data-testid="stExpander"] summary span, [data-testid="stExpander"] summary p { font-size:16px!important; line-height:1.35!important; }
+[data-testid="stExpanderDetails"] { padding:.2rem 1.05rem 1.05rem!important; }
+
+/* Pestañas tipo cápsula y opciones claramente seleccionadas */
+[data-testid="stTabs"] [data-baseweb="tab-list"] { gap:8px; padding:6px; border-radius:16px; background:rgba(15,23,42,.70); border:1px solid rgba(88,105,156,.28); }
+[data-testid="stTabs"] [data-baseweb="tab"] { min-height:44px; padding:.65rem 1rem; border-radius:11px; color:#AEB9D2; font-size:14px; font-weight:750; }
+[data-testid="stTabs"] [aria-selected="true"] { color:#FFFFFF!important; background:linear-gradient(135deg,rgba(129,140,248,.42),rgba(59,130,246,.22))!important; }
+[data-testid="stTabs"] [data-baseweb="tab-highlight"] { display:none; }
+
+/* Botones con texto siempre visible y estados claros */
+[data-testid="stButton"] button, [data-testid="stDownloadButton"] button, [data-testid="stFormSubmitButton"] button { min-height:48px!important; padding:.65rem 1rem!important; font-size:15px!important; }
+[data-testid="stButton"] button:hover, [data-testid="stDownloadButton"] button:hover { border-color:#8EA1FF!important; transform:translateY(-1px); box-shadow:0 12px 24px rgba(0,0,0,.22),0 0 0 1px rgba(129,140,248,.18); }
+button:disabled, button:disabled * { color:#A8B2C8!important; opacity:.76!important; }
+[data-testid="stDownloadButton"] button { width:100%; border:1px solid #4E6596!important; border-radius:13px!important; background:linear-gradient(145deg,#293B64,#192642)!important; color:#F7F8FF!important; font-weight:750!important; }
+
+/* Tablas, alertas y carga de archivos */
+[data-testid="stDataFrame"] { border-radius:18px!important; border-color:rgba(100,120,177,.42)!important; box-shadow:0 14px 30px rgba(0,0,0,.13); }
+[data-testid="stAlert"] { padding:1rem 1.15rem!important; border-radius:16px!important; font-size:15px!important; }
+[data-testid="stFileUploaderDropzone"] { min-height:130px; padding:1.2rem!important; border-radius:18px!important; border:1px dashed #6277AD!important; background:linear-gradient(145deg,rgba(34,48,83,.72),rgba(17,25,44,.74))!important; }
+[data-testid="stFileUploaderDropzone"] button { min-height:44px!important; }
+
+@media(max-width:1100px) {
+  html { font-size:16px; }
+  .block-container { padding:1.35rem 1.4rem 3rem; }
+  [data-testid="stSidebar"][aria-expanded="true"], [data-testid="stSidebar"][aria-expanded="true"] > div:first-child { min-width:300px!important; max-width:300px!important; width:300px!important; }
+}
+@media(max-width:800px) {
+  .block-container { padding:.9rem .8rem 2.5rem; }
+  .app-status { display:none; }
+  .page-hero { padding:1rem; border-radius:18px; align-items:flex-start; }
+  .page-hero-icon { width:46px; height:46px; flex-basis:46px; border-radius:14px; }
+  .page-hero-title { font-size:21px; }
+  .page-hero-description { font-size:12px; }
+  .metric-card { min-height:108px; padding:.9rem; }
+  .metric-value { font-size:21px; }
+  [data-testid="stSidebar"][aria-expanded="true"], [data-testid="stSidebar"][aria-expanded="true"] > div:first-child { min-width:min(86vw,320px)!important; max-width:min(86vw,320px)!important; width:min(86vw,320px)!important; }
+}
 </style>
 """, unsafe_allow_html=True)
