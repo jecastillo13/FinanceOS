@@ -117,3 +117,20 @@ NOTA
 ----
 
 Los avisos de Git sobre LF y CRLF son normales en Windows y no representan un error.
+============================================================
+NUEVO FRONTEND REACT
+============================================================
+
+1. Iniciar la API (primera terminal):
+   uvicorn api.main:app --reload --port 8000
+
+2. Iniciar React (segunda terminal):
+   cd frontend
+   npm install
+   npm run dev
+
+3. Abrir en el navegador:
+   http://localhost:5173
+
+4. Validar la versión de producción:
+   npm run build

@@ -60,6 +60,24 @@ pip install -r requirements.txt
 streamlit run financeos.py
 ```
 
+### Nuevo frontend React
+
+El frontend profesional vive en `frontend/` y consume la API FastAPI. Ejecuta primero la API:
+
+```powershell
+uvicorn api.main:app --reload --port 8000
+```
+
+Después, en otra terminal:
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+Abre `http://localhost:5173`. Para comprobar la versión de producción utiliza `npm run build`.
+
 La base de datos SQLite se crea localmente en `database/finance.db` y no se versiona.
 
 ## Convenciones financieras
