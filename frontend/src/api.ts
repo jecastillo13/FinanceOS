@@ -6,6 +6,9 @@ export type Meta = { id: number; nombre: string; objetivo: number; moneda: strin
 export type Inversion = { id: number; activo: string; tipo: string; cantidad: number; precio_compra: number; precio_actual: number; broker?: string; moneda: string; costo: number; valor: number; ganancia: number; rentabilidad: number; costo_cop?: number; valor_cop?: number };
 export type Portafolio = { costo_total_cop: number; valor_total_cop: number; ganancia_total_cop: number; rentabilidad: number; posiciones: Inversion[]; monedas_sin_tasa: string[] };
 export type RespaldoEstado = { motor: string; tamano: number; modificado?: string; disponible: boolean };
+export type GastoRecurrente = { id: number; nombre: string; valor: number; frecuencia: string; proxima_fecha_pago: string; ultima_fecha_pago?: string; activo: boolean; categoria_id: number; categoria: string };
+export type Transferencia = { id: number; fecha: string; valor: number; descripcion?: string; cuenta_origen_id: number; cuenta_destino_id: number; cuenta_origen: string; cuenta_destino: string; moneda: string };
+export type ReporteResumen = { anio: number; mes: number; ingresos_cop: number; gastos_cop: number; balance_cop: number; monedas_sin_tasa: string[]; movimientos: number };
 export type Resumen = {
   patrimonio: number;
   cuentas_cop: number;
@@ -54,4 +57,11 @@ export const financeApi = {
   health: () => get<{ estado: string; servicio: string; version: string }>("/health"),
   estadoRespaldo: () => get<RespaldoEstado>("/configuracion/respaldo"),
   descargarRespaldo: async () => { const response = await fetch(`${BASE_URL}/configuracion/respaldo/descargar`); if (!response.ok) throw new Error("No fue posible crear el respaldo"); return response.blob(); },
+  recurrentes: () => get<GastoRecurrente[]>("/gastos-recurrentes"),
+  crearRecurrente: (body: { nombre: string; valor: number; frecuencia: string; proxima_fecha_pago: string; categoria_id: number }) => post<GastoRecurrente>("/gastos-recurrentes", body),
+  pagarRecurrente: (id: number, body: { cuenta_id: number; fecha_pago: string }) => post<Movimiento>(`/gastos-recurrentes/${id}/pagar`, body),
+  transferencias: () => get<Transferencia[]>("/transferencias"),
+  crearTransferencia: (body: { fecha: string; cuenta_origen_id: number; cuenta_destino_id: number; valor: number; descripcion: string }) => post<Transferencia>("/transferencias", body),
+  reporte: (anio: number, mes: number) => get<ReporteResumen>(`/reportes/${anio}/${mes}/resumen`),
+  descargarReporte: async (anio: number, mes: number, formato: "csv"|"xlsx"|"pdf") => { const response=await fetch(`${BASE_URL}/reportes/${anio}/${mes}/${formato}`); if(!response.ok) throw new Error("No fue posible generar el reporte"); return response.blob(); },
 };
