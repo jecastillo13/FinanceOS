@@ -18,7 +18,7 @@ from api.schemas import (
     PortafolioRespuesta, PresupuestoGuardar, PresupuestoRespuesta,
     TransferenciaCrear, TransferenciaRespuesta, TasaCambioRespuesta,
     ActualizacionTasasRespuesta,
-    TarjetaCrear, TarjetaRespuesta, DeteccionCrear, DeteccionConfirmar, DeteccionRespuesta,
+    TarjetaCrear, TarjetaRespuesta, PagoTarjetaCrear, DeteccionCrear, DeteccionConfirmar, DeteccionRespuesta,
 )
 from core.database import create_database
 from core.services import (
@@ -138,7 +138,7 @@ def eliminar_cuenta(cuenta_id: int):
         if service.obtener_cuenta(cuenta_id) is None:
             raise HTTPException(status_code=404, detail="La cuenta no existe.")
         if not service.eliminar_cuenta(cuenta_id):
-            raise HTTPException(status_code=409, detail="La cuenta tiene movimientos y no puede eliminarse.")
+            raise HTTPException(status_code=409, detail="La cuenta tiene movimientos o tarjetas vinculadas y no puede eliminarse.")
         return Response(status_code=204)
     finally:
         service.cerrar()
@@ -240,6 +240,17 @@ def eliminar_tarjeta(tarjeta_id: int):
         if not service.eliminar_tarjeta(tarjeta_id):
             raise HTTPException(status_code=404, detail="La tarjeta no existe.")
         return Response(status_code=204)
+    finally:
+        service.cerrar()
+
+
+@app.post("/api/v1/tarjetas/{tarjeta_id}/pagar", response_model=TransferenciaRespuesta)
+def pagar_tarjeta(tarjeta_id: int, datos: PagoTarjetaCrear):
+    service = CardService()
+    try:
+        return _serializar_transferencia(service.pagar_tarjeta(tarjeta_id, **datos.model_dump()))
+    except ValueError as error:
+        _error_negocio(error)
     finally:
         service.cerrar()
 
@@ -742,7 +753,8 @@ def _serializar_tarjeta(tarjeta):
     return TarjetaRespuesta(id=tarjeta.id, nombre=tarjeta.nombre, banco=tarjeta.banco,
                             ultimos_cuatro=tarjeta.ultimos_cuatro, tipo=tarjeta.tipo,
                             moneda=tarjeta.moneda, cuenta_id=tarjeta.cuenta_id,
-                            activa=bool(tarjeta.activa), cuenta=tarjeta.cuenta.nombre)
+                            activa=bool(tarjeta.activa), cuenta=tarjeta.cuenta.nombre,
+                            cuenta_tipo=tarjeta.cuenta.tipo, saldo=tarjeta.cuenta.saldo)
 
 
 def _serializar_deteccion(operacion, duplicada=False):

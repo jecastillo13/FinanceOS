@@ -4,7 +4,7 @@ export type TasaCambio = { id: number; moneda_origen: string; moneda_destino: st
 export type Conversion = { valor_origen: number; origen: string; destino: string; valor_convertido: number };
 export type Adjunto = { id: number; movimiento_id: number; nombre: string; tipo_mime: string; tamano: number; fecha: string; url_descarga: string };
 export type Movimiento = { id: number; fecha: string; descripcion?: string; valor: number; observaciones?: string; cuenta_id: number; categoria_id: number; cuenta: string; moneda: string; categoria: string; tipo: string };
-export type Tarjeta = { id: number; nombre: string; banco: string; ultimos_cuatro: string; tipo: "Credito"|"Debito"; moneda: string; cuenta_id: number; activa: boolean; cuenta: string };
+export type Tarjeta = { id: number; nombre: string; banco: string; ultimos_cuatro: string; tipo: "Credito"|"Debito"; moneda: string; cuenta_id: number; activa: boolean; cuenta: string; cuenta_tipo: string; saldo: number };
 export type Deteccion = { id: number; origen: string; comercio: string; valor: number; moneda: string; fecha: string; banco: string; ultimos_cuatro?: string; tipo_sugerido?: "Credito"|"Debito"; estado: string; tarjeta_id?: number; movimiento_id?: number; duplicada: boolean };
 export type Presupuesto = { id: number; anio: number; mes: number; valor: number; categoria_id: number; categoria: string; gastado: number };
 export type Meta = { id: number; nombre: string; objetivo: number; moneda: string; fecha_limite?: string; descripcion?: string; pagado: number; aportado: number; pendiente: number; porcentaje: number };
@@ -74,8 +74,9 @@ export const financeApi = {
   actualizarMovimiento: (id: number, body: { fecha: string; descripcion: string; valor: number; cuenta_id: number; categoria_id: number; observaciones: string }) => put<Movimiento>(`/movimientos/${id}`, body),
   eliminarMovimiento: (id: number) => remove(`/movimientos/${id}`),
   tarjetas: () => get<Tarjeta[]>("/tarjetas"),
-  crearTarjeta: (body: { nombre: string; banco: string; ultimos_cuatro: string; tipo: string; moneda: string; cuenta_id: number }) => post<Tarjeta>("/tarjetas", body),
+  crearTarjeta: (body: { nombre: string; banco: string; ultimos_cuatro: string; tipo: string; moneda: string; cuenta_id?: number }) => post<Tarjeta>("/tarjetas", body),
   eliminarTarjeta: (id: number) => remove(`/tarjetas/${id}`),
+  pagarTarjeta: (id: number, body: { cuenta_origen_id: number; valor: number; fecha: string; descripcion: string }) => post<Transferencia>(`/tarjetas/${id}/pagar`, body),
   detecciones: () => get<Deteccion[]>("/detecciones?estado=Pendiente"),
   detectarOperacion: (texto: string, origen="Manual") => post<Deteccion>("/detecciones", { texto, origen }),
   confirmarDeteccion: (id: number, body: { categoria_id: number; tarjeta_id?: number; cuenta_id?: number; descripcion?: string }) => post<Deteccion>(`/detecciones/${id}/confirmar`, body),

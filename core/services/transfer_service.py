@@ -6,8 +6,9 @@ from core.services.validation import monto_positivo
 
 
 class TransferService:
-    def __init__(self):
-        self.db = get_session()
+    def __init__(self, db=None):
+        self.db = db or get_session()
+        self._sesion_propia = db is None
 
     def obtener_transferencias(self):
         return self.db.query(Transferencia).order_by(Transferencia.fecha.desc(), Transferencia.id.desc()).all()
@@ -110,4 +111,5 @@ class TransferService:
         return categoria
 
     def cerrar(self):
-        self.db.close()
+        if self._sesion_propia:
+            self.db.close()

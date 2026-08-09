@@ -7,6 +7,7 @@ from core.database import get_session
 from core.models import Categoria, Cuenta, Movimiento, OperacionDetectada, Tarjeta
 from core.services.audit_service import registrar_auditoria
 from core.services.validation import monto_positivo, texto_requerido
+from core.services.transfer_service import TransferService
 
 
 class CardService:
@@ -19,7 +20,7 @@ class CardService:
             consulta = consulta.filter(Tarjeta.activa == 1)
         return consulta.all()
 
-    def crear_tarjeta(self, nombre, banco, ultimos_cuatro, tipo, moneda, cuenta_id):
+    def crear_tarjeta(self, nombre, banco, ultimos_cuatro, tipo, moneda, cuenta_id=None):
         nombre = texto_requerido(nombre, "El nombre", 100)
         ultimos = re.sub(r"\D", "", ultimos_cuatro)[-4:]
         if len(ultimos) != 4:
@@ -27,11 +28,27 @@ class CardService:
         tipo = tipo.capitalize()
         if tipo not in {"Credito", "Debito"}:
             raise ValueError("El tipo debe ser Credito o Debito.")
-        cuenta = self.db.get(Cuenta, cuenta_id)
-        if cuenta is None:
-            raise ValueError("La cuenta vinculada no existe.")
+        moneda = moneda.upper()
+        cuenta = self.db.get(Cuenta, cuenta_id) if cuenta_id else None
+        if tipo == "Debito" and cuenta is None:
+            raise ValueError("Una tarjeta debito debe vincularse a una cuenta bancaria.")
+        if tipo == "Credito" and cuenta is None:
+            cuenta = Cuenta(nombre=f"Deuda {nombre}", tipo="Tarjeta de credito", saldo=0,
+                            moneda=moneda, color="#6D5DFB", icono="💳")
+            self.db.add(cuenta)
+            self.db.flush()
+        if tipo == "Credito" and self._normalizar(cuenta.tipo) != "tarjeta de credito":
+            raise ValueError("Una tarjeta credito debe usar una cuenta de tipo Tarjeta de credito.")
+        if cuenta.moneda.upper() != moneda:
+            raise ValueError("La tarjeta y su cuenta vinculada deben usar la misma moneda.")
+        repetida = self.db.query(Tarjeta).filter(
+            Tarjeta.banco == (banco or "").strip(), Tarjeta.ultimos_cuatro == ultimos,
+            Tarjeta.tipo == tipo, Tarjeta.activa == 1,
+        ).first()
+        if repetida:
+            raise ValueError("Esta tarjeta ya esta registrada.")
         tarjeta = Tarjeta(nombre=nombre, banco=(banco or "").strip(), ultimos_cuatro=ultimos,
-                          tipo=tipo, moneda=moneda.upper(), cuenta_id=cuenta_id)
+                          tipo=tipo, moneda=moneda, cuenta_id=cuenta.id)
         self.db.add(tarjeta)
         self.db.commit()
         self.db.refresh(tarjeta)
@@ -54,9 +71,16 @@ class CardService:
             return existente, True
         tarjeta = None
         if datos["ultimos_cuatro"]:
-            tarjeta = self.db.query(Tarjeta).filter(
+            coincidencias = self.db.query(Tarjeta).filter(
                 Tarjeta.ultimos_cuatro == datos["ultimos_cuatro"], Tarjeta.activa == 1
-            ).first()
+            ).all()
+            if datos["banco"]:
+                por_banco = [item for item in coincidencias if self._normalizar(item.banco) == self._normalizar(datos["banco"])]
+                coincidencias = por_banco or coincidencias
+            if datos["tipo"]:
+                por_tipo = [item for item in coincidencias if item.tipo == datos["tipo"]]
+                coincidencias = por_tipo or coincidencias
+            tarjeta = coincidencias[0] if len(coincidencias) == 1 else None
         operacion = OperacionDetectada(
             origen=origen, texto_original=texto, comercio=datos["comercio"], valor=datos["valor"],
             moneda=datos["moneda"], fecha=datos["fecha"], banco=datos["banco"],
@@ -98,6 +122,10 @@ class CardService:
             raise ValueError("Selecciona la cuenta o tarjeta utilizada.")
         if categoria is None or categoria.tipo != "Gasto":
             raise ValueError("Selecciona una categoria de gasto.")
+        if tarjeta and tarjeta.moneda.upper() != operacion.moneda.upper():
+            raise ValueError(f"El aviso esta en {operacion.moneda} y la tarjeta seleccionada usa {tarjeta.moneda}.")
+        if tarjeta and operacion.ultimos_cuatro and tarjeta.ultimos_cuatro != operacion.ultimos_cuatro:
+            raise ValueError("Los ultimos cuatro digitos no coinciden con la tarjeta seleccionada.")
         valor = -monto_positivo(operacion.valor)
         movimiento = Movimiento(
             fecha=operacion.fecha.date(), descripcion=(descripcion or operacion.comercio)[:250], valor=valor,
@@ -114,6 +142,30 @@ class CardService:
         self.db.commit()
         self.db.refresh(operacion)
         return operacion
+
+    def pagar_tarjeta(self, tarjeta_id, cuenta_origen_id, valor, fecha, descripcion=""):
+        tarjeta = self.db.get(Tarjeta, tarjeta_id)
+        if tarjeta is None or not tarjeta.activa:
+            raise ValueError("La tarjeta no existe o esta inactiva.")
+        if tarjeta.tipo != "Credito":
+            raise ValueError("Solo las tarjetas de credito generan una deuda por pagar.")
+        deuda = tarjeta.cuenta
+        origen = self.db.get(Cuenta, cuenta_origen_id)
+        if origen is None:
+            raise ValueError("La cuenta de pago no existe.")
+        if origen.id == deuda.id:
+            raise ValueError("Selecciona una cuenta bancaria distinta a la cuenta de deuda.")
+        if origen.moneda.upper() != deuda.moneda.upper():
+            raise ValueError("La cuenta de pago y la tarjeta deben usar la misma moneda.")
+        monto = monto_positivo(valor)
+        saldo_pendiente = abs(min(deuda.saldo, 0))
+        if saldo_pendiente <= 0:
+            raise ValueError("Esta tarjeta no tiene deuda pendiente.")
+        if monto > saldo_pendiente:
+            raise ValueError(f"El pago supera la deuda pendiente de {saldo_pendiente:.2f} {deuda.moneda}.")
+        return TransferService(self.db).crear_transferencia(
+            fecha, origen.id, deuda.id, monto, descripcion or f"Pago de {tarjeta.nombre}"
+        )
 
     def _extraer(self, texto):
         normal = unicodedata.normalize("NFKD", texto).encode("ascii", "ignore").decode().lower()
@@ -155,6 +207,10 @@ class CardService:
     def _huella(datos):
         base = "|".join([datos["banco"], datos["ultimos_cuatro"] or "", f'{datos["valor"]:.2f}', datos["moneda"], datos["comercio"].lower(), datos["fecha"].date().isoformat()])
         return hashlib.sha256(base.encode()).hexdigest()
+
+    @staticmethod
+    def _normalizar(valor):
+        return unicodedata.normalize("NFKD", valor or "").encode("ascii", "ignore").decode().lower().strip()
 
     def cerrar(self):
         self.db.close()

@@ -142,4 +142,5 @@ TARJETAS Y AVISOS BANCARIOS
 1. Abre el módulo Tarjetas y vincula cada tarjeta con su cuenta.
 2. Pega el aviso bancario o revísalo desde la bandeja móvil.
 3. Confirma categoría y medio de pago antes de guardarlo.
-4. Para crédito usa una cuenta de tipo Tarjeta de crédito.
+4. En crédito, FinanceOS crea la cuenta de deuda automáticamente.
+5. Usa el botón Pagar para reducir la deuda sin duplicar el gasto.

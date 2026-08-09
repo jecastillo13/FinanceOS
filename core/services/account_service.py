@@ -68,7 +68,7 @@ class AccountService:
 
     def eliminar_cuenta(self, cuenta_id):
         cuenta = self.db.get(Cuenta, cuenta_id)
-        if cuenta is None or cuenta.movimientos:
+        if cuenta is None or cuenta.movimientos or cuenta.tarjetas:
             return False
         registrar_auditoria(self.db, "CUENTA_ELIMINADA", f"Cuenta #{cuenta.id} eliminada: {cuenta.nombre}.")
         self.db.delete(cuenta)

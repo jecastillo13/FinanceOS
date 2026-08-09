@@ -86,7 +86,7 @@ class TarjetaCrear(BaseModel):
     ultimos_cuatro: str = Field(min_length=4, max_length=19)
     tipo: str
     moneda: str = "COP"
-    cuenta_id: int
+    cuenta_id: int | None = None
 
 
 class TarjetaRespuesta(ORMResponse):
@@ -99,6 +99,15 @@ class TarjetaRespuesta(ORMResponse):
     cuenta_id: int
     activa: bool
     cuenta: str
+    cuenta_tipo: str
+    saldo: float
+
+
+class PagoTarjetaCrear(BaseModel):
+    cuenta_origen_id: int
+    valor: float = Field(gt=0)
+    fecha: date
+    descripcion: str = Field(default="", max_length=250)
 
 
 class DeteccionCrear(BaseModel):

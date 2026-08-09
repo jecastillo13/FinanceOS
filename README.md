@@ -49,9 +49,11 @@ La aplicación Flutter incluida en `mobile/` cuenta actualmente con el Dashboard
 ### Tarjetas y compras detectadas
 
 - Cada tarjeta débito o crédito se identifica por sus últimos cuatro dígitos y se vincula a una cuenta.
-- Para crédito se recomienda una cuenta de tipo `Tarjeta de crédito`; su saldo negativo representa la deuda.
+- Al registrar una tarjeta crédito, FinanceOS crea automáticamente una cuenta de deuda independiente; su saldo negativo representa lo pendiente.
 - Los avisos bancarios siempre llegan como candidatos y requieren confirmación antes de crear movimientos.
 - Débito descuenta la cuenta bancaria; crédito afecta únicamente la cuenta de deuda vinculada.
+- El pago de una tarjeta crédito es una transferencia desde una cuenta bancaria hacia la deuda: reduce ambos saldos sin duplicar el gasto.
+- La moneda del aviso debe coincidir con la tarjeta y su cuenta vinculada.
 - Una huella de banco, tarjeta, comercio, valor y fecha evita duplicar el mismo aviso.
 
 En la web, abre **Tarjetas** y pega el aviso. En móvil, abre el icono de notificaciones. La lectura automática de notificaciones Android requiere generar el proyecto nativo con Flutter y autorización explícita del usuario.

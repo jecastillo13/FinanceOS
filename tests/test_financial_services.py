@@ -52,10 +52,10 @@ class FinancialServicesTest(unittest.TestCase):
         finally:
             session.close()
 
-    def _crear_cuenta(self, nombre="Cuenta prueba", saldo=1000):
+    def _crear_cuenta(self, nombre="Cuenta prueba", saldo=1000, tipo="Ahorros", moneda="COP"):
         service = AccountService()
         try:
-            return service.crear_cuenta(nombre, "Ahorros", saldo, "COP").id
+            return service.crear_cuenta(nombre, tipo, saldo, moneda).id
         finally:
             service.cerrar()
 
@@ -97,7 +97,7 @@ class FinancialServicesTest(unittest.TestCase):
 
     def test_compra_credito_afecta_cuenta_deuda_y_no_cuenta_bancaria(self):
         banco_id = self._crear_cuenta("Banco", 500_000)
-        deuda_id = self._crear_cuenta("Tarjeta credito", 0)
+        deuda_id = self._crear_cuenta("Tarjeta credito", 0, "Tarjeta de credito")
         service = CardService()
         try:
             service.crear_tarjeta("Mastercard", "Nu", "9876", "Credito", "COP", deuda_id)
@@ -107,6 +107,35 @@ class FinancialServicesTest(unittest.TestCase):
             service.cerrar()
         self.assertEqual(self._saldo(banco_id), 500_000)
         self.assertEqual(self._saldo(deuda_id), -120_000)
+
+    def test_pago_de_tarjeta_reduce_banco_y_deuda_sin_crear_otro_gasto(self):
+        banco_id = self._crear_cuenta("Banco pago", 500_000)
+        service = CardService()
+        try:
+            tarjeta = service.crear_tarjeta("Visa credito", "Davivienda", "5544", "Credito", "COP")
+            deteccion, _ = service.detectar("Davivienda compra COP $120.000 en VIAJE tarjeta credito terminada en 5544", "Prueba")
+            service.confirmar(deteccion.id, self.gasto_id)
+            deuda_id = tarjeta.cuenta_id
+            service.pagar_tarjeta(tarjeta.id, banco_id, 50_000, date.today())
+        finally:
+            service.cerrar()
+        self.assertEqual(self._saldo(banco_id), 450_000)
+        self.assertEqual(self._saldo(deuda_id), -70_000)
+        movement_service = MovementService()
+        try:
+            self.assertEqual(movement_service.gastos_totales(), 120_000)
+        finally:
+            movement_service.cerrar()
+
+    def test_no_permite_moneda_distinta_entre_aviso_y_tarjeta(self):
+        service = CardService()
+        try:
+            tarjeta = service.crear_tarjeta("USD card", "Nu", "4321", "Credito", "USD")
+            deteccion, _ = service.detectar("Nu compra COP $90.000 en TIENDA tarjeta credito terminada en 4321", "Prueba")
+            with self.assertRaisesRegex(ValueError, "aviso esta en COP"):
+                service.confirmar(deteccion.id, self.gasto_id, tarjeta_id=tarjeta.id)
+        finally:
+            service.cerrar()
 
     def test_eliminar_movimiento_restaura_el_saldo(self):
         cuenta_id = self._crear_cuenta()
