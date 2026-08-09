@@ -1,6 +1,8 @@
 export type Cuenta = { id: number; nombre: string; tipo: string; saldo: number; moneda: string; color?: string; icono?: string };
 export type Categoria = { id: number; nombre: string; tipo: string; color: string; icono?: string; grupo?: string; activa: boolean };
 export type Movimiento = { id: number; fecha: string; descripcion?: string; valor: number; observaciones?: string; cuenta_id: number; categoria_id: number; cuenta: string; moneda: string; categoria: string; tipo: string };
+export type Presupuesto = { id: number; anio: number; mes: number; valor: number; categoria_id: number; categoria: string; gastado: number };
+export type Meta = { id: number; nombre: string; objetivo: number; moneda: string; fecha_limite?: string; descripcion?: string; pagado: number; aportado: number; pendiente: number; porcentaje: number };
 export type Resumen = {
   patrimonio: number;
   cuentas_cop: number;
@@ -39,4 +41,9 @@ export const financeApi = {
   categorias: () => get<Categoria[]>("/categorias"),
   movimientos: () => get<Movimiento[]>("/movimientos?limite=100"),
   crearMovimiento: (body: { fecha: string; descripcion: string; valor: number; cuenta_id: number; categoria_id: number; observaciones: string }) => post<Movimiento>("/movimientos", body),
+  presupuestos: (anio: number, mes: number) => get<Presupuesto[]>(`/presupuestos?anio=${anio}&mes=${mes}`),
+  crearPresupuesto: (body: { anio: number; mes: number; categoria_id: number; valor: number }) => post<Presupuesto>("/presupuestos", body),
+  metas: () => get<Meta[]>("/metas"),
+  crearMeta: (body: { nombre: string; objetivo: number; moneda: string; fecha_limite: string | null; descripcion: string }) => post<Meta>("/metas", body),
+  aportarMeta: (metaId: number, body: { fecha: string; valor: number; descripcion: string }) => post(`/metas/${metaId}/aportes`, body),
 };
