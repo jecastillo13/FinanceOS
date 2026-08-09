@@ -3,6 +3,9 @@ export type Categoria = { id: number; nombre: string; tipo: string; color: strin
 export type Movimiento = { id: number; fecha: string; descripcion?: string; valor: number; observaciones?: string; cuenta_id: number; categoria_id: number; cuenta: string; moneda: string; categoria: string; tipo: string };
 export type Presupuesto = { id: number; anio: number; mes: number; valor: number; categoria_id: number; categoria: string; gastado: number };
 export type Meta = { id: number; nombre: string; objetivo: number; moneda: string; fecha_limite?: string; descripcion?: string; pagado: number; aportado: number; pendiente: number; porcentaje: number };
+export type Inversion = { id: number; activo: string; tipo: string; cantidad: number; precio_compra: number; precio_actual: number; broker?: string; moneda: string; costo: number; valor: number; ganancia: number; rentabilidad: number; costo_cop?: number; valor_cop?: number };
+export type Portafolio = { costo_total_cop: number; valor_total_cop: number; ganancia_total_cop: number; rentabilidad: number; posiciones: Inversion[]; monedas_sin_tasa: string[] };
+export type RespaldoEstado = { motor: string; tamano: number; modificado?: string; disponible: boolean };
 export type Resumen = {
   patrimonio: number;
   cuentas_cop: number;
@@ -46,4 +49,9 @@ export const financeApi = {
   metas: () => get<Meta[]>("/metas"),
   crearMeta: (body: { nombre: string; objetivo: number; moneda: string; fecha_limite: string | null; descripcion: string }) => post<Meta>("/metas", body),
   aportarMeta: (metaId: number, body: { fecha: string; valor: number; descripcion: string }) => post(`/metas/${metaId}/aportes`, body),
+  inversiones: () => get<Portafolio>("/inversiones"),
+  crearInversion: (body: { activo: string; tipo: string; cantidad: number; precio_compra: number; precio_actual: number; broker: string; moneda: string; valores_totales: boolean }) => post<Inversion>("/inversiones", body),
+  health: () => get<{ estado: string; servicio: string; version: string }>("/health"),
+  estadoRespaldo: () => get<RespaldoEstado>("/configuracion/respaldo"),
+  descargarRespaldo: async () => { const response = await fetch(`${BASE_URL}/configuracion/respaldo/descargar`); if (!response.ok) throw new Error("No fue posible crear el respaldo"); return response.blob(); },
 };

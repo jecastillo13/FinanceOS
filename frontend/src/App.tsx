@@ -8,15 +8,16 @@ import {
 import { Cuenta, financeApi, Graficas, Resumen } from "./api";
 import AccountsPage from "./pages/AccountsPage";
 import MovementsPage from "./pages/MovementsPage";
-import ComingSoon from "./pages/ComingSoon";
 import BudgetsPage from "./pages/BudgetsPage";
 import GoalsPage from "./pages/GoalsPage";
+import InvestmentsPage from "./pages/InvestmentsPage";
+import SettingsPage from "./pages/SettingsPage";
 
 const DashboardCharts = lazy(() => import("./DashboardCharts"));
 const cop = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
 const nav = [
   ["Centro", LayoutDashboard], ["Cuentas", WalletCards], ["Movimientos", ReceiptText],
-  ["Presupuestos", ChartNoAxesCombined], ["Metas", Target], ["Configuración", Settings],
+  ["Presupuestos", ChartNoAxesCombined], ["Metas", Target], ["Inversiones", TrendingUp], ["Configuración", Settings],
 ] as const;
 
 function Metric({ label, value, icon: Icon, accent }: { label: string; value: number; icon: typeof TrendingUp; accent: string }) {
@@ -100,7 +101,7 @@ export default function App() {
           </article>
           <article className="ai-panel"><span className="ai-icon"><Sparkles size={21}/></span><div><span className="eyebrow text-violet-200">FINANCEOS INTELLIGENCE</span><h2>Tu resumen inteligente</h2><p>Tu patrimonio está distribuido entre {accounts.length} cuentas. Próximamente recibirás análisis y proyecciones personalizadas.</p></div><button>Descubrir <ChevronRight size={15}/></button></article>
         </section>
-        </> : active==="Cuentas" ? <AccountsPage accounts={accounts} onChanged={load}/> : active==="Movimientos" ? <MovementsPage accounts={accounts}/> : active==="Presupuestos" ? <BudgetsPage/> : active==="Metas" ? <GoalsPage/> : <ComingSoon title={active}/>}
+        </> : active==="Cuentas" ? <AccountsPage accounts={accounts} onChanged={load}/> : active==="Movimientos" ? <MovementsPage accounts={accounts}/> : active==="Presupuestos" ? <BudgetsPage/> : active==="Metas" ? <GoalsPage/> : active==="Inversiones" ? <InvestmentsPage/> : <SettingsPage/>}
       </div>
     </main>
   </div>;

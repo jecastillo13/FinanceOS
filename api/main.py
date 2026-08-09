@@ -18,7 +18,7 @@ from api.schemas import (
 )
 from core.database import create_database
 from core.services import (
-    AccountService, AttachmentService, BudgetService, CategoryService, DashboardService,
+    AccountService, AttachmentService, BackupService, BudgetService, CategoryService, DashboardService,
     ExchangeService, GoalService, InvestmentService, MovementService,
     RecurringExpenseService, ReportService, TransferService,
 )
@@ -53,6 +53,28 @@ def inicio():
 @app.get("/api/v1/health")
 def health():
     return {"estado": "ok", "servicio": "financeos-api", "version": app.version}
+
+
+@app.get("/api/v1/configuracion/respaldo")
+def estado_respaldo():
+    service = BackupService()
+    estado = service.estado()
+    return {
+        "motor": estado["motor"],
+        "tamano": estado["tamano"],
+        "modificado": estado["modificado"].isoformat() if estado["modificado"] else None,
+        "disponible": service.disponible,
+    }
+
+
+@app.get("/api/v1/configuracion/respaldo/descargar")
+def descargar_respaldo():
+    service = BackupService()
+    try:
+        contenido = service.crear_respaldo()
+    except ValueError as error:
+        _error_negocio(error)
+    return Response(content=contenido, media_type="application/zip", headers={"Content-Disposition": 'attachment; filename="FinanceOS-respaldo.zip"'})
 
 
 @app.get("/api/v1/cuentas", response_model=list[CuentaRespuesta])
