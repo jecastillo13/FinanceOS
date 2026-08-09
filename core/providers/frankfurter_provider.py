@@ -3,25 +3,30 @@ import requests
 
 class FrankfurterProvider:
 
-    BASE_URL = "https://api.frankfurter.app"
+    BASE_URL = "https://api.frankfurter.dev/v2"
+    MONEDAS_FINANCEOS = ("COP", "EUR", "GBP", "JPY", "BRL", "MXN", "CAD", "AUD")
 
     def obtener_tasas(self, base="USD"):
 
         try:
 
+            cotizaciones = ",".join(moneda for moneda in self.MONEDAS_FINANCEOS if moneda != base.upper())
             respuesta = requests.get(
-                f"{self.BASE_URL}/latest?from={base}",
-                timeout=10
+                f"{self.BASE_URL}/rates",
+                params={"base": base.upper(), "quotes": cotizaciones},
+                timeout=10,
             )
 
             respuesta.raise_for_status()
 
             datos = respuesta.json()
+            if not isinstance(datos, list):
+                return {}
+            return {
+                registro["quote"]: float(registro["rate"])
+                for registro in datos
+                if registro.get("quote") and registro.get("rate") is not None
+            }
 
-            return datos.get("rates", {})
-
-        except Exception as e:
-
-            print("Error Frankfurter:", e)
-
+        except (requests.RequestException, ValueError, TypeError, KeyError):
             return {}

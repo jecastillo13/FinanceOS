@@ -2,6 +2,7 @@ export type Cuenta = { id: number; nombre: string; tipo: string; saldo: number; 
 export type Categoria = { id: number; nombre: string; tipo: string; color: string; icono?: string; grupo?: string; activa: boolean };
 export type TasaCambio = { id: number; moneda_origen: string; moneda_destino: string; tasa: number; fuente?: string; fecha_actualizacion: string };
 export type Conversion = { valor_origen: number; origen: string; destino: string; valor_convertido: number };
+export type Adjunto = { id: number; movimiento_id: number; nombre: string; tipo_mime: string; tamano: number; fecha: string; url_descarga: string };
 export type Movimiento = { id: number; fecha: string; descripcion?: string; valor: number; observaciones?: string; cuenta_id: number; categoria_id: number; cuenta: string; moneda: string; categoria: string; tipo: string };
 export type Presupuesto = { id: number; anio: number; mes: number; valor: number; categoria_id: number; categoria: string; gastado: number };
 export type Meta = { id: number; nombre: string; objetivo: number; moneda: string; fecha_limite?: string; descripcion?: string; pagado: number; aportado: number; pendiente: number; porcentaje: number };
@@ -70,6 +71,8 @@ export const financeApi = {
   crearMovimiento: (body: { fecha: string; descripcion: string; valor: number; cuenta_id: number; categoria_id: number; observaciones: string }) => post<Movimiento>("/movimientos", body),
   actualizarMovimiento: (id: number, body: { fecha: string; descripcion: string; valor: number; cuenta_id: number; categoria_id: number; observaciones: string }) => put<Movimiento>(`/movimientos/${id}`, body),
   eliminarMovimiento: (id: number) => remove(`/movimientos/${id}`),
+  comprobantes: (id: number) => get<Adjunto[]>(`/movimientos/${id}/comprobantes`),
+  adjuntarComprobante: async (id: number, archivo: File) => { const data=new FormData(); data.append("archivo",archivo); const response=await fetch(`${BASE_URL}/movimientos/${id}/comprobantes`,{method:"POST",body:data}); if(!response.ok){const body=await response.json().catch(()=>null);throw new Error(body?.detail??"No fue posible adjuntar el comprobante")} return response.json() as Promise<Adjunto>; },
   presupuestos: (anio: number, mes: number) => get<Presupuesto[]>(`/presupuestos?anio=${anio}&mes=${mes}`),
   crearPresupuesto: (body: { anio: number; mes: number; categoria_id: number; valor: number }) => post<Presupuesto>("/presupuestos", body),
   metas: () => get<Meta[]>("/metas"),
