@@ -105,6 +105,8 @@ La base de datos SQLite se crea localmente en `database/finance.db` y no se vers
 
 ## Convenciones financieras
 
+El flujo detallado, la matriz de efectos y las reglas contra duplicados están documentados en [`docs/FLUJO_CONTABLE.md`](docs/FLUJO_CONTABLE.md).
+
 - Una categoría de tipo **Ingreso** guarda el valor como positivo.
 - Una categoría de tipo **Gasto** guarda el valor como negativo.
 - El saldo de una cuenta se actualiza al crear, editar o eliminar un movimiento.
