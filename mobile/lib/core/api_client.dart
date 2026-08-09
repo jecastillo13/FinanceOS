@@ -16,6 +16,8 @@ class ApiClient {
 
   Future<Map<String, dynamic>> resumenDashboard() => _getObject('/api/v1/dashboard/resumen');
 
+  Future<Map<String, dynamic>> graficasDashboard() => _getObject('/api/v1/dashboard/graficas');
+
   Future<List<dynamic>> cuentas() => _getList('/api/v1/cuentas');
 
   Future<List<dynamic>> metas() => _getList('/api/v1/metas');

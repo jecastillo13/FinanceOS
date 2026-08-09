@@ -6,7 +6,28 @@ def load_css():
 <style>
 :root { --bg:#0B1020; --surface:#141B2E; --surface2:#1A233A; --border:#273451; --text:#F5F7FF; --muted:#99A7C2; --primary:#818CF8; --success:#34D399; }
 html, body, [class*="css"] { font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif; }
-[data-testid="stAppViewContainer"] { background:radial-gradient(circle at 75% -10%, #202c56 0, transparent 30%),var(--bg); color:var(--text); }
+[data-testid="stAppViewContainer"] { isolation:isolate; background:var(--bg); color:var(--text); }
+[data-testid="stAppViewContainer"]::before {
+  content:""; position:fixed; z-index:-2; inset:-28%; pointer-events:none; opacity:.88;
+  background:
+    radial-gradient(ellipse at 16% 28%,rgba(52,119,246,.43) 0,rgba(52,119,246,.13) 22%,transparent 48%),
+    radial-gradient(ellipse at 78% 12%,rgba(125,105,255,.46) 0,rgba(125,105,255,.14) 24%,transparent 50%),
+    radial-gradient(ellipse at 72% 76%,rgba(27,192,193,.22) 0,transparent 43%),
+    radial-gradient(ellipse at 36% 88%,rgba(93,72,203,.25) 0,transparent 46%);
+  filter:blur(18px) saturate(115%); transform:translate3d(0,0,0) scale(1.02);
+  animation:finance-aurora 22s ease-in-out infinite alternate; will-change:transform;
+}
+[data-testid="stAppViewContainer"]::after {
+  content:""; position:fixed; z-index:-1; inset:0; pointer-events:none;
+  background:linear-gradient(115deg,rgba(8,13,27,.22),rgba(8,13,27,.58) 52%,rgba(8,13,27,.30));
+  box-shadow:inset 0 0 180px rgba(2,6,18,.48);
+}
+[data-testid="stAppViewContainer"]:hover::before { filter:blur(14px) saturate(128%); }
+@keyframes finance-aurora {
+  0% { transform:translate3d(-2%,-1%,0) scale(1.02) rotate(-1deg); }
+  45% { transform:translate3d(3%,2%,0) scale(1.08) rotate(1deg); }
+  100% { transform:translate3d(-1%,4%,0) scale(1.04) rotate(-.5deg); }
+}
 [data-testid="stHeader"] { display:none; }
 [data-testid="stAppViewContainer"] .main { padding-top:0; }
 .block-container { max-width:1500px; padding:1.5rem 2.25rem 3rem; }
@@ -201,6 +222,24 @@ button:disabled, button:disabled * { color:#A8B2C8!important; opacity:.76!import
 [data-testid="stHorizontalBlock"] { gap:1rem; }
 [data-testid="stVerticalBlock"] { gap:.55rem; }
 [data-testid="stElementContainer"] { scroll-margin-top:1rem; }
+
+/* Gráficas premium: panel translúcido, halo y entrada suave */
+[data-testid="stPlotlyChart"] {
+  position:relative; overflow:hidden; padding:.45rem; border-radius:22px;
+  border:1px solid rgba(91,116,181,.34);
+  background:radial-gradient(circle at 82% 0%,rgba(53,184,244,.10),transparent 34%),linear-gradient(145deg,rgba(26,39,70,.78),rgba(12,20,38,.70));
+  box-shadow:0 18px 42px rgba(0,0,0,.18),inset 0 1px rgba(255,255,255,.05);
+  backdrop-filter:blur(16px);
+}
+[data-testid="stPlotlyChart"]::before {
+  content:""; position:absolute; width:180px; height:180px; right:-80px; top:-110px; pointer-events:none;
+  border-radius:50%; background:rgba(124,131,255,.12); filter:blur(24px);
+}
+.page-hero, .metric-card, [data-testid="stPlotlyChart"] { animation:finance-rise .42s cubic-bezier(.2,.75,.25,1) both; }
+@keyframes finance-rise { from { opacity:0; transform:translateY(9px); } to { opacity:1; transform:translateY(0); } }
+@media(prefers-reduced-motion:reduce) {
+  *, *::before, *::after { animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important; }
+}
 
 /* Tablas, alertas y carga de archivos */
 [data-testid="stDataFrame"] { border-radius:18px!important; border-color:rgba(100,120,177,.42)!important; box-shadow:0 14px 30px rgba(0,0,0,.13); }

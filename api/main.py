@@ -547,6 +547,23 @@ def resumen_dashboard():
         service.cerrar()
 
 
+@app.get("/api/v1/dashboard/graficas")
+def graficas_dashboard():
+    service = DashboardService()
+    try:
+        gastos, pendientes_gastos = service.gastos_por_categoria()
+        cuentas, pendientes_cuentas = service.cuentas_por_saldo()
+        inversiones, pendientes_inversiones = service.inversiones_por_saldo()
+        return {
+            "flujo": service.flujo_seis_meses(),
+            "gastos_categoria": gastos,
+            "distribucion": cuentas + inversiones,
+            "pendientes": len(pendientes_gastos) + len(pendientes_cuentas) + len(pendientes_inversiones),
+        }
+    finally:
+        service.cerrar()
+
+
 @app.get("/api/v1/reportes/{anio}/{mes}/resumen")
 def resumen_reporte(anio: int, mes: int):
     if not 2000 <= anio <= 2100 or not 1 <= mes <= 12:

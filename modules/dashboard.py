@@ -1,7 +1,7 @@
-import plotly.express as px
 import streamlit as st
 
 from components.cards import metric_card
+from components.charts import dona_chart, flujo_caja_chart
 from components.ui.page import page_header
 from core.services import DashboardService
 
@@ -79,17 +79,13 @@ def mostrar():
         with izquierda:
             st.subheader("Flujo de caja · últimos 6 meses")
             if any(fila["ingresos"] or fila["gastos"] for fila in flujo):
-                figura = px.bar(flujo, x="mes", y=["ingresos", "gastos"], barmode="group", labels={"value": "COP", "variable": "Tipo", "mes": "Mes"}, color_discrete_map={"ingresos": "#16A34A", "gastos": "#DC2626"})
-                figura.update_layout(template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(20,27,46,.65)", legend_title_text="", margin=dict(l=10, r=10, t=20, b=10))
-                st.plotly_chart(figura, use_container_width=True)
+                st.plotly_chart(flujo_caja_chart(flujo), use_container_width=True, config={"displayModeBar": False})
             else:
                 st.info("Registra tu primer movimiento para ver el flujo de caja.")
         with derecha:
             st.subheader("Gastos por categoría · mes actual")
             if gastos_categoria:
-                figura = px.pie(gastos_categoria, names="categoría", values="valor", hole=0.45)
-                figura.update_layout(template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", legend_title_text="", margin=dict(l=10, r=10, t=20, b=10))
-                st.plotly_chart(figura, use_container_width=True)
+                st.plotly_chart(dona_chart(gastos_categoria, "categoría", "valor", centro="GASTOS"), use_container_width=True, config={"displayModeBar": False})
             else:
                 st.info("Registra gastos para ver su distribución.")
 
@@ -98,9 +94,7 @@ def mostrar():
             st.subheader("Distribución de patrimonio")
             distribucion = cuentas + inversiones
             if distribucion:
-                figura = px.pie(distribucion, names="cuenta", values="saldo_cop", hole=0.58, color_discrete_sequence=["#818CF8", "#34D399", "#38BDF8", "#FBBF24", "#FB7185"])
-                figura.update_layout(template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", legend_title_text="", margin=dict(l=10, r=10, t=20, b=10))
-                st.plotly_chart(figura, use_container_width=True)
+                st.plotly_chart(dona_chart(distribucion, "cuenta", "saldo_cop", centro="PATRIMONIO"), use_container_width=True, config={"displayModeBar": False})
                 st.caption("Cuentas e inversiones convertidas y consolidadas en COP.")
             else:
                 st.info("Aún no hay cuentas ni inversiones registradas.")

@@ -36,10 +36,15 @@ La versión actual es una base funcional para:
 - Transferir dinero entre cuentas sin alterar los totales de ingresos y gastos.
 - Crear presupuestos mensuales por categoría, con alertas al alcanzar el límite.
 - Consultar un Centro Financiero con flujo de caja, distribución de gastos y alertas de presupuesto.
-- Consultar un dashboard con patrimonio, cuentas, ingresos y gastos acumulados.
+- Consultar un dashboard moderno con patrimonio consolidado en COP, flujo de caja, distribución por categorías y composición de cuentas.
 - Actualizar y consultar tasas de cambio mediante Frankfurter.
+- Administrar metas con aportes, pagos vinculados a movimientos e historial.
+- Registrar inversiones y consultar costo, valor actual y rentabilidad.
+- Exportar reportes en CSV, Excel y PDF.
+- Crear, validar y restaurar copias de seguridad desde Configuración.
+- Consumir cuentas, categorías, movimientos, metas, gastos recurrentes, transferencias, presupuestos, inversiones, reportes y Dashboard mediante la API FastAPI.
 
-Metas, inversiones, reportes y configuración están visibles como secciones futuras; todavía no están implementadas.
+La aplicación Flutter incluida en `mobile/` cuenta actualmente con el Dashboard conectado a la API y un sistema visual compartido. Los demás módulos móviles continúan como la siguiente etapa; la aplicación web de Streamlit conserva hoy la cobertura funcional completa.
 
 ## Requisitos
 
@@ -91,9 +96,9 @@ FinanceOS mantiene la interfaz de Streamlit separada de las reglas financieras:
 Esta separación permite conservar las reglas actuales cuando se agregue una API web o una aplicación móvil. La evolución prevista es:
 
 1. Mantener SQLite para uso personal sin conexión y migraciones idempotentes para cada actualización.
-2. Exponer los servicios existentes mediante una API (por ejemplo, FastAPI) sin duplicar reglas de cálculo.
+2. Ampliar la API FastAPI existente sin duplicar reglas de cálculo.
 3. Añadir autenticación, usuarios y PostgreSQL cuando haya sincronización entre dispositivos.
-4. Conectar una interfaz web/móvil a esa API, manteniendo Streamlit como panel local o administrativo.
+4. Completar en Flutter los módulos móviles que ya están disponibles en Streamlit.
 
 ### Integridad y trazabilidad
 
