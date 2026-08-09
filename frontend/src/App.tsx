@@ -3,7 +3,7 @@ import {
   ArrowDownRight, ArrowLeftRight, ArrowUpRight, Bell, ChartNoAxesCombined,
   ChevronRight, CircleDollarSign, Command, CreditCard, LayoutDashboard, Menu,
   FileChartColumn, Plus, ReceiptText, RefreshCw, Repeat2, Search, Settings, Sparkles, Target, TrendingUp,
-  WalletCards, X,
+  WalletCards, X, Tags, Globe2,
 } from "lucide-react";
 import { Cuenta, financeApi, Graficas, Resumen } from "./api";
 import AccountsPage from "./pages/AccountsPage";
@@ -15,13 +15,15 @@ import SettingsPage from "./pages/SettingsPage";
 import RecurringPage from "./pages/RecurringPage";
 import TransfersPage from "./pages/TransfersPage";
 import ReportsPage from "./pages/ReportsPage";
+import CategoriesPage from "./pages/CategoriesPage";
+import CurrenciesPage from "./pages/CurrenciesPage";
 
 const DashboardCharts = lazy(() => import("./DashboardCharts"));
 const cop = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
 const nav = [
-  ["Centro", LayoutDashboard], ["Cuentas", WalletCards], ["Movimientos", ReceiptText],
+  ["Centro", LayoutDashboard], ["Cuentas", WalletCards], ["Categorías", Tags], ["Movimientos", ReceiptText],
   ["Recurrentes", Repeat2], ["Transferencias", ArrowLeftRight], ["Presupuestos", ChartNoAxesCombined],
-  ["Metas", Target], ["Inversiones", TrendingUp], ["Reportes", FileChartColumn], ["Configuración", Settings],
+  ["Metas", Target], ["Inversiones", TrendingUp], ["Monedas", Globe2], ["Reportes", FileChartColumn], ["Configuración", Settings],
 ] as const;
 
 function Metric({ label, value, icon: Icon, accent }: { label: string; value: number; icon: typeof TrendingUp; accent: string }) {
@@ -105,7 +107,7 @@ export default function App() {
           </article>
           <article className="ai-panel"><span className="ai-icon"><Sparkles size={21}/></span><div><span className="eyebrow text-violet-200">FINANCEOS INTELLIGENCE</span><h2>Tu resumen inteligente</h2><p>Tu patrimonio está distribuido entre {accounts.length} cuentas. Próximamente recibirás análisis y proyecciones personalizadas.</p></div><button>Descubrir <ChevronRight size={15}/></button></article>
         </section>
-        </> : active==="Cuentas" ? <AccountsPage accounts={accounts} onChanged={load}/> : active==="Movimientos" ? <MovementsPage accounts={accounts}/> : active==="Recurrentes" ? <RecurringPage accounts={accounts}/> : active==="Transferencias" ? <TransfersPage accounts={accounts} onChanged={load}/> : active==="Presupuestos" ? <BudgetsPage/> : active==="Metas" ? <GoalsPage/> : active==="Inversiones" ? <InvestmentsPage/> : active==="Reportes" ? <ReportsPage/> : <SettingsPage/>}
+        </> : active==="Cuentas" ? <AccountsPage accounts={accounts} onChanged={load}/> : active==="Categorías" ? <CategoriesPage/> : active==="Movimientos" ? <MovementsPage accounts={accounts}/> : active==="Recurrentes" ? <RecurringPage accounts={accounts}/> : active==="Transferencias" ? <TransfersPage accounts={accounts} onChanged={load}/> : active==="Presupuestos" ? <BudgetsPage/> : active==="Metas" ? <GoalsPage/> : active==="Inversiones" ? <InvestmentsPage/> : active==="Monedas" ? <CurrenciesPage/> : active==="Reportes" ? <ReportsPage/> : <SettingsPage/>}
       </div>
     </main>
   </div>;

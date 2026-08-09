@@ -14,7 +14,8 @@ from api.schemas import (
     MetaCrear, MetaDetalleRespuesta, MetaOperacionCrear, MetaOperacionRespuesta,
     MetaPagoCrear, MetaRespuesta, MovimientoCrear, MovimientoRespuesta, PagoRecurrenteCrear,
     PortafolioRespuesta, PresupuestoGuardar, PresupuestoRespuesta,
-    TransferenciaCrear, TransferenciaRespuesta,
+    TransferenciaCrear, TransferenciaRespuesta, TasaCambioRespuesta,
+    ActualizacionTasasRespuesta,
 )
 from core.database import create_database
 from core.services import (
@@ -550,6 +551,33 @@ def convertir_moneda(valor: float = Query(gt=0), origen: str = "USD", destino: s
         if convertido is None:
             raise HTTPException(status_code=404, detail="No hay una tasa disponible para esta conversión.")
         return ConversionRespuesta(valor_origen=valor, origen=origen.upper(), destino=destino.upper(), valor_convertido=convertido)
+    finally:
+        service.cerrar()
+
+
+@app.get("/api/v1/monedas/tasas", response_model=list[TasaCambioRespuesta])
+def listar_tasas():
+    service = ExchangeService()
+    try:
+        return service.obtener_tasas()
+    finally:
+        service.cerrar()
+
+
+@app.post("/api/v1/monedas/tasas/actualizar", response_model=ActualizacionTasasRespuesta)
+def actualizar_tasas(moneda_base: str = "USD"):
+    service = ExchangeService()
+    try:
+        base = moneda_base.upper()
+        if not service.actualizar_tasas(base):
+            raise HTTPException(status_code=503, detail="No fue posible consultar las tasas de cambio.")
+        tasas = service.obtener_tasas()
+        return ActualizacionTasasRespuesta(
+            actualizadas=True,
+            moneda_base=base,
+            ultima_actualizacion=service.ultima_actualizacion(),
+            total=len(tasas),
+        )
     finally:
         service.cerrar()
 

@@ -1,5 +1,7 @@
 export type Cuenta = { id: number; nombre: string; tipo: string; saldo: number; moneda: string; color?: string; icono?: string };
 export type Categoria = { id: number; nombre: string; tipo: string; color: string; icono?: string; grupo?: string; activa: boolean };
+export type TasaCambio = { id: number; moneda_origen: string; moneda_destino: string; tasa: number; fuente?: string; fecha_actualizacion: string };
+export type Conversion = { valor_origen: number; origen: string; destino: string; valor_convertido: number };
 export type Movimiento = { id: number; fecha: string; descripcion?: string; valor: number; observaciones?: string; cuenta_id: number; categoria_id: number; cuenta: string; moneda: string; categoria: string; tipo: string };
 export type Presupuesto = { id: number; anio: number; mes: number; valor: number; categoria_id: number; categoria: string; gastado: number };
 export type Meta = { id: number; nombre: string; objetivo: number; moneda: string; fecha_limite?: string; descripcion?: string; pagado: number; aportado: number; pendiente: number; porcentaje: number };
@@ -39,12 +41,29 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+async function put<T>(path: string, body: unknown): Promise<T> {
+  const response = await fetch(`${BASE_URL}${path}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  if (!response.ok) { const data = await response.json().catch(() => null); throw new Error(data?.detail ?? `La API respondió ${response.status}`); }
+  return response.json() as Promise<T>;
+}
+
+async function remove(path: string): Promise<void> {
+  const response = await fetch(`${BASE_URL}${path}`, { method: "DELETE" });
+  if (!response.ok) { const data = await response.json().catch(() => null); throw new Error(data?.detail ?? `La API respondió ${response.status}`); }
+}
+
 export const financeApi = {
   resumen: () => get<Resumen>("/dashboard/resumen"),
   graficas: () => get<Graficas>("/dashboard/graficas"),
   cuentas: () => get<Cuenta[]>("/cuentas"),
   crearCuenta: (body: { nombre: string; tipo: string; saldo: number; moneda: string }) => post<Cuenta>("/cuentas", body),
   categorias: () => get<Categoria[]>("/categorias"),
+  crearCategoria: (body: { nombre: string; tipo: string; color: string; icono: string; grupo: string; orden: number }) => post<Categoria>("/categorias", body),
+  actualizarCategoria: (id: number, body: { nombre: string; tipo: string; color: string; icono: string; grupo: string; orden: number; activa: boolean }) => put<Categoria>(`/categorias/${id}`, body),
+  eliminarCategoria: (id: number) => remove(`/categorias/${id}`),
+  tasas: () => get<TasaCambio[]>("/monedas/tasas"),
+  actualizarTasas: () => post<{ actualizadas: boolean; moneda_base: string; ultima_actualizacion?: string; total: number }>("/monedas/tasas/actualizar", {}),
+  convertir: (valor: number, origen: string, destino: string) => get<Conversion>(`/monedas/convertir?valor=${valor}&origen=${origen}&destino=${destino}`),
   movimientos: () => get<Movimiento[]>("/movimientos?limite=100"),
   crearMovimiento: (body: { fecha: string; descripcion: string; valor: number; cuenta_id: number; categoria_id: number; observaciones: string }) => post<Movimiento>("/movimientos", body),
   presupuestos: (anio: number, mes: number) => get<Presupuesto[]>(`/presupuestos?anio=${anio}&mes=${mes}`),

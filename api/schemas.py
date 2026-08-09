@@ -200,6 +200,22 @@ class ConversionRespuesta(BaseModel):
     valor_convertido: float
 
 
+class TasaCambioRespuesta(BaseModel):
+    id: int
+    moneda_origen: str
+    moneda_destino: str
+    tasa: float
+    fuente: str | None
+    fecha_actualizacion: datetime
+
+
+class ActualizacionTasasRespuesta(BaseModel):
+    actualizadas: bool
+    moneda_base: str
+    ultima_actualizacion: datetime | None
+    total: int
+
+
 class AdjuntoRespuesta(ORMResponse):
     id: int
     movimiento_id: int
