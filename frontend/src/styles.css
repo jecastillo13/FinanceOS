@@ -72,7 +72,7 @@
 @media(max-width:640px){.hero-actions{grid-template-columns:1fr}.scan-action,.hero-actions .primary-action{width:100%}.movement-actions{flex-direction:column}.receipt-modal{max-height:calc(100vh - 24px);overflow-y:auto}}
 
 /* Composicion del cierre del dashboard: jerarquia compacta y alineacion consistente. */
-.lower-grid{grid-template-columns:minmax(0,1.7fr) minmax(310px,.8fr);align-items:stretch;gap:20px}
+.lower-grid{grid-template-columns:minmax(0,1.62fr) minmax(0,1fr);align-items:stretch;gap:18px}
 .lower-grid .accounts-panel,.lower-grid .ai-panel{min-height:272px}
 .lower-grid .accounts-panel{display:flex;flex-direction:column}
 .lower-grid .accounts-panel .panel-heading{margin-bottom:16px}
