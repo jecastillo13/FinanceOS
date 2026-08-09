@@ -8,14 +8,20 @@ const today=()=>new Date().toISOString().slice(0,10);
 const normalized=(value:string)=>value.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
 
 function extractReceipt(text:string):ReceiptDraft{
- const lines=text.split(/\r?\n/).map(x=>x.trim()).filter(x=>x.length>2);
- const dateMatch=text.match(/\b(20\d{2})[-/.](\d{1,2})[-/.](\d{1,2})\b/)||text.match(/\b(\d{1,2})[-/.](\d{1,2})[-/.](20\d{2})\b/);
+ const normalizedText=text.replace(/([\d.,])[\s\u00a0]+(?=[\d.,])/g,"$1");
+ const lines=normalizedText.split(/\r?\n/).map(x=>x.trim()).filter(x=>x.length>2);
+ const dateMatch=normalizedText.match(/\b(20\d{2})[-/.](\d{1,2})[-/.](\d{1,2})\b/)||normalizedText.match(/\b(\d{1,2})[-/.](\d{1,2})[-/.](20\d{2})\b/);
  let fecha=today();if(dateMatch)fecha=dateMatch[1].length===4?`${dateMatch[1]}-${dateMatch[2].padStart(2,"0")}-${dateMatch[3].padStart(2,"0")}`:`${dateMatch[3]}-${dateMatch[2].padStart(2,"0")}-${dateMatch[1].padStart(2,"0")}`;
- const totals=Array.from(text.matchAll(/(?:total(?:\s+a\s+pagar)?|valor\s+total|importe)[^\d]{0,12}\$?\s*([\d.,]+)/gi)).map(x=>x[1]);
- const numeric=(value:string)=>{const clean=value.replace(/[^\d.,]/g,"");if(clean.includes(",")&&clean.includes("."))return Number(clean.lastIndexOf(",")>clean.lastIndexOf(".")?clean.replace(/\./g,"").replace(",", "."):clean.replace(/,/g,""));if(/,\d{2}$/.test(clean))return Number(clean.replace(/\./g,"").replace(",","."));return Number(clean.replace(/[.,]/g,""))};
- const valor=totals.map(numeric).filter(Number.isFinite).sort((a,b)=>b-a)[0];
+ const numeric=(value:string)=>{const clean=value.replace(/[^\d.,]/g,"");const lastComma=clean.lastIndexOf(","),lastDot=clean.lastIndexOf("."),decimal=Math.max(lastComma,lastDot);if(decimal>=0&&clean.length-decimal-1===2){const integer=clean.slice(0,decimal).replace(/[.,]/g,"");return Number(`${integer}.${clean.slice(decimal+1)}`)}return Number(clean.replace(/[.,]/g,""))};
+ const patterns=[
+  /total\s*\(\s*cop\s*\)\s*:?\s*\$?\s*([\d.,]+)/gi,
+  /total\s+a\s+pagar\s*:?\s*\$?\s*([\d.,]+)/gi,
+  /(?:^|\n)\s*total\s*:?\s*\$?\s*([\d.,]+)/gi,
+  /importe\s+total\s*:?\s*\$?\s*([\d.,]+)/gi,
+ ];
+ let valor:number|undefined;for(const pattern of patterns){const candidates=Array.from(normalizedText.matchAll(pattern)).map(match=>numeric(match[1])).filter(number=>Number.isFinite(number)&&number>0);if(candidates.length){valor=Math.max(...candidates);break}}
  const merchant=lines.find(line=>/[A-Za-zÁÉÍÓÚÑáéíóúñ]{3}/.test(line)&&!/(nit|factura|fecha|tel|total|cajero|cliente)/i.test(line))||"Compra con comprobante";
- return{fecha,descripcion:merchant.slice(0,120),valor:valor?String(valor):"",observaciones:"Datos sugeridos mediante lectura automática. Verificar antes de guardar.",texto:text};
+ return{fecha,descripcion:merchant.slice(0,120),valor:valor?String(valor):"",observaciones:"Datos sugeridos mediante lectura automática. Verificar antes de guardar.",texto:normalizedText};
 }
 
 function matchRecurring(receipt:ReceiptDraft,items:GastoRecurrente[]){const text=normalized(`${receipt.descripcion} ${receipt.texto}`),amount=Number(receipt.valor);return items.find(item=>{const name=normalized(item.nombre),due=item.proxima_fecha_pago<=receipt.fecha,close=!amount||Math.abs(item.valor-amount)<=Math.max(item.valor*.15,1000);return item.activo&&due&&name.length>=4&&text.includes(name)&&close})||null}
