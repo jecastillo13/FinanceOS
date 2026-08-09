@@ -10,7 +10,23 @@ export async function readReceipt(file: File, onProgress: (value: number) => voi
     for (let number = 1; number <= Math.min(pdf.numPages, 3); number += 1) {
       const page = await pdf.getPage(number);
       const content = await page.getTextContent();
-      pages.push(content.items.map(item => "str" in item ? item.str : "").join(" "));
+      const textItems = content.items.flatMap(item => "str" in item && item.str.trim() ? [{ str: item.str, transform: item.transform }] : []);
+      const totalLabel = textItems.find(item => /^total\s*\(.*cop.*\)\s*:?$/i.test(item.str.trim()));
+      let totalHint = "";
+      if (totalLabel) {
+        const vertical = Math.abs(totalLabel.transform[1]) > Math.abs(totalLabel.transform[0]);
+        const aligned = textItems.filter(item => {
+          if (!/^\s*\d{1,3}(?:[.,]\d{3})+(?:[.,]\d{2})?\s*$/.test(item.str)) return false;
+          const distance = vertical ? Math.abs(item.transform[4] - totalLabel.transform[4]) : Math.abs(item.transform[5] - totalLabel.transform[5]);
+          return distance <= 3;
+        }).sort((left, right) => {
+          const leftDistance = vertical ? Math.abs(left.transform[5] - totalLabel.transform[5]) : Math.abs(left.transform[4] - totalLabel.transform[4]);
+          const rightDistance = vertical ? Math.abs(right.transform[5] - totalLabel.transform[5]) : Math.abs(right.transform[4] - totalLabel.transform[4]);
+          return leftDistance - rightDistance;
+        });
+        if (aligned[0]) totalHint = `TOTAL (COP): ${aligned[0].str}\n`;
+      }
+      pages.push(totalHint + textItems.map(item => item.str).join("\n"));
       onProgress(Math.round((number / Math.min(pdf.numPages, 3)) * 75));
     }
     const embeddedText = pages.join("\n").trim();
