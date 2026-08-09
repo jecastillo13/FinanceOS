@@ -242,6 +242,27 @@ class FinancialServicesTest(unittest.TestCase):
             self.assertIn("database/finance.db", archivo.namelist())
             self.assertIn("manifest.json", archivo.namelist())
 
+    def test_restaurar_respaldo_recupera_datos(self):
+        cuenta_id = self._crear_cuenta("Cuenta para restaurar", 4321)
+        respaldos = BackupService()
+        contenido = respaldos.crear_respaldo()
+
+        cuentas = AccountService()
+        try:
+            self.assertTrue(cuentas.eliminar_cuenta(cuenta_id))
+        finally:
+            cuentas.cerrar()
+
+        respaldo_previo = respaldos.restaurar(contenido)
+        cuentas = AccountService()
+        try:
+            restaurada = cuentas.obtener_cuentas()
+        finally:
+            cuentas.cerrar()
+
+        self.assertTrue(respaldo_previo.is_file())
+        self.assertIn("Cuenta para restaurar", [cuenta.nombre for cuenta in restaurada])
+
 
 if __name__ == "__main__":
     unittest.main()

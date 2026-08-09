@@ -44,8 +44,13 @@ class BackupService:
         temporal.close()
         temporal_path = Path(temporal.name)
         try:
-            with sqlite3.connect(origen) as conexion_origen, sqlite3.connect(temporal_path) as conexion_destino:
+            conexion_origen = sqlite3.connect(origen)
+            conexion_destino = sqlite3.connect(temporal_path)
+            try:
                 conexion_origen.backup(conexion_destino)
+            finally:
+                conexion_destino.close()
+                conexion_origen.close()
 
             salida = BytesIO()
             with ZipFile(salida, "w", ZIP_DEFLATED) as archivo:
@@ -111,17 +116,21 @@ class BackupService:
     def _validar_sqlite(self, ruta):
         if ruta.read_bytes()[:16] != b"SQLite format 3\x00":
             raise ValueError("La base incluida no tiene un formato SQLite válido.")
+        conexion = None
         try:
-            with sqlite3.connect(ruta) as conexion:
-                integridad = conexion.execute("PRAGMA integrity_check").fetchone()[0]
-                tablas = {fila[0] for fila in conexion.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+            conexion = sqlite3.connect(ruta)
+            integridad = conexion.execute("PRAGMA integrity_check").fetchone()[0]
+            tablas = {fila[0] for fila in conexion.execute("SELECT name FROM sqlite_master WHERE type='table'")}
         except sqlite3.DatabaseError as error:
             raise ValueError("No fue posible leer la base del respaldo.") from error
+        finally:
+            if conexion is not None:
+                conexion.close()
         if integridad != "ok" or not self.TABLAS_REQUERIDAS.issubset(tablas):
             raise ValueError("El respaldo está incompleto o su base de datos está dañada.")
 
     def _guardar_respaldo_seguridad(self):
-        destino = Path(BASE_DIR) / "backups"
+        destino = self.database_path.parent / "backups"
         destino.mkdir(parents=True, exist_ok=True)
         ruta = destino / f"antes_de_restaurar_{datetime.now():%Y%m%d_%H%M%S}.zip"
         ruta.write_bytes(self.crear_respaldo())
