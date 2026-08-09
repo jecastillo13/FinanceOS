@@ -127,6 +127,28 @@ class FinancialServicesTest(unittest.TestCase):
         finally:
             movement_service.cerrar()
 
+    def test_pago_tarjeta_no_altera_patrimonio_neto(self):
+        banco_id = self._crear_cuenta("Banco patrimonio", 500_000)
+        service = CardService()
+        try:
+            tarjeta = service.crear_tarjeta("Credito patrimonio", "Nu", "6677", "Credito", "COP")
+            deteccion, _ = service.detectar("Nu compra COP $100.000 en HOTEL tarjeta credito terminada en 6677", "Prueba")
+            service.confirmar(deteccion.id, self.gasto_id)
+            dashboard = DashboardService()
+            try:
+                patrimonio_antes = dashboard.patrimonio()
+            finally:
+                dashboard.cerrar()
+            service.pagar_tarjeta(tarjeta.id, banco_id, 60_000, date.today())
+        finally:
+            service.cerrar()
+        dashboard = DashboardService()
+        try:
+            self.assertEqual(patrimonio_antes, 400_000)
+            self.assertEqual(dashboard.patrimonio(), patrimonio_antes)
+        finally:
+            dashboard.cerrar()
+
     def test_no_permite_moneda_distinta_entre_aviso_y_tarjeta(self):
         service = CardService()
         try:

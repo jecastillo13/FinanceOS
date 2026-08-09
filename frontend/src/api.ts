@@ -27,6 +27,7 @@ export type Graficas = {
   flujo: Array<{ mes: string; ingresos: number; gastos: number; balance: number }>;
   gastos_categoria: Array<{ categoria: string; total?: number; valor?: number }>;
   distribucion: Array<{ cuenta: string; saldo_cop: number; moneda_original: string; tipo?: string }>;
+  deudas: Array<{ cuenta: string; saldo_cop: number; moneda_original: string; tipo?: string }>;
   pendientes: number;
 };
 

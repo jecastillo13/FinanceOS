@@ -702,10 +702,13 @@ def graficas_dashboard():
         gastos, pendientes_gastos = service.gastos_por_categoria()
         cuentas, pendientes_cuentas = service.cuentas_por_saldo()
         inversiones, pendientes_inversiones = service.inversiones_por_saldo()
+        activos = [item for item in cuentas if item["saldo_cop"] >= 0] + inversiones
+        deudas = [{**item, "saldo_cop": abs(item["saldo_cop"])} for item in cuentas if item["saldo_cop"] < 0]
         return {
             "flujo": service.flujo_seis_meses(),
             "gastos_categoria": gastos,
-            "distribucion": cuentas + inversiones,
+            "distribucion": activos,
+            "deudas": deudas,
             "pendientes": len(pendientes_gastos) + len(pendientes_cuentas) + len(pendientes_inversiones),
         }
     finally:
