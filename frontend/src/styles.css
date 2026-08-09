@@ -70,6 +70,21 @@
 .hero-actions{position:relative;z-index:2;display:flex;gap:10px;align-items:center}.scan-action{height:52px;padding:0 20px;border:1px solid rgba(108,231,218,.22);border-radius:17px;background:rgba(47,210,191,.09);color:#68e3cd;display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;font-weight:750;cursor:pointer;transition:.25s}.scan-action:hover{transform:translateY(-2px);background:rgba(47,210,191,.14)}.scan-action input{display:none}.scan-action svg{width:19px}.scan-action.scanning{cursor:wait}.movement-list article{grid-template-columns:auto 1fr auto minmax(120px,auto) auto}.movement-actions{display:flex;gap:5px}.movement-actions button{width:34px;height:34px;border:1px solid rgba(255,255,255,.07);border-radius:10px;background:rgba(255,255,255,.035);color:#77849a;display:grid;place-items:center}.movement-actions svg{width:13px}.receipt-file{display:flex;align-items:center;gap:11px;padding:12px 14px;border:1px solid rgba(66,218,184,.14);border-radius:14px;background:rgba(49,208,173,.07);color:#5cdfbd}.receipt-file svg{width:18px}.receipt-file strong{display:block;color:#cbd7df;font-size:11px}.receipt-file small{display:block;margin-top:3px;color:#718c8b;font-size:8px}
 @media(max-width:800px){.hero-actions{width:100%;display:grid;grid-template-columns:1fr 1fr}.scan-action,.hero-actions .primary-action{padding:0 10px}.movement-list article{grid-template-columns:auto 1fr auto}.movement-actions{grid-column:3;grid-row:1/3}.movement-list .amount{grid-column:2/3}}
 @media(max-width:640px){.hero-actions{grid-template-columns:1fr}.scan-action,.hero-actions .primary-action{width:100%}.movement-actions{flex-direction:column}.receipt-modal{max-height:calc(100vh - 24px);overflow-y:auto}}
+
+/* Composicion del cierre del dashboard: jerarquia compacta y alineacion consistente. */
+.lower-grid{grid-template-columns:minmax(0,1.7fr) minmax(310px,.8fr);align-items:stretch;gap:20px}
+.lower-grid .accounts-panel,.lower-grid .ai-panel{min-height:272px}
+.lower-grid .accounts-panel{display:flex;flex-direction:column}
+.lower-grid .accounts-panel .panel-heading{margin-bottom:16px}
+.lower-grid .accounts-track{flex:1;align-items:stretch;gap:14px}
+.lower-grid .account-tile{min-height:0;padding:18px;justify-content:flex-start;gap:30px}
+.lower-grid .account-tile>div:last-of-type{margin-top:auto}
+.lower-grid .ai-panel{padding:30px;justify-content:flex-start;gap:18px}
+.lower-grid .ai-panel>div{margin-top:auto;margin-bottom:auto}
+.lower-grid .ai-panel p{max-width:36ch;margin:10px 0 0;font-size:12px;line-height:1.65}
+.lower-grid .ai-panel button{margin-top:auto}
+@media(max-width:1180px){.lower-grid{grid-template-columns:1fr}.lower-grid .accounts-panel,.lower-grid .ai-panel{min-height:auto}.lower-grid .ai-panel{display:grid;grid-template-columns:auto 1fr auto;align-items:center}.lower-grid .ai-panel>div{margin:0}.lower-grid .ai-panel button{margin:0}}
+@media(max-width:700px){.lower-grid .accounts-track{grid-template-columns:1fr}.lower-grid .account-tile{min-height:150px}.lower-grid .ai-panel{display:flex;align-items:flex-start}.lower-grid .ai-panel>div{margin:0}}
 .movements-hero .hero-actions{flex-wrap:wrap;justify-content:flex-end;max-width:560px}.upload-action{color:#aaa0ff;border-color:rgba(135,113,255,.24);background:rgba(116,91,240,.1)}.upload-action:hover{background:rgba(116,91,240,.16)}.recurring-suggestion{display:grid;grid-template-columns:auto 1fr minmax(170px,.7fr);align-items:center;gap:12px;margin:13px 0;padding:14px;border:1px solid rgba(69,221,183,.18);border-radius:17px;background:linear-gradient(90deg,rgba(47,208,171,.11),rgba(105,82,238,.08))}.recurring-suggestion>span{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;color:#57dfbe;background:rgba(57,218,181,.1)}.recurring-suggestion svg{width:17px}.recurring-suggestion strong{font-size:12px}.recurring-suggestion p{font-size:9px;color:#728198;margin:4px 0}.recurring-suggestion label{margin:0}.recurring-suggestion select{margin-top:5px}
 @media(min-width:1024px){.movements-hero{align-items:center}.movements-hero>div:first-child{max-width:48%}.movements-hero .hero-actions .primary-action{margin-left:auto}}
 @media(max-width:900px){.recurring-suggestion{grid-template-columns:auto 1fr}.recurring-suggestion label{grid-column:1/-1}.movements-hero .hero-actions{max-width:none}}
