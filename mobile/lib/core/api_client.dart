@@ -22,6 +22,29 @@ class ApiClient {
 
   Future<List<dynamic>> metas() => _getList('/api/v1/metas');
 
+  Future<List<dynamic>> tarjetas() => _getList('/api/v1/tarjetas');
+
+  Future<List<dynamic>> detecciones() => _getList('/api/v1/detecciones?estado=Pendiente');
+
+  Future<List<dynamic>> categorias() => _getList('/api/v1/categorias');
+
+  Future<Map<String, dynamic>> detectarOperacion(String texto, {String origen = 'Movil'}) =>
+      _postObject('/api/v1/detecciones', {'texto': texto, 'origen': origen});
+
+  Future<Map<String, dynamic>> confirmarDeteccion({
+    required int deteccionId,
+    required int categoriaId,
+    int? tarjetaId,
+    int? cuentaId,
+  }) => _postObject('/api/v1/detecciones/$deteccionId/confirmar', {
+        'categoria_id': categoriaId,
+        'tarjeta_id': tarjetaId,
+        'cuenta_id': cuentaId,
+      });
+
+  Future<Map<String, dynamic>> descartarDeteccion(int deteccionId) =>
+      _postObject('/api/v1/detecciones/$deteccionId/descartar', {});
+
   Future<Map<String, dynamic>> aportarMeta({
     required int metaId,
     required double valor,

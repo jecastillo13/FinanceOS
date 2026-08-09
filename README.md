@@ -44,7 +44,17 @@ La versión actual es una base funcional para:
 - Crear, validar y restaurar copias de seguridad desde Configuración.
 - Consumir cuentas, categorías, movimientos, metas, gastos recurrentes, transferencias, presupuestos, inversiones, reportes y Dashboard mediante la API FastAPI.
 
-La aplicación Flutter incluida en `mobile/` cuenta actualmente con el Dashboard conectado a la API y un sistema visual compartido. Los demás módulos móviles continúan como la siguiente etapa; la aplicación web de Streamlit conserva hoy la cobertura funcional completa.
+La aplicación Flutter incluida en `mobile/` cuenta actualmente con el Dashboard y la bandeja de compras detectadas conectados a la API. La interfaz React es la experiencia web principal y Streamlit se conserva como cliente legado durante la migración.
+
+### Tarjetas y compras detectadas
+
+- Cada tarjeta débito o crédito se identifica por sus últimos cuatro dígitos y se vincula a una cuenta.
+- Para crédito se recomienda una cuenta de tipo `Tarjeta de crédito`; su saldo negativo representa la deuda.
+- Los avisos bancarios siempre llegan como candidatos y requieren confirmación antes de crear movimientos.
+- Débito descuenta la cuenta bancaria; crédito afecta únicamente la cuenta de deuda vinculada.
+- Una huella de banco, tarjeta, comercio, valor y fecha evita duplicar el mismo aviso.
+
+En la web, abre **Tarjetas** y pega el aviso. En móvil, abre el icono de notificaciones. La lectura automática de notificaciones Android requiere generar el proyecto nativo con Flutter y autorización explícita del usuario.
 
 ## Requisitos
 

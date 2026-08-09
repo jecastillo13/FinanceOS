@@ -18,12 +18,13 @@ from api.schemas import (
     PortafolioRespuesta, PresupuestoGuardar, PresupuestoRespuesta,
     TransferenciaCrear, TransferenciaRespuesta, TasaCambioRespuesta,
     ActualizacionTasasRespuesta,
+    TarjetaCrear, TarjetaRespuesta, DeteccionCrear, DeteccionConfirmar, DeteccionRespuesta,
 )
 from core.database import create_database
 from core.services import (
     AccountService, AttachmentService, BackupService, BudgetService, CategoryService, DashboardService,
     ExchangeService, GoalService, InvestmentService, MovementService,
-    RecurringExpenseService, ReportService, TransferService,
+    RecurringExpenseService, ReportService, TransferService, CardService,
 )
 
 
@@ -206,6 +207,86 @@ def crear_movimiento(datos: MovimientoCrear):
     service = MovementService()
     try:
         return _serializar_movimiento(service.registrar_movimiento(**datos.model_dump()))
+    except ValueError as error:
+        _error_negocio(error)
+    finally:
+        service.cerrar()
+
+
+@app.get("/api/v1/tarjetas", response_model=list[TarjetaRespuesta])
+def listar_tarjetas():
+    service = CardService()
+    try:
+        return [_serializar_tarjeta(t) for t in service.listar_tarjetas()]
+    finally:
+        service.cerrar()
+
+
+@app.post("/api/v1/tarjetas", response_model=TarjetaRespuesta, status_code=201)
+def crear_tarjeta(datos: TarjetaCrear):
+    service = CardService()
+    try:
+        return _serializar_tarjeta(service.crear_tarjeta(**datos.model_dump()))
+    except ValueError as error:
+        _error_negocio(error)
+    finally:
+        service.cerrar()
+
+
+@app.delete("/api/v1/tarjetas/{tarjeta_id}", status_code=204, response_class=Response)
+def eliminar_tarjeta(tarjeta_id: int):
+    service = CardService()
+    try:
+        if not service.eliminar_tarjeta(tarjeta_id):
+            raise HTTPException(status_code=404, detail="La tarjeta no existe.")
+        return Response(status_code=204)
+    finally:
+        service.cerrar()
+
+
+@app.get("/api/v1/detecciones", response_model=list[DeteccionRespuesta])
+def listar_detecciones(estado: str = "Pendiente"):
+    service = CardService()
+    try:
+        return [_serializar_deteccion(item) for item in service.listar_detecciones(estado)]
+    finally:
+        service.cerrar()
+
+
+@app.post("/api/v1/detecciones", response_model=DeteccionRespuesta, status_code=201)
+def detectar_operacion(datos: DeteccionCrear):
+    service = CardService()
+    try:
+        operacion, duplicada = service.detectar(**datos.model_dump())
+        return _serializar_deteccion(operacion, duplicada)
+    except ValueError as error:
+        _error_negocio(error)
+    finally:
+        service.cerrar()
+
+
+@app.post("/api/v1/detecciones/{operacion_id}/confirmar", response_model=DeteccionRespuesta)
+def confirmar_deteccion(operacion_id: int, datos: DeteccionConfirmar):
+    service = CardService()
+    try:
+        operacion = service.confirmar(operacion_id, **datos.model_dump())
+        if operacion is None:
+            raise HTTPException(status_code=404, detail="La deteccion no existe.")
+        return _serializar_deteccion(operacion)
+    except ValueError as error:
+        _error_negocio(error)
+    finally:
+        service.cerrar()
+
+
+@app.post("/api/v1/detecciones/{operacion_id}/descartar", response_model=DeteccionRespuesta)
+def descartar_deteccion(operacion_id: int):
+    service = CardService()
+    try:
+        operacion = service.descartar(operacion_id)
+        if operacion is None:
+            raise HTTPException(status_code=404, detail="La deteccion no existe.")
+        return _serializar_deteccion(operacion)
     except ValueError as error:
         _error_negocio(error)
     finally:
@@ -655,6 +736,22 @@ def descargar_reporte(anio: int, mes: int, formato: str):
 
 def _serializar_movimiento(movimiento):
     return MovimientoRespuesta(id=movimiento.id, fecha=movimiento.fecha, descripcion=movimiento.descripcion, valor=movimiento.valor, observaciones=movimiento.observaciones, cuenta_id=movimiento.cuenta_id, categoria_id=movimiento.categoria_id, cuenta=movimiento.cuenta.nombre, moneda=movimiento.cuenta.moneda, categoria=movimiento.categoria.nombre, tipo=movimiento.categoria.tipo)
+
+
+def _serializar_tarjeta(tarjeta):
+    return TarjetaRespuesta(id=tarjeta.id, nombre=tarjeta.nombre, banco=tarjeta.banco,
+                            ultimos_cuatro=tarjeta.ultimos_cuatro, tipo=tarjeta.tipo,
+                            moneda=tarjeta.moneda, cuenta_id=tarjeta.cuenta_id,
+                            activa=bool(tarjeta.activa), cuenta=tarjeta.cuenta.nombre)
+
+
+def _serializar_deteccion(operacion, duplicada=False):
+    return DeteccionRespuesta(id=operacion.id, origen=operacion.origen, comercio=operacion.comercio,
+                              valor=operacion.valor, moneda=operacion.moneda, fecha=operacion.fecha,
+                              banco=operacion.banco, ultimos_cuatro=operacion.ultimos_cuatro,
+                              tipo_sugerido=operacion.tipo_sugerido, estado=operacion.estado,
+                              tarjeta_id=operacion.tarjeta_id, movimiento_id=operacion.movimiento_id,
+                              duplicada=duplicada)
 
 
 def _serializar_meta(resumen):

@@ -17,11 +17,12 @@ import TransfersPage from "./pages/TransfersPage";
 import ReportsPage from "./pages/ReportsPage";
 import CategoriesPage from "./pages/CategoriesPage";
 import CurrenciesPage from "./pages/CurrenciesPage";
+import CardsPage from "./pages/CardsPage";
 
 const DashboardCharts = lazy(() => import("./DashboardCharts"));
 const cop = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
 const nav = [
-  ["Centro", LayoutDashboard], ["Cuentas", WalletCards], ["Categorías", Tags], ["Movimientos", ReceiptText],
+  ["Centro", LayoutDashboard], ["Cuentas", WalletCards], ["Tarjetas", CreditCard], ["Categorías", Tags], ["Movimientos", ReceiptText],
   ["Recurrentes", Repeat2], ["Transferencias", ArrowLeftRight], ["Presupuestos", ChartNoAxesCombined],
   ["Metas", Target], ["Inversiones", TrendingUp], ["Monedas", Globe2], ["Reportes", FileChartColumn], ["Configuración", Settings],
 ] as const;
@@ -107,7 +108,7 @@ export default function App() {
           </article>
           <article className="ai-panel"><span className="ai-icon"><Sparkles size={21}/></span><div><span className="eyebrow text-violet-200">FINANCEOS INTELLIGENCE</span><h2>Tu resumen inteligente</h2><p>Tu patrimonio está distribuido entre {accounts.length} cuentas. Próximamente recibirás análisis y proyecciones personalizadas.</p></div><button>Descubrir <ChevronRight size={15}/></button></article>
         </section>
-        </> : active==="Cuentas" ? <AccountsPage accounts={accounts} onChanged={load}/> : active==="Categorías" ? <CategoriesPage/> : active==="Movimientos" ? <MovementsPage accounts={accounts}/> : active==="Recurrentes" ? <RecurringPage accounts={accounts}/> : active==="Transferencias" ? <TransfersPage accounts={accounts} onChanged={load}/> : active==="Presupuestos" ? <BudgetsPage/> : active==="Metas" ? <GoalsPage/> : active==="Inversiones" ? <InvestmentsPage/> : active==="Monedas" ? <CurrenciesPage/> : active==="Reportes" ? <ReportsPage/> : <SettingsPage/>}
+        </> : active==="Cuentas" ? <AccountsPage accounts={accounts} onChanged={load}/> : active==="Tarjetas" ? <CardsPage accounts={accounts} onChanged={load}/> : active==="Categorías" ? <CategoriesPage/> : active==="Movimientos" ? <MovementsPage accounts={accounts}/> : active==="Recurrentes" ? <RecurringPage accounts={accounts}/> : active==="Transferencias" ? <TransfersPage accounts={accounts} onChanged={load}/> : active==="Presupuestos" ? <BudgetsPage/> : active==="Metas" ? <GoalsPage/> : active==="Inversiones" ? <InvestmentsPage/> : active==="Monedas" ? <CurrenciesPage/> : active==="Reportes" ? <ReportsPage/> : <SettingsPage/>}
       </div>
     </main>
   </div>;

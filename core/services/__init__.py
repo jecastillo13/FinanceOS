@@ -11,6 +11,7 @@ from .budget_service import BudgetService
 from .investment_service import InvestmentService
 from .report_service import ReportService
 from .backup_service import BackupService
+from .card_service import CardService
 
 __all__ = [
     "AccountService",
@@ -26,4 +27,5 @@ __all__ = [
     "InvestmentService",
     "ReportService",
     "BackupService",
+    "CardService",
 ]

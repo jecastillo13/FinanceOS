@@ -134,3 +134,12 @@ NUEVO FRONTEND REACT
 
 4. Validar la versión de producción:
    npm run build
+
+============================================================
+TARJETAS Y AVISOS BANCARIOS
+============================================================
+
+1. Abre el módulo Tarjetas y vincula cada tarjeta con su cuenta.
+2. Pega el aviso bancario o revísalo desde la bandeja móvil.
+3. Confirma categoría y medio de pago antes de guardarlo.
+4. Para crédito usa una cuenta de tipo Tarjeta de crédito.

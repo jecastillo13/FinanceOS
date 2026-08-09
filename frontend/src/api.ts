@@ -4,6 +4,8 @@ export type TasaCambio = { id: number; moneda_origen: string; moneda_destino: st
 export type Conversion = { valor_origen: number; origen: string; destino: string; valor_convertido: number };
 export type Adjunto = { id: number; movimiento_id: number; nombre: string; tipo_mime: string; tamano: number; fecha: string; url_descarga: string };
 export type Movimiento = { id: number; fecha: string; descripcion?: string; valor: number; observaciones?: string; cuenta_id: number; categoria_id: number; cuenta: string; moneda: string; categoria: string; tipo: string };
+export type Tarjeta = { id: number; nombre: string; banco: string; ultimos_cuatro: string; tipo: "Credito"|"Debito"; moneda: string; cuenta_id: number; activa: boolean; cuenta: string };
+export type Deteccion = { id: number; origen: string; comercio: string; valor: number; moneda: string; fecha: string; banco: string; ultimos_cuatro?: string; tipo_sugerido?: "Credito"|"Debito"; estado: string; tarjeta_id?: number; movimiento_id?: number; duplicada: boolean };
 export type Presupuesto = { id: number; anio: number; mes: number; valor: number; categoria_id: number; categoria: string; gastado: number };
 export type Meta = { id: number; nombre: string; objetivo: number; moneda: string; fecha_limite?: string; descripcion?: string; pagado: number; aportado: number; pendiente: number; porcentaje: number };
 export type Inversion = { id: number; activo: string; tipo: string; cantidad: number; precio_compra: number; precio_actual: number; broker?: string; moneda: string; costo: number; valor: number; ganancia: number; rentabilidad: number; costo_cop?: number; valor_cop?: number };
@@ -71,6 +73,13 @@ export const financeApi = {
   crearMovimiento: (body: { fecha: string; descripcion: string; valor: number; cuenta_id: number; categoria_id: number; observaciones: string }) => post<Movimiento>("/movimientos", body),
   actualizarMovimiento: (id: number, body: { fecha: string; descripcion: string; valor: number; cuenta_id: number; categoria_id: number; observaciones: string }) => put<Movimiento>(`/movimientos/${id}`, body),
   eliminarMovimiento: (id: number) => remove(`/movimientos/${id}`),
+  tarjetas: () => get<Tarjeta[]>("/tarjetas"),
+  crearTarjeta: (body: { nombre: string; banco: string; ultimos_cuatro: string; tipo: string; moneda: string; cuenta_id: number }) => post<Tarjeta>("/tarjetas", body),
+  eliminarTarjeta: (id: number) => remove(`/tarjetas/${id}`),
+  detecciones: () => get<Deteccion[]>("/detecciones?estado=Pendiente"),
+  detectarOperacion: (texto: string, origen="Manual") => post<Deteccion>("/detecciones", { texto, origen }),
+  confirmarDeteccion: (id: number, body: { categoria_id: number; tarjeta_id?: number; cuenta_id?: number; descripcion?: string }) => post<Deteccion>(`/detecciones/${id}/confirmar`, body),
+  descartarDeteccion: (id: number) => post<Deteccion>(`/detecciones/${id}/descartar`, {}),
   comprobantes: (id: number) => get<Adjunto[]>(`/movimientos/${id}/comprobantes`),
   adjuntarComprobante: async (id: number, archivo: File) => { const data=new FormData(); data.append("archivo",archivo); const response=await fetch(`${BASE_URL}/movimientos/${id}/comprobantes`,{method:"POST",body:data}); if(!response.ok){const body=await response.json().catch(()=>null);throw new Error(body?.detail??"No fue posible adjuntar el comprobante")} return response.json() as Promise<Adjunto>; },
   presupuestos: (anio: number, mes: number) => get<Presupuesto[]>(`/presupuestos?anio=${anio}&mes=${mes}`),

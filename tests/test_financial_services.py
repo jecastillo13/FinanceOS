@@ -23,6 +23,7 @@ from core.services import (  # noqa: E402
     RecurringExpenseService,
     ReportService,
     TransferService,
+    CardService,
 )
 
 
@@ -75,6 +76,37 @@ class FinancialServicesTest(unittest.TestCase):
             service.cerrar()
 
         self.assertEqual(self._saldo(cuenta_id), 1375)
+
+    def test_detectar_y_confirmar_compra_debito_sin_duplicarla(self):
+        cuenta_id = self._crear_cuenta("Debito", 1_000_000)
+        service = CardService()
+        try:
+            tarjeta = service.crear_tarjeta("Visa personal", "Bancolombia", "1234", "Debito", "COP", cuenta_id)
+            mensaje = "Bancolombia: compra por COP $75.900 en ADIDAS con tarjeta debito terminada en 1234"
+            deteccion, duplicada = service.detectar(mensaje, "Prueba")
+            repetida, es_repetida = service.detectar(mensaje, "Prueba")
+            self.assertFalse(duplicada)
+            self.assertTrue(es_repetida)
+            self.assertEqual(deteccion.id, repetida.id)
+            self.assertEqual(deteccion.tarjeta_id, tarjeta.id)
+            confirmada = service.confirmar(deteccion.id, self.gasto_id)
+            self.assertEqual(confirmada.estado, "Confirmada")
+        finally:
+            service.cerrar()
+        self.assertEqual(self._saldo(cuenta_id), 924_100)
+
+    def test_compra_credito_afecta_cuenta_deuda_y_no_cuenta_bancaria(self):
+        banco_id = self._crear_cuenta("Banco", 500_000)
+        deuda_id = self._crear_cuenta("Tarjeta credito", 0)
+        service = CardService()
+        try:
+            service.crear_tarjeta("Mastercard", "Nu", "9876", "Credito", "COP", deuda_id)
+            deteccion, _ = service.detectar("Nu compra $120.000 en MERCADO tarjeta credito terminada en 9876", "Prueba")
+            service.confirmar(deteccion.id, self.gasto_id)
+        finally:
+            service.cerrar()
+        self.assertEqual(self._saldo(banco_id), 500_000)
+        self.assertEqual(self._saldo(deuda_id), -120_000)
 
     def test_eliminar_movimiento_restaura_el_saldo(self):
         cuenta_id = self._crear_cuenta()

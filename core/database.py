@@ -67,6 +67,8 @@ def create_database():
         Configuracion,
         Auditoria,
         TasaCambio,
+        Tarjeta,
+        OperacionDetectada,
     )
 
     Base.metadata.create_all(bind=engine)
@@ -100,6 +102,8 @@ def _crear_indices_operativos(conexion):
         "CREATE INDEX IF NOT EXISTS idx_tasas_par ON tasas_cambio(moneda_origen, moneda_destino)",
         "CREATE INDEX IF NOT EXISTS idx_presupuestos_periodo ON presupuestos(anio, mes, categoria_id)",
         "CREATE INDEX IF NOT EXISTS idx_meta_operaciones_meta_fecha ON meta_operaciones(meta_id, fecha)",
+        "CREATE INDEX IF NOT EXISTS idx_tarjetas_ultimos_cuatro ON tarjetas(ultimos_cuatro)",
+        "CREATE INDEX IF NOT EXISTS idx_operaciones_detectadas_estado_fecha ON operaciones_detectadas(estado, fecha)",
     )
     for sentencia in indices:
         conexion.execute(text(sentencia))
@@ -124,6 +128,7 @@ def _ejecutar_migraciones():
         ("001_categoria_enriquecida", _migrar_categoria),
         ("002_indices_operativos", _crear_indices_operativos),
         ("003_metas_inteligentes", _migrar_metas),
+        ("004_tarjetas_y_detecciones", _crear_indices_operativos),
     )
     with engine.begin() as conexion:
         conexion.execute(text("""

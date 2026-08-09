@@ -80,6 +80,55 @@ class MovimientoRespuesta(ORMResponse):
     tipo: str
 
 
+class TarjetaCrear(BaseModel):
+    nombre: str = Field(min_length=1, max_length=100)
+    banco: str = Field(default="", max_length=100)
+    ultimos_cuatro: str = Field(min_length=4, max_length=19)
+    tipo: str
+    moneda: str = "COP"
+    cuenta_id: int
+
+
+class TarjetaRespuesta(ORMResponse):
+    id: int
+    nombre: str
+    banco: str
+    ultimos_cuatro: str
+    tipo: str
+    moneda: str
+    cuenta_id: int
+    activa: bool
+    cuenta: str
+
+
+class DeteccionCrear(BaseModel):
+    texto: str = Field(min_length=3, max_length=4000)
+    origen: str = Field(default="Manual", max_length=30)
+
+
+class DeteccionConfirmar(BaseModel):
+    categoria_id: int
+    tarjeta_id: int | None = None
+    cuenta_id: int | None = None
+    descripcion: str | None = Field(default=None, max_length=250)
+
+
+class DeteccionRespuesta(ORMResponse):
+    id: int
+    origen: str
+    comercio: str
+    valor: float
+    moneda: str
+    fecha: datetime
+    banco: str
+    ultimos_cuatro: str | None
+    tipo_sugerido: str | None
+    estado: str
+    tarjeta_id: int | None
+    movimiento_id: int | None
+    duplicada: bool = False
+
+
 class MetaCrear(BaseModel):
     nombre: str = Field(min_length=1, max_length=100)
     objetivo: float = Field(gt=0)

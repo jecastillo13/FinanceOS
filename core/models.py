@@ -8,7 +8,8 @@ from sqlalchemy import (
     Date,
     DateTime,
     ForeignKey,
-    Text
+    Text,
+    UniqueConstraint,
 )
 
 from sqlalchemy.orm import relationship
@@ -64,6 +65,8 @@ class Cuenta(Base):
         back_populates="cuenta",
         cascade="all, delete-orphan"
     )
+
+    tarjetas = relationship("Tarjeta", back_populates="cuenta")
 
 
 # =====================================================
@@ -165,6 +168,48 @@ class Movimiento(Base):
         back_populates="movimiento",
         cascade="all, delete-orphan",
     )
+
+    deteccion = relationship("OperacionDetectada", back_populates="movimiento", uselist=False)
+
+
+class Tarjeta(Base):
+    __tablename__ = "tarjetas"
+
+    id = Column(Integer, primary_key=True)
+    nombre = Column(String(100), nullable=False)
+    banco = Column(String(100), nullable=False, default="")
+    ultimos_cuatro = Column(String(4), nullable=False)
+    tipo = Column(String(10), nullable=False)
+    moneda = Column(String(10), nullable=False, default="COP")
+    cuenta_id = Column(Integer, ForeignKey("cuentas.id"), nullable=False)
+    activa = Column(Integer, nullable=False, default=1)
+    creada_en = Column(DateTime, default=datetime.now, nullable=False)
+
+    cuenta = relationship("Cuenta", back_populates="tarjetas")
+
+
+class OperacionDetectada(Base):
+    __tablename__ = "operaciones_detectadas"
+    __table_args__ = (UniqueConstraint("huella", name="uq_operacion_detectada_huella"),)
+
+    id = Column(Integer, primary_key=True)
+    origen = Column(String(30), nullable=False, default="Manual")
+    texto_original = Column(Text, nullable=False)
+    comercio = Column(String(160), nullable=False, default="Compra detectada")
+    valor = Column(Float, nullable=False)
+    moneda = Column(String(10), nullable=False, default="COP")
+    fecha = Column(DateTime, default=datetime.now, nullable=False)
+    banco = Column(String(100), nullable=False, default="")
+    ultimos_cuatro = Column(String(4))
+    tipo_sugerido = Column(String(10))
+    estado = Column(String(20), nullable=False, default="Pendiente")
+    huella = Column(String(64), nullable=False)
+    tarjeta_id = Column(Integer, ForeignKey("tarjetas.id"))
+    movimiento_id = Column(Integer, ForeignKey("movimientos.id"))
+    creada_en = Column(DateTime, default=datetime.now, nullable=False)
+
+    tarjeta = relationship("Tarjeta")
+    movimiento = relationship("Movimiento", back_populates="deteccion")
 
 
 class AdjuntoMovimiento(Base):

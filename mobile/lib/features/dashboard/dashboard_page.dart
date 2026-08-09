@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/api_client.dart';
 import '../../core/design_system.dart';
+import '../detections/detections_page.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -106,6 +107,7 @@ class _TopBar extends StatelessWidget {
         const SizedBox(width: 12),
         const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('FinanceOS', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)), Text('Centro financiero personal', style: TextStyle(color: FinanceColors.muted, fontSize: 12))])),
         Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7), decoration: BoxDecoration(color: FinanceColors.success.withOpacity(.10), border: Border.all(color: FinanceColors.success.withOpacity(.25)), borderRadius: BorderRadius.circular(20)), child: const Row(children: [Icon(Icons.circle, size: 7, color: FinanceColors.success), SizedBox(width: 6), Text('Activo', style: TextStyle(color: FinanceColors.success, fontSize: 11, fontWeight: FontWeight.w700))])),
+        IconButton(tooltip: 'Compras detectadas', onPressed: ()=>Navigator.of(context).push(MaterialPageRoute(builder:(_)=>const DetectionsPage())), icon: const Icon(Icons.notifications_active_rounded)),
         IconButton(onPressed: onRefresh, icon: const Icon(Icons.refresh_rounded)),
       ]);
 }
