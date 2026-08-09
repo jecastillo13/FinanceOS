@@ -77,6 +77,24 @@ class FinancialServicesTest(unittest.TestCase):
 
         self.assertEqual(self._saldo(cuenta_id), 1375)
 
+    def test_factura_repetida_no_duplica_movimiento_ni_saldo(self):
+        cuenta_id = self._crear_cuenta(saldo=1_000_000)
+        service = MovementService()
+        try:
+            primera = service.registrar_movimiento(
+                date.today(), "Factura Adidas", 759_899.99, cuenta_id, self.gasto_id,
+                huella="a" * 64,
+            )
+            repetida = service.registrar_movimiento(
+                date.today(), "Factura Adidas", 759_899.99, cuenta_id, self.gasto_id,
+                huella="a" * 64,
+            )
+            self.assertEqual(primera.id, repetida.id)
+            self.assertEqual(service.contar_movimientos(), 1)
+        finally:
+            service.cerrar()
+        self.assertAlmostEqual(self._saldo(cuenta_id), 240_100.01, places=2)
+
     def test_detectar_y_confirmar_compra_debito_sin_duplicarla(self):
         cuenta_id = self._crear_cuenta("Debito", 1_000_000)
         service = CardService()
@@ -225,6 +243,18 @@ class FinancialServicesTest(unittest.TestCase):
         self.assertEqual(movimiento.valor, -100)
         self.assertEqual(self._saldo(cuenta_id), 900)
         self.assertGreater(siguiente_fecha, date.today())
+
+    def test_doble_confirmacion_recurrente_del_mismo_dia_es_idempotente(self):
+        cuenta_id = self._crear_cuenta(saldo=1000)
+        service = RecurringExpenseService()
+        try:
+            gasto = service.crear_gasto("Internet idempotente", 100, "Mensual", date.today(), self.gasto_id)
+            primero = service.pagar(gasto.id, cuenta_id, date.today())
+            segundo = service.pagar(gasto.id, cuenta_id, date.today())
+            self.assertEqual(primero.id, segundo.id)
+        finally:
+            service.cerrar()
+        self.assertEqual(self._saldo(cuenta_id), 900)
 
     def test_eliminar_meta_restaura_pagos_vinculados(self):
         cuenta_id = self._crear_cuenta(saldo=1000)

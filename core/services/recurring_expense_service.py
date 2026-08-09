@@ -71,6 +71,15 @@ class RecurringExpenseService:
             raise ValueError("El gasto recurrente no está disponible.")
         if cuenta is None:
             raise ValueError("La cuenta seleccionada no existe.")
+        descripcion = f"Pago recurrente: {gasto.nombre}"
+        existente = self.db.query(Movimiento).filter(
+            Movimiento.fecha == fecha_pago,
+            Movimiento.descripcion == descripcion,
+            Movimiento.cuenta_id == cuenta_id,
+            Movimiento.categoria_id == gasto.categoria_id,
+        ).first()
+        if existente:
+            return existente
         if gasto.proxima_fecha_pago > fecha_pago:
             raise ValueError("Este gasto todavía no está pendiente de pago.")
 
@@ -78,7 +87,7 @@ class RecurringExpenseService:
         valor = -abs(gasto.valor)
         movimiento = Movimiento(
             fecha=fecha_pago,
-            descripcion=f"Pago recurrente: {gasto.nombre}",
+            descripcion=descripcion,
             valor=valor,
             cuenta_id=cuenta_id,
             categoria_id=gasto.categoria_id,

@@ -1,9 +1,11 @@
 """Punto de entrada de la API local de FinanceOS."""
 
+import os
+import secrets
 from pathlib import Path
 from urllib.parse import quote
 
-from fastapi import FastAPI, File, HTTPException, Query, Response, UploadFile
+from fastapi import FastAPI, File, HTTPException, Query, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -34,12 +36,28 @@ if (FRONTEND_DIST / "assets").is_dir():
     app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="frontend-assets")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8501", "http://localhost:3000", "http://localhost:5173"],
+    allow_origins=[
+        "http://localhost:8501", "http://localhost:3000", "http://localhost:5173",
+        *[origin.strip() for origin in os.getenv("FINANCEOS_CORS_ORIGINS", "").split(",") if origin.strip()],
+    ],
     allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+API_TOKEN = os.getenv("FINANCEOS_API_TOKEN", "").strip()
+
+
+@app.middleware("http")
+async def proteger_api_remota(request: Request, call_next):
+    """Proteccion opcional para exponer una instalacion personal fuera del equipo."""
+    if API_TOKEN and request.url.path.startswith("/api/v1/") and request.url.path != "/api/v1/health":
+        recibido = request.headers.get("authorization", "")
+        esperado = f"Bearer {API_TOKEN}"
+        if not secrets.compare_digest(recibido, esperado):
+            return Response(content='{"detail":"No autorizado"}', status_code=401, media_type="application/json")
+    return await call_next(request)
 
 
 def _error_negocio(error):

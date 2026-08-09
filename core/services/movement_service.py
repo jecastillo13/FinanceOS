@@ -23,7 +23,8 @@ class MovementService:
         valor,
         cuenta_id,
         categoria_id,
-        observaciones=""
+        observaciones="",
+        huella=None,
     ):
 
         descripcion = texto_requerido(descripcion, "La descripcion", 250)
@@ -31,13 +32,20 @@ class MovementService:
         if self.db.get(Cuenta, cuenta_id) is None:
             raise ValueError("La cuenta seleccionada no existe.")
 
+        huella = (huella or "").strip().lower() or None
+        if huella:
+            existente = self.db.query(Movimiento).filter(Movimiento.huella == huella).first()
+            if existente:
+                return existente
+
         movimiento = Movimiento(
             fecha=fecha,
             descripcion=descripcion,
             valor=valor_firmado,
             cuenta_id=cuenta_id,
             categoria_id=categoria_id,
-            observaciones=observaciones
+            observaciones=observaciones,
+            huella=huella,
         )
 
         self.db.add(movimiento)
@@ -65,7 +73,8 @@ class MovementService:
         valor,
         cuenta_id,
         categoria_id,
-        observaciones=""
+        observaciones="",
+        huella=None,
     ):
 
         movimiento = self.db.get(
@@ -89,6 +98,14 @@ class MovementService:
         movimiento.cuenta_id = cuenta_id
         movimiento.categoria_id = categoria_id
         movimiento.observaciones = observaciones
+        if huella and huella != movimiento.huella:
+            repetido = self.db.query(Movimiento).filter(
+                Movimiento.huella == huella,
+                Movimiento.id != movimiento.id,
+            ).first()
+            if repetido:
+                raise ValueError("Este comprobante ya esta asociado a otro movimiento.")
+            movimiento.huella = huella
 
         if cuenta_anterior_id == cuenta_id:
             self.actualizar_saldo(cuenta_id, valor_firmado - valor_anterior)

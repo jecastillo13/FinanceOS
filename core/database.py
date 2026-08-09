@@ -122,6 +122,14 @@ def _migrar_metas(conexion):
             conexion.execute(text(f"ALTER TABLE metas ADD COLUMN {nombre} {definicion}"))
 
 
+def _migrar_idempotencia_movimientos(conexion):
+    """Permite reconocer comprobantes ya importados sin alterar datos previos."""
+    columnas = {columna["name"] for columna in inspect(engine).get_columns("movimientos")}
+    if "huella" not in columnas:
+        conexion.execute(text("ALTER TABLE movimientos ADD COLUMN huella VARCHAR(64)"))
+    conexion.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS uq_movimiento_huella ON movimientos(huella)"))
+
+
 def _ejecutar_migraciones():
     """Aplica migraciones idempotentes y registra la version local."""
     migraciones = (
@@ -129,6 +137,7 @@ def _ejecutar_migraciones():
         ("002_indices_operativos", _crear_indices_operativos),
         ("003_metas_inteligentes", _migrar_metas),
         ("004_tarjetas_y_detecciones", _crear_indices_operativos),
+        ("005_idempotencia_movimientos", _migrar_idempotencia_movimientos),
     )
     with engine.begin() as conexion:
         conexion.execute(text("""

@@ -8,11 +8,17 @@ const apiBaseUrl = String.fromEnvironment(
   'API_URL',
   defaultValue: 'http://10.0.2.2:8000',
 );
+const apiToken = String.fromEnvironment('API_TOKEN', defaultValue: '');
 
 class ApiClient {
   ApiClient({http.Client? client}) : _client = client ?? http.Client();
 
   final http.Client _client;
+
+  Map<String, String> get _headers => {
+        'Content-Type': 'application/json',
+        if (apiToken.isNotEmpty) 'Authorization': 'Bearer $apiToken',
+      };
 
   Future<Map<String, dynamic>> resumenDashboard() => _getObject('/api/v1/dashboard/resumen');
 
@@ -27,6 +33,24 @@ class ApiClient {
   Future<List<dynamic>> detecciones() => _getList('/api/v1/detecciones?estado=Pendiente');
 
   Future<List<dynamic>> categorias() => _getList('/api/v1/categorias');
+
+  Future<Map<String, dynamic>> crearMovimiento({
+    required DateTime fecha,
+    required String descripcion,
+    required double valor,
+    required int cuentaId,
+    required int categoriaId,
+    String observaciones = '',
+    String? huella,
+  }) => _postObject('/api/v1/movimientos', {
+        'fecha': _fecha(fecha),
+        'descripcion': descripcion,
+        'valor': valor,
+        'cuenta_id': cuentaId,
+        'categoria_id': categoriaId,
+        'observaciones': observaciones,
+        if (huella != null) 'huella': huella,
+      });
 
   Future<Map<String, dynamic>> detectarOperacion(String texto, {String origen = 'Movil'}) =>
       _postObject('/api/v1/detecciones', {'texto': texto, 'origen': origen});
@@ -81,6 +105,7 @@ class ApiClient {
       'POST',
       Uri.parse('$apiBaseUrl/api/v1/movimientos/$movimientoId/comprobantes'),
     );
+    if (apiToken.isNotEmpty) request.headers['Authorization'] = 'Bearer $apiToken';
     request.files.add(await http.MultipartFile.fromPath('archivo', rutaArchivo));
     final response = await http.Response.fromStream(await request.send());
     if (response.statusCode >= 400) throw ApiException(response.statusCode, response.body);
@@ -88,13 +113,13 @@ class ApiClient {
   }
 
   Future<Map<String, dynamic>> _getObject(String path) async {
-    final response = await _client.get(Uri.parse('$apiBaseUrl$path'));
+    final response = await _client.get(Uri.parse('$apiBaseUrl$path'), headers: _headers);
     if (response.statusCode >= 400) throw ApiException(response.statusCode, response.body);
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
   Future<List<dynamic>> _getList(String path) async {
-    final response = await _client.get(Uri.parse('$apiBaseUrl$path'));
+    final response = await _client.get(Uri.parse('$apiBaseUrl$path'), headers: _headers);
     if (response.statusCode >= 400) throw ApiException(response.statusCode, response.body);
     return jsonDecode(response.body) as List<dynamic>;
   }
@@ -102,7 +127,7 @@ class ApiClient {
   Future<Map<String, dynamic>> _postObject(String path, Map<String, dynamic> body) async {
     final response = await _client.post(
       Uri.parse('$apiBaseUrl$path'),
-      headers: {'Content-Type': 'application/json'},
+      headers: _headers,
       body: jsonEncode(body),
     );
     if (response.statusCode >= 400) throw ApiException(response.statusCode, response.body);

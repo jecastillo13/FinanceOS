@@ -64,6 +64,7 @@ class MovimientoCrear(BaseModel):
     cuenta_id: int
     categoria_id: int
     observaciones: str = ""
+    huella: str | None = Field(default=None, min_length=16, max_length=64)
 
 
 class MovimientoRespuesta(ORMResponse):

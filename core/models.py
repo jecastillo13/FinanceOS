@@ -116,6 +116,7 @@ class Categoria(Base):
 
 class Movimiento(Base):
     __tablename__ = "movimientos"
+    __table_args__ = (UniqueConstraint("huella", name="uq_movimiento_huella"),)
 
     id = Column(
         Integer,
@@ -140,6 +141,10 @@ class Movimiento(Base):
     observaciones = Column(
         Text
     )
+
+    # Identificador idempotente para importaciones (facturas, SMS y sincronizacion).
+    # Es opcional para conservar los movimientos manuales historicos.
+    huella = Column(String(64), nullable=True)
 
     cuenta_id = Column(
         Integer,

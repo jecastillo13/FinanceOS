@@ -32,27 +32,29 @@ export type Graficas = {
 };
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? "/api/v1";
+const API_TOKEN = import.meta.env.VITE_API_TOKEN ?? "";
+const authHeaders = (): Record<string,string> => API_TOKEN ? { Authorization: `Bearer ${API_TOKEN}` } : {};
 
 async function get<T>(path: string): Promise<T> {
-  const response = await fetch(`${BASE_URL}${path}`);
+  const response = await fetch(`${BASE_URL}${path}`, { headers: authHeaders() });
   if (!response.ok) throw new Error(`La API respondió ${response.status}`);
   return response.json() as Promise<T>;
 }
 
 async function post<T>(path: string, body: unknown): Promise<T> {
-  const response = await fetch(`${BASE_URL}${path}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const response = await fetch(`${BASE_URL}${path}`, { method: "POST", headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify(body) });
   if (!response.ok) { const data = await response.json().catch(() => null); throw new Error(data?.detail ?? `La API respondió ${response.status}`); }
   return response.json() as Promise<T>;
 }
 
 async function put<T>(path: string, body: unknown): Promise<T> {
-  const response = await fetch(`${BASE_URL}${path}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const response = await fetch(`${BASE_URL}${path}`, { method: "PUT", headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify(body) });
   if (!response.ok) { const data = await response.json().catch(() => null); throw new Error(data?.detail ?? `La API respondió ${response.status}`); }
   return response.json() as Promise<T>;
 }
 
 async function remove(path: string): Promise<void> {
-  const response = await fetch(`${BASE_URL}${path}`, { method: "DELETE" });
+  const response = await fetch(`${BASE_URL}${path}`, { method: "DELETE", headers: authHeaders() });
   if (!response.ok) { const data = await response.json().catch(() => null); throw new Error(data?.detail ?? `La API respondió ${response.status}`); }
 }
 
@@ -71,8 +73,8 @@ export const financeApi = {
   actualizarTasas: () => post<{ actualizadas: boolean; moneda_base: string; ultima_actualizacion?: string; total: number }>("/monedas/tasas/actualizar", {}),
   convertir: (valor: number, origen: string, destino: string) => get<Conversion>(`/monedas/convertir?valor=${valor}&origen=${origen}&destino=${destino}`),
   movimientos: () => get<Movimiento[]>("/movimientos?limite=100"),
-  crearMovimiento: (body: { fecha: string; descripcion: string; valor: number; cuenta_id: number; categoria_id: number; observaciones: string }) => post<Movimiento>("/movimientos", body),
-  actualizarMovimiento: (id: number, body: { fecha: string; descripcion: string; valor: number; cuenta_id: number; categoria_id: number; observaciones: string }) => put<Movimiento>(`/movimientos/${id}`, body),
+  crearMovimiento: (body: { fecha: string; descripcion: string; valor: number; cuenta_id: number; categoria_id: number; observaciones: string; huella?: string }) => post<Movimiento>("/movimientos", body),
+  actualizarMovimiento: (id: number, body: { fecha: string; descripcion: string; valor: number; cuenta_id: number; categoria_id: number; observaciones: string; huella?: string }) => put<Movimiento>(`/movimientos/${id}`, body),
   eliminarMovimiento: (id: number) => remove(`/movimientos/${id}`),
   tarjetas: () => get<Tarjeta[]>("/tarjetas"),
   crearTarjeta: (body: { nombre: string; banco: string; ultimos_cuatro: string; tipo: string; moneda: string; cuenta_id?: number }) => post<Tarjeta>("/tarjetas", body),
@@ -83,7 +85,7 @@ export const financeApi = {
   confirmarDeteccion: (id: number, body: { categoria_id: number; tarjeta_id?: number; cuenta_id?: number; descripcion?: string }) => post<Deteccion>(`/detecciones/${id}/confirmar`, body),
   descartarDeteccion: (id: number) => post<Deteccion>(`/detecciones/${id}/descartar`, {}),
   comprobantes: (id: number) => get<Adjunto[]>(`/movimientos/${id}/comprobantes`),
-  adjuntarComprobante: async (id: number, archivo: File) => { const data=new FormData(); data.append("archivo",archivo); const response=await fetch(`${BASE_URL}/movimientos/${id}/comprobantes`,{method:"POST",body:data}); if(!response.ok){const body=await response.json().catch(()=>null);throw new Error(body?.detail??"No fue posible adjuntar el comprobante")} return response.json() as Promise<Adjunto>; },
+  adjuntarComprobante: async (id: number, archivo: File) => { const data=new FormData(); data.append("archivo",archivo); const response=await fetch(`${BASE_URL}/movimientos/${id}/comprobantes`,{method:"POST",headers:authHeaders(),body:data}); if(!response.ok){const body=await response.json().catch(()=>null);throw new Error(body?.detail??"No fue posible adjuntar el comprobante")} return response.json() as Promise<Adjunto>; },
   presupuestos: (anio: number, mes: number) => get<Presupuesto[]>(`/presupuestos?anio=${anio}&mes=${mes}`),
   crearPresupuesto: (body: { anio: number; mes: number; categoria_id: number; valor: number }) => post<Presupuesto>("/presupuestos", body),
   metas: () => get<Meta[]>("/metas"),
@@ -95,12 +97,12 @@ export const financeApi = {
   crearInversion: (body: { activo: string; tipo: string; cantidad: number; precio_compra: number; precio_actual: number; broker: string; moneda: string; valores_totales: boolean }) => post<Inversion>("/inversiones", body),
   health: () => get<{ estado: string; servicio: string; version: string }>("/health"),
   estadoRespaldo: () => get<RespaldoEstado>("/configuracion/respaldo"),
-  descargarRespaldo: async () => { const response = await fetch(`${BASE_URL}/configuracion/respaldo/descargar`); if (!response.ok) throw new Error("No fue posible crear el respaldo"); return response.blob(); },
+  descargarRespaldo: async () => { const response = await fetch(`${BASE_URL}/configuracion/respaldo/descargar`,{headers:authHeaders()}); if (!response.ok) throw new Error("No fue posible crear el respaldo"); return response.blob(); },
   recurrentes: () => get<GastoRecurrente[]>("/gastos-recurrentes"),
   crearRecurrente: (body: { nombre: string; valor: number; frecuencia: string; proxima_fecha_pago: string; categoria_id: number }) => post<GastoRecurrente>("/gastos-recurrentes", body),
   pagarRecurrente: (id: number, body: { cuenta_id: number; fecha_pago: string }) => post<Movimiento>(`/gastos-recurrentes/${id}/pagar`, body),
   transferencias: () => get<Transferencia[]>("/transferencias"),
   crearTransferencia: (body: { fecha: string; cuenta_origen_id: number; cuenta_destino_id: number; valor: number; descripcion: string }) => post<Transferencia>("/transferencias", body),
   reporte: (anio: number, mes: number) => get<ReporteResumen>(`/reportes/${anio}/${mes}/resumen`),
-  descargarReporte: async (anio: number, mes: number, formato: "csv"|"xlsx"|"pdf") => { const response=await fetch(`${BASE_URL}/reportes/${anio}/${mes}/${formato}`); if(!response.ok) throw new Error("No fue posible generar el reporte"); return response.blob(); },
+  descargarReporte: async (anio: number, mes: number, formato: "csv"|"xlsx"|"pdf") => { const response=await fetch(`${BASE_URL}/reportes/${anio}/${mes}/${formato}`,{headers:authHeaders()}); if(!response.ok) throw new Error("No fue posible generar el reporte"); return response.blob(); },
 };

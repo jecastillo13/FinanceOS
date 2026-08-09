@@ -38,6 +38,14 @@ class AttachmentService:
         if not contenido or len(contenido) > self.TAMANO_MAXIMO:
             raise ValueError("El comprobante debe pesar entre 1 byte y 10 MB.")
 
+        # Una repeticion de red o un doble toque no debe crear dos adjuntos.
+        for existente in movimiento.adjuntos:
+            if existente.tamano != len(contenido):
+                continue
+            ruta_existente = Path(BASE_DIR) / existente.ruta
+            if ruta_existente.is_file() and ruta_existente.read_bytes() == contenido:
+                return existente
+
         self.carpeta.mkdir(parents=True, exist_ok=True)
         extension = self.TIPOS_PERMITIDOS[tipo_mime]
         ruta = self.carpeta / f"{uuid4().hex}{extension}"

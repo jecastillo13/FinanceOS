@@ -127,6 +127,20 @@ components/           Componentes reutilizables de interfaz
 database/             Base de datos local (ignorada por Git)
 ```
 
+## Web y movil protegidos
+
+La API admite PostgreSQL mediante `FINANCEOS_DATABASE_URL` y proteccion Bearer opcional mediante `FINANCEOS_API_TOKEN`. Copia `.env.example`, configura valores seguros en el servidor y no publiques ese archivo.
+
+En desarrollo local el token puede omitirse. Para compilar la web protegida define tambien `VITE_API_TOKEN`. En Flutter usa:
+
+```powershell
+flutter run --dart-define=API_URL=https://tu-api.example.com --dart-define=API_TOKEN=TU_TOKEN
+```
+
+La aplicacion movil incluye el flujo de camara y OCR en `mobile/lib/features/receipts/receipt_scan_page.dart`: toma la foto, propone comercio y total, exige confirmacion y adjunta la imagen al movimiento. La huella del comprobante evita descontar dos veces por reintentos o doble toque.
+
+El token protege una instalacion personal sincronizada. El registro de varias personas independientes requiere una migracion posterior con `usuario_id` en todas las entidades; no debe simularse compartiendo un token entre usuarios.
+
 ## Arquitectura y crecimiento
 
 FinanceOS mantiene la interfaz de Streamlit separada de las reglas financieras:
