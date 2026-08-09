@@ -1,10 +1,12 @@
 """Punto de entrada de la API local de FinanceOS."""
 
+from pathlib import Path
 from urllib.parse import quote
 
 from fastapi import FastAPI, File, HTTPException, Query, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
 from api.schemas import (
     AdjuntoRespuesta, CategoriaActualizar, CategoriaGuardar, CategoriaRespuesta,
@@ -26,6 +28,9 @@ from core.services import (
 
 
 app = FastAPI(title="FinanceOS API", version="0.1.0", description="API local preparada para las aplicaciones web y móvil de FinanceOS.")
+FRONTEND_DIST = Path(__file__).resolve().parents[1] / "frontend" / "dist"
+if (FRONTEND_DIST / "assets").is_dir():
+    app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="frontend-assets")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:8501", "http://localhost:3000", "http://localhost:5173"],
@@ -47,8 +52,9 @@ def iniciar_base_datos():
 
 @app.get("/", include_in_schema=False)
 def inicio():
-    """Abre la documentación interactiva al entrar a la API local."""
-    return RedirectResponse(url="/docs")
+    """Sirve la interfaz compilada o abre la documentación si aún no existe."""
+    index = FRONTEND_DIST / "index.html"
+    return FileResponse(index) if index.is_file() else RedirectResponse(url="/docs")
 
 
 @app.get("/api/v1/health")

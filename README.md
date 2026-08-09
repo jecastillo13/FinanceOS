@@ -76,7 +76,18 @@ npm install
 npm run dev
 ```
 
-Abre `http://localhost:5173`. Para comprobar la versión de producción utiliza `npm run build`.
+Abre `http://localhost:5173` durante el desarrollo, porque Vite actualiza los cambios al instante.
+
+Para usar una sola dirección, compila el frontend y luego inicia FastAPI:
+
+```powershell
+cd frontend
+npm run build
+cd ..
+uvicorn api.main:app --reload --port 8000
+```
+
+Abre `http://localhost:8000`. FastAPI servirá la aplicación React y conservará su documentación en `http://localhost:8000/docs`.
 
 La base de datos SQLite se crea localmente en `database/finance.db` y no se versiona.
 
