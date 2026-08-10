@@ -1,83 +1,31 @@
 import 'package:flutter/material.dart';
 
+import '../../core/api_client.dart';
 import '../../core/design_system.dart';
 import '../dashboard/dashboard_page.dart';
+import '../detections/detections_page.dart';
 import '../modules/collection_page.dart';
-import '../modules/modules_page.dart';
 import '../receipts/receipt_scan_page.dart';
-import '../../core/api_client.dart';
 
-/// Navegacion principal de FinanceOS para telefonos.
-///
-/// IndexedStack conserva el estado y la posicion de desplazamiento de cada
-/// modulo al cambiar de seccion.
 class MobileShell extends StatefulWidget {
   const MobileShell({super.key});
-
-  @override
-  State<MobileShell> createState() => _MobileShellState();
+  @override State<MobileShell> createState()=>_MobileShellState();
 }
 
-class _MobileShellState extends State<MobileShell> {
-  int _selectedIndex = 0;
+class _MobileShellState extends State<MobileShell>{
+  final _key=GlobalKey<ScaffoldState>(); int _index=0;
+  static final _pages=<Widget>[const DashboardPage(),CollectionPage(title:'Movimientos',icon:Icons.receipt_long_rounded,loader:(a)=>a.movimientos(),deleteResource:'movimientos'),const ReceiptScanPage()];
 
-  static final _pages = <Widget>[
-    const DashboardPage(),
-    CollectionPage(title:'Movimientos',icon:Icons.receipt_long_rounded,loader:(ApiClient api)=>api.movimientos(),deleteResource:'movimientos'),
-    const ReceiptScanPage(),
-    const ModulesPage(),
-  ];
+  void _collection(String title,IconData icon,Future<List<dynamic>> Function(ApiClient) loader,[String? resource]){Navigator.pop(context);Navigator.push(context,MaterialPageRoute(builder:(_)=>CollectionPage(title:title,icon:icon,loader:loader,deleteResource:resource)));}
 
-  @override
-  Widget build(BuildContext context) => Scaffold(
-        extendBody: true,
-        body: IndexedStack(index: _selectedIndex, children: _pages),
-        bottomNavigationBar: SafeArea(
-          minimum: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: const Color(0xF2131C32),
-              borderRadius: BorderRadius.circular(26),
-              border: Border.all(color: FinanceColors.border.withValues(alpha: .72)),
-              boxShadow: const [
-                BoxShadow(color: Color(0x66000000), blurRadius: 28, offset: Offset(0, 12)),
-                BoxShadow(color: Color(0x227C83FF), blurRadius: 22),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(25),
-              child: NavigationBar(
-                selectedIndex: _selectedIndex,
-                onDestinationSelected: (index) => setState(() => _selectedIndex = index),
-                height: 72,
-                backgroundColor: Colors.transparent,
-                indicatorColor: FinanceColors.primary.withValues(alpha: .24),
-                labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-                destinations: const [
-                  NavigationDestination(
-                    icon: Icon(Icons.space_dashboard_outlined),
-                    selectedIcon: Icon(Icons.space_dashboard_rounded, color: FinanceColors.text),
-                    label: 'Inicio',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.receipt_long_outlined),
-                    selectedIcon: Icon(Icons.receipt_long_rounded, color: FinanceColors.text),
-                    label: 'Movimientos',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.document_scanner_outlined),
-                    selectedIcon: Icon(Icons.document_scanner_rounded, color: FinanceColors.text),
-                    label: 'Escanear',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.apps_rounded),
-                    selectedIcon: Icon(Icons.grid_view_rounded, color: FinanceColors.text),
-                    label: 'Módulos',
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
+  Widget _drawer(){final now=DateTime.now();final entries=<({String title,IconData icon,Future<List<dynamic>> Function(ApiClient) loader,String? resource})>[
+    (title:'Cuentas',icon:Icons.account_balance_wallet_rounded,loader:(a)=>a.cuentas(),resource:'cuentas'),(title:'Tarjetas',icon:Icons.credit_card_rounded,loader:(a)=>a.tarjetas(),resource:'tarjetas'),(title:'Categorías',icon:Icons.sell_rounded,loader:(a)=>a.categorias(),resource:'categorias'),(title:'Recurrentes',icon:Icons.event_repeat_rounded,loader:(a)=>a.recurrentes(),resource:'gastos-recurrentes'),(title:'Transferencias',icon:Icons.swap_horiz_rounded,loader:(a)=>a.transferencias(),resource:'transferencias'),(title:'Presupuestos',icon:Icons.donut_large_rounded,loader:(a)=>a.presupuestos(anio:now.year,mes:now.month),resource:'presupuestos'),(title:'Metas',icon:Icons.track_changes_rounded,loader:(a)=>a.metas(),resource:'metas'),(title:'Inversiones',icon:Icons.trending_up_rounded,loader:(a)async=>((await a.inversiones())['posiciones'] as List<dynamic>? ??[]),resource:'inversiones'),(title:'Monedas',icon:Icons.currency_exchange_rounded,loader:(a)=>a.tasas(),resource:null)];
+    return Drawer(backgroundColor:FinanceColors.background,child:FinanceAurora(child:SafeArea(child:Column(children:[
+      const Padding(padding:EdgeInsets.fromLTRB(20,18,20,14),child:Row(children:[CircleAvatar(radius:23,backgroundColor:FinanceColors.primary,child:Icon(Icons.paid_rounded,color:Colors.white)),SizedBox(width:12),Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('FinanceOS',style:TextStyle(fontSize:20,fontWeight:FontWeight.w900)),Text('Centro de control',style:TextStyle(color:FinanceColors.muted,fontSize:12))])])),const Divider(),
+      ListTile(leading:const Icon(Icons.space_dashboard_rounded),title:const Text('Centro'),onTap:(){Navigator.pop(context);setState(()=>_index=0);}),ListTile(leading:const Icon(Icons.receipt_long_rounded),title:const Text('Movimientos'),onTap:(){Navigator.pop(context);setState(()=>_index=1);}),
+      Expanded(child:ListView(children:[...entries.map((e)=>ListTile(leading:Icon(e.icon),title:Text(e.title),trailing:const Icon(Icons.chevron_right_rounded),onTap:()=>_collection(e.title,e.icon,e.loader,e.resource))),ListTile(leading:const Icon(Icons.document_scanner_rounded),title:const Text('Escanear factura'),onTap:(){Navigator.pop(context);setState(()=>_index=2);}),ListTile(leading:const Icon(Icons.notifications_active_rounded),title:const Text('Compras detectadas'),onTap:(){Navigator.pop(context);Navigator.push(context,MaterialPageRoute(builder:(_)=>const DetectionsPage()));})])),
+      const Padding(padding:EdgeInsets.all(20),child:Row(children:[Icon(Icons.circle,size:9,color:FinanceColors.success),SizedBox(width:8),Text('Sistema conectado',style:TextStyle(color:FinanceColors.success,fontWeight:FontWeight.w700))]))]))));
+  }
+
+  @override Widget build(BuildContext context)=>Scaffold(key:_key,drawer:_drawer(),extendBody:true,body:IndexedStack(index:_index,children:_pages),bottomNavigationBar:SafeArea(minimum:const EdgeInsets.fromLTRB(16,0,16,12),child:Container(decoration:BoxDecoration(color:const Color(0xF2131C32),borderRadius:BorderRadius.circular(26),border:Border.all(color:FinanceColors.border.withValues(alpha:.72)),boxShadow:const [BoxShadow(color:Color(0x66000000),blurRadius:28,offset:Offset(0,12))]),child:ClipRRect(borderRadius:BorderRadius.circular(25),child:NavigationBar(selectedIndex:_index,onDestinationSelected:(i){if(i==3){_key.currentState?.openDrawer();}else{setState(()=>_index=i);}},height:72,backgroundColor:Colors.transparent,indicatorColor:FinanceColors.primary.withValues(alpha:.24),destinations:const [NavigationDestination(icon:Icon(Icons.space_dashboard_outlined),selectedIcon:Icon(Icons.space_dashboard_rounded),label:'Inicio'),NavigationDestination(icon:Icon(Icons.receipt_long_outlined),selectedIcon:Icon(Icons.receipt_long_rounded),label:'Movimientos'),NavigationDestination(icon:Icon(Icons.document_scanner_outlined),selectedIcon:Icon(Icons.document_scanner_rounded),label:'Escanear'),NavigationDestination(icon:Icon(Icons.menu_rounded),selectedIcon:Icon(Icons.menu_open_rounded),label:'Menú')])))));
 }
