@@ -34,6 +34,29 @@ class ApiClient {
 
   Future<List<dynamic>> categorias() => _getList('/api/v1/categorias');
 
+  Future<List<dynamic>> movimientos() => _getList('/api/v1/movimientos?limite=100');
+  Future<List<dynamic>> recurrentes() => _getList('/api/v1/gastos-recurrentes');
+  Future<List<dynamic>> transferencias() => _getList('/api/v1/transferencias');
+  Future<List<dynamic>> presupuestos({required int anio, required int mes}) =>
+      _getList('/api/v1/presupuestos?anio=$anio&mes=$mes');
+  Future<Map<String, dynamic>> inversiones() => _getObject('/api/v1/inversiones');
+  Future<List<dynamic>> tasas() => _getList('/api/v1/monedas/tasas');
+  Future<Map<String, dynamic>> reporte({required int anio, required int mes}) =>
+      _getObject('/api/v1/reportes/$anio/$mes/resumen');
+  Future<Map<String, dynamic>> estadoRespaldo() => _getObject('/api/v1/configuracion/respaldo');
+
+  Future<Map<String, dynamic>> crearCuenta(Map<String, dynamic> body) => _postObject('/api/v1/cuentas', body);
+  Future<Map<String, dynamic>> crearCategoria(Map<String, dynamic> body) => _postObject('/api/v1/categorias', body);
+  Future<Map<String, dynamic>> crearMeta(Map<String, dynamic> body) => _postObject('/api/v1/metas', body);
+  Future<Map<String, dynamic>> crearRecurrente(Map<String, dynamic> body) => _postObject('/api/v1/gastos-recurrentes', body);
+  Future<Map<String, dynamic>> crearTransferencia(Map<String, dynamic> body) => _postObject('/api/v1/transferencias', body);
+  Future<Map<String, dynamic>> crearPresupuesto(Map<String, dynamic> body) => _postObject('/api/v1/presupuestos', body);
+  Future<Map<String, dynamic>> crearInversion(Map<String, dynamic> body) => _postObject('/api/v1/inversiones', body);
+  Future<Map<String, dynamic>> crearTarjeta(Map<String, dynamic> body) => _postObject('/api/v1/tarjetas', body);
+  Future<Map<String, dynamic>> actualizarTasas() => _postObject('/api/v1/monedas/tasas/actualizar', {});
+
+  Future<void> eliminar(String recurso, int id) => _delete('/api/v1/$recurso/$id');
+
   Future<Map<String, dynamic>> crearMovimiento({
     required DateTime fecha,
     required String descripcion,
@@ -132,6 +155,11 @@ class ApiClient {
     );
     if (response.statusCode >= 400) throw ApiException(response.statusCode, response.body);
     return jsonDecode(response.body) as Map<String, dynamic>;
+  }
+
+  Future<void> _delete(String path) async {
+    final response = await _client.delete(Uri.parse('$apiBaseUrl$path'), headers: _headers);
+    if (response.statusCode >= 400) throw ApiException(response.statusCode, response.body);
   }
 
   String _fecha(DateTime value) => value.toIso8601String().split('T').first;
