@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'core/design_system.dart';
-import 'features/dashboard/dashboard_page.dart';
+import 'features/navigation/mobile_shell.dart';
 
 void main() => runApp(const FinanceOSMobile());
 
@@ -13,6 +13,6 @@ class FinanceOSMobile extends StatelessWidget {
         title: 'FinanceOS',
         debugShowCheckedModeBanner: false,
         theme: FinanceTheme.dark,
-        home: const DashboardPage(),
+        home: const MobileShell(),
       );
 }
