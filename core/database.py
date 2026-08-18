@@ -76,6 +76,11 @@ def create_database():
     Base.metadata.create_all(bind=engine)
     if engine.dialect.name == "sqlite":
         _ejecutar_migraciones()
+    else:
+        # PostgreSQL también puede recibir una instalación ya existente. La
+        # inspección idempotente evita depender de SQLite al escalar a web.
+        with engine.begin() as conexion:
+            _migrar_propiedad_por_usuario(conexion)
 
 
 def _migrar_categoria(conexion):
@@ -132,6 +137,40 @@ def _migrar_idempotencia_movimientos(conexion):
     conexion.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS uq_movimiento_huella ON movimientos(huella)"))
 
 
+def _migrar_propiedad_por_usuario(conexion):
+    """Asigna los datos históricos al primer propietario y prepara el aislamiento."""
+    from core.ownership import TABLAS_CON_PROPIETARIO
+
+    columnas_usuario = {columna["name"] for columna in inspect(engine).get_columns("usuarios")}
+    if "rol" not in columnas_usuario:
+        conexion.execute(text("ALTER TABLE usuarios ADD COLUMN rol VARCHAR(20) NOT NULL DEFAULT 'usuario'"))
+    propietario = conexion.execute(text("SELECT id FROM usuarios ORDER BY id LIMIT 1")).scalar()
+    if propietario is not None:
+        conexion.execute(text("UPDATE usuarios SET rol = 'administrador' WHERE id = :id"), {"id": propietario})
+
+    tablas = set(inspect(engine).get_table_names())
+    for tabla in TABLAS_CON_PROPIETARIO:
+        if tabla not in tablas:
+            continue
+        columnas = {columna["name"] for columna in inspect(engine).get_columns(tabla)}
+        if "usuario_id" not in columnas:
+            conexion.execute(text(f"ALTER TABLE {tabla} ADD COLUMN usuario_id INTEGER"))
+        conexion.execute(text(f"CREATE INDEX IF NOT EXISTS idx_{tabla}_usuario ON {tabla}(usuario_id)"))
+        if propietario is not None:
+            conexion.execute(
+                text(f"UPDATE {tabla} SET usuario_id = :usuario_id WHERE usuario_id IS NULL"),
+                {"usuario_id": propietario},
+            )
+
+    # El índice histórico hacía global la huella. Ahora dos usuarios pueden
+    # importar legítimamente el mismo comprobante sin compartir registros.
+    conexion.execute(text("DROP INDEX IF EXISTS uq_movimiento_huella"))
+    conexion.execute(text(
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_movimiento_usuario_huella "
+        "ON movimientos(usuario_id, huella)"
+    ))
+
+
 def _ejecutar_migraciones():
     """Aplica migraciones idempotentes y registra la version local."""
     migraciones = (
@@ -140,6 +179,7 @@ def _ejecutar_migraciones():
         ("003_metas_inteligentes", _migrar_metas),
         ("004_tarjetas_y_detecciones", _crear_indices_operativos),
         ("005_idempotencia_movimientos", _migrar_idempotencia_movimientos),
+        ("006_propiedad_por_usuario", _migrar_propiedad_por_usuario),
     )
     with engine.begin() as conexion:
         conexion.execute(text("""

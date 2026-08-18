@@ -11,6 +11,7 @@ export type Meta = { id: number; nombre: string; objetivo: number; moneda: strin
 export type Inversion = { id: number; activo: string; tipo: string; cantidad: number; precio_compra: number; precio_actual: number; broker?: string; moneda: string; costo: number; valor: number; ganancia: number; rentabilidad: number; costo_cop?: number; valor_cop?: number };
 export type Portafolio = { costo_total_cop: number; valor_total_cop: number; ganancia_total_cop: number; rentabilidad: number; posiciones: Inversion[]; monedas_sin_tasa: string[] };
 export type RespaldoEstado = { motor: string; tamano: number; modificado?: string; disponible: boolean };
+export type Usuario = { id: number; nombre: string; correo: string; rol: "usuario"|"administrador"; activo: boolean };
 export type GastoRecurrente = { id: number; nombre: string; valor: number; frecuencia: string; proxima_fecha_pago: string; ultima_fecha_pago?: string; activo: boolean; categoria_id: number; categoria: string };
 export type Transferencia = { id: number; fecha: string; valor: number; descripcion?: string; cuenta_origen_id: number; cuenta_destino_id: number; cuenta_origen: string; cuenta_destino: string; moneda: string };
 export type ReporteResumen = { anio: number; mes: number; ingresos_cop: number; gastos_cop: number; balance_cop: number; monedas_sin_tasa: string[]; movimientos: number };
@@ -60,10 +61,13 @@ async function remove(path: string): Promise<void> {
 }
 
 export const financeApi = {
-  authStatus: () => get<{ requiere_registro: boolean; autenticado: boolean; usuario?: { id:number; nombre:string; correo:string } }>("/auth/status"),
+  authStatus: () => get<{ requiere_registro: boolean; autenticado: boolean; usuario?: Usuario }>("/auth/status"),
   registrarPropietario: (body:{nombre:string;correo:string;password:string}) => post<{id:number;nombre:string;correo:string}>("/auth/registro",body),
   iniciarSesion: (body:{correo:string;password:string}) => post<{id:number;nombre:string;correo:string}>("/auth/login",body),
   cerrarSesion: () => post<{ok:boolean}>("/auth/logout",{}),
+  usuarios: () => get<Usuario[]>("/auth/usuarios"),
+  crearUsuario: (body:{nombre:string;correo:string;password:string;rol:"usuario"|"administrador"}) => post<Usuario>("/auth/usuarios",body),
+  actualizarUsuario: (id:number,body:{activo:boolean;rol:"usuario"|"administrador"}) => put<Usuario>(`/auth/usuarios/${id}`,body),
   resumen: () => get<Resumen>("/dashboard/resumen"),
   graficas: () => get<Graficas>("/dashboard/graficas"),
   cuentas: () => get<Cuenta[]>("/cuentas"),

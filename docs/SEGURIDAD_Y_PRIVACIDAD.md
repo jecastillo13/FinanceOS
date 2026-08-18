@@ -17,8 +17,10 @@ La API incorpora estas defensas:
 - documentación de la API desactivada en producción;
 - comprobantes limitados a 10 MB, con tipo y firma real JPG, PNG, WEBP o PDF;
 - nombres aleatorios para los archivos y auditoría de operaciones sensibles.
-- propietario local con contraseña Argon2id, bloqueo temporal por intentos
-  fallidos y sesiones opacas revocables en cookie `HttpOnly`.
+- usuarios con contraseña Argon2id, bloqueo temporal por intentos fallidos,
+  sesiones opacas revocables en cookie `HttpOnly` y roles administrador/usuario;
+- filtrado automático por propietario en todas las entidades financieras;
+- pruebas que verifican que cambiar un ID no permite consultar datos ajenos.
 
 Esto reduce la superficie de ataque, pero ningún sistema puede prometer que es
 imposible de vulnerar. Mantén Windows, Python, Node, Flutter y sus dependencias
@@ -39,19 +41,17 @@ considerarse secreto si está compilado dentro del frontend o del APK. Web y mó
 usan la sesión servida por la API; la captura de facturas se abre desde
 Movimientos para que cámara, PDF y OCR respeten la misma autenticación.
 
-El estado actual admite un único propietario local. Esto protege la instalación
-personal, pero no autoriza todavía un servicio multiusuario. Antes de crear más
-usuarios se añadirán propietarios a todas las entidades financieras y pruebas
-que impidan consultar objetos ajenos cambiando un ID.
+El primer usuario es el administrador de la instalación. Solo él puede crear o
+desactivar accesos desde Configuración. Cada usuario nuevo recibe su catálogo de
+categorías y comienza con un espacio independiente. Los respaldos completos son
+una operación administrativa porque contienen información de toda la instalación.
 
 ## Requisitos antes de publicar en Internet
 
 Antes de ofrecer FinanceOS a varios usuarios se debe implementar:
 
-- autenticación individual adicional o un proveedor OIDC para multiusuario;
+- MFA o un proveedor OIDC para una publicación multiusuario en Internet;
 - renovación segura de sesiones y recuperación de contraseña;
-- `usuario_id` y autorización por propietario en cada cuenta, movimiento, meta,
-  tarjeta, inversión y comprobante;
 - PostgreSQL administrado con cifrado, copias de seguridad y migraciones;
 - HTTPS obligatorio detrás de un proxy o plataforma confiable;
 - secretos únicamente en el servidor, nunca dentro de React o Flutter;

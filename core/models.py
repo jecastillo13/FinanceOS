@@ -15,6 +15,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 
 from core.database import Base
+from core.ownership import PropiedadUsuario
 
 
 class Usuario(Base):
@@ -24,6 +25,7 @@ class Usuario(Base):
     nombre = Column(String(100), nullable=False)
     correo = Column(String(254), nullable=False, unique=True, index=True)
     password_hash = Column(String(255), nullable=False)
+    rol = Column(String(20), nullable=False, default="usuario")
     activo = Column(Integer, nullable=False, default=1)
     intentos_fallidos = Column(Integer, nullable=False, default=0)
     bloqueado_hasta = Column(DateTime)
@@ -50,7 +52,7 @@ class SesionUsuario(Base):
 # CUENTAS
 # =====================================================
 
-class Cuenta(Base):
+class Cuenta(PropiedadUsuario, Base):
     __tablename__ = "cuentas"
 
     id = Column(
@@ -102,7 +104,7 @@ class Cuenta(Base):
 # CATEGORÍAS
 # =====================================================
 
-class Categoria(Base):
+class Categoria(PropiedadUsuario, Base):
     __tablename__ = "categorias"
 
     id = Column(
@@ -143,9 +145,9 @@ class Categoria(Base):
 # MOVIMIENTOS
 # =====================================================
 
-class Movimiento(Base):
+class Movimiento(PropiedadUsuario, Base):
     __tablename__ = "movimientos"
-    __table_args__ = (UniqueConstraint("huella", name="uq_movimiento_huella"),)
+    __table_args__ = (UniqueConstraint("usuario_id", "huella", name="uq_movimiento_usuario_huella"),)
 
     id = Column(
         Integer,
@@ -206,7 +208,7 @@ class Movimiento(Base):
     deteccion = relationship("OperacionDetectada", back_populates="movimiento", uselist=False)
 
 
-class Tarjeta(Base):
+class Tarjeta(PropiedadUsuario, Base):
     __tablename__ = "tarjetas"
 
     id = Column(Integer, primary_key=True)
@@ -222,9 +224,9 @@ class Tarjeta(Base):
     cuenta = relationship("Cuenta", back_populates="tarjetas")
 
 
-class OperacionDetectada(Base):
+class OperacionDetectada(PropiedadUsuario, Base):
     __tablename__ = "operaciones_detectadas"
-    __table_args__ = (UniqueConstraint("huella", name="uq_operacion_detectada_huella"),)
+    __table_args__ = (UniqueConstraint("usuario_id", "huella", name="uq_operacion_usuario_huella"),)
 
     id = Column(Integer, primary_key=True)
     origen = Column(String(30), nullable=False, default="Manual")
@@ -246,7 +248,7 @@ class OperacionDetectada(Base):
     movimiento = relationship("Movimiento", back_populates="deteccion")
 
 
-class AdjuntoMovimiento(Base):
+class AdjuntoMovimiento(PropiedadUsuario, Base):
     __tablename__ = "adjuntos_movimiento"
 
     id = Column(Integer, primary_key=True)
@@ -264,7 +266,7 @@ class AdjuntoMovimiento(Base):
 # GASTOS RECURRENTES
 # =====================================================
 
-class GastoRecurrente(Base):
+class GastoRecurrente(PropiedadUsuario, Base):
     __tablename__ = "gastos_recurrentes"
 
     id = Column(Integer, primary_key=True)
@@ -283,7 +285,7 @@ class GastoRecurrente(Base):
 # TRANSFERENCIAS ENTRE CUENTAS
 # =====================================================
 
-class Transferencia(Base):
+class Transferencia(PropiedadUsuario, Base):
     __tablename__ = "transferencias"
 
     id = Column(Integer, primary_key=True)
@@ -303,7 +305,7 @@ class Transferencia(Base):
 # PRESUPUESTOS MENSUALES
 # =====================================================
 
-class Presupuesto(Base):
+class Presupuesto(PropiedadUsuario, Base):
     __tablename__ = "presupuestos"
 
     id = Column(Integer, primary_key=True)
@@ -319,7 +321,7 @@ class Presupuesto(Base):
 # METAS
 # =====================================================
 
-class Meta(Base):
+class Meta(PropiedadUsuario, Base):
     __tablename__ = "metas"
 
     id = Column(
@@ -356,7 +358,7 @@ class Meta(Base):
     )
 
 
-class MetaOperacion(Base):
+class MetaOperacion(PropiedadUsuario, Base):
     __tablename__ = "meta_operaciones"
 
     id = Column(Integer, primary_key=True)
@@ -375,7 +377,7 @@ class MetaOperacion(Base):
 # INVERSIONES
 # =====================================================
 
-class Inversion(Base):
+class Inversion(PropiedadUsuario, Base):
     __tablename__ = "inversiones"
 
     id = Column(
@@ -439,7 +441,7 @@ class Configuracion(Base):
 # AUDITORÍA
 # =====================================================
 
-class Auditoria(Base):
+class Auditoria(PropiedadUsuario, Base):
     __tablename__ = "auditoria"
 
     id = Column(

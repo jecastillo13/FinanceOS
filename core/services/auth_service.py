@@ -8,7 +8,10 @@ from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 
 from core.database import get_session
-from core.models import SesionUsuario, Usuario
+from core.models import Categoria, SesionUsuario, Usuario
+from core.ownership import TABLAS_CON_PROPIETARIO
+from core.default_categories import CATEGORIAS_PREDETERMINADAS, COLORES_POR_TIPO
+from sqlalchemy import text
 
 
 class AuthService:
@@ -27,11 +30,79 @@ class AuthService:
     def requiere_registro(self) -> bool:
         return self.db.query(Usuario.id).first() is None
 
+    def _agregar_catalogo(self, usuario_id: int):
+        for orden, (tipo, grupo, icono, categoria) in enumerate(CATEGORIAS_PREDETERMINADAS, start=1):
+            self.db.add(Categoria(
+                nombre=categoria, tipo=tipo, grupo=grupo, icono=icono,
+                color=COLORES_POR_TIPO[tipo], es_sistema=1, editable=1,
+                activa=1, orden=orden, usuario_id=usuario_id,
+            ))
+
     def registrar_propietario(self, nombre: str, correo: str, password: str):
         if not self.requiere_registro():
             raise ValueError("FinanceOS ya tiene un propietario registrado.")
-        usuario = Usuario(nombre=nombre.strip(), correo=correo.strip().lower(), password_hash=self.hasher.hash(password))
+        usuario = Usuario(nombre=nombre.strip(), correo=correo.strip().lower(), password_hash=self.hasher.hash(password), rol="administrador")
         self.db.add(usuario); self.db.commit(); self.db.refresh(usuario)
+        # Una instalación anterior a la autenticación conserva sus datos: al
+        # crear el primer propietario quedan vinculados a él, nunca huérfanos.
+        for tabla in TABLAS_CON_PROPIETARIO:
+            self.db.execute(text(f"UPDATE {tabla} SET usuario_id = :id WHERE usuario_id IS NULL"), {"id": usuario.id})
+        if self.db.query(Categoria.id).filter(Categoria.usuario_id == usuario.id).first() is None:
+            self._agregar_catalogo(usuario.id)
+        self.db.commit()
+        return usuario
+
+    def _administrador(self, usuario_id: int):
+        usuario = self.db.get(Usuario, usuario_id)
+        if usuario is None or not usuario.activo or usuario.rol != "administrador":
+            raise PermissionError("Solo un administrador puede gestionar usuarios.")
+        return usuario
+
+    def listar_usuarios(self, solicitante_id: int):
+        self._administrador(solicitante_id)
+        return self.db.query(Usuario).order_by(Usuario.creado_en, Usuario.id).all()
+
+    def verificar_administrador(self, usuario_id: int):
+        self._administrador(usuario_id)
+
+    def crear_usuario(self, solicitante_id: int, nombre: str, correo: str, password: str, rol: str = "usuario"):
+        self._administrador(solicitante_id)
+        correo_limpio = correo.strip().lower()
+        if self.db.query(Usuario.id).filter(Usuario.correo == correo_limpio).first():
+            raise ValueError("Ya existe un usuario con ese correo.")
+        if rol not in {"usuario", "administrador"}:
+            raise ValueError("El rol indicado no es válido.")
+        usuario = Usuario(
+            nombre=nombre.strip(), correo=correo_limpio,
+            password_hash=self.hasher.hash(password), rol=rol,
+        )
+        self.db.add(usuario); self.db.flush()
+        self._agregar_catalogo(usuario.id)
+        self.db.commit(); self.db.refresh(usuario)
+        return usuario
+
+    def actualizar_usuario(self, solicitante_id: int, usuario_id: int, activo: bool, rol: str):
+        administrador = self._administrador(solicitante_id)
+        usuario = self.db.get(Usuario, usuario_id)
+        if usuario is None:
+            raise ValueError("El usuario no existe.")
+        if rol not in {"usuario", "administrador"}:
+            raise ValueError("El rol indicado no es válido.")
+        if usuario.id == administrador.id and (not activo or rol != "administrador"):
+            raise ValueError("No puedes quitar tu propio acceso de administrador.")
+        if usuario.rol == "administrador" and (not activo or rol != "administrador"):
+            otros = self.db.query(Usuario.id).filter(
+                Usuario.rol == "administrador", Usuario.activo == 1, Usuario.id != usuario.id,
+            ).first()
+            if otros is None:
+                raise ValueError("FinanceOS debe conservar al menos un administrador activo.")
+        usuario.activo = int(activo); usuario.rol = rol
+        if not activo:
+            ahora = datetime.now()
+            self.db.query(SesionUsuario).filter(
+                SesionUsuario.usuario_id == usuario.id, SesionUsuario.revocada_en.is_(None),
+            ).update({SesionUsuario.revocada_en: ahora}, synchronize_session=False)
+        self.db.commit(); self.db.refresh(usuario)
         return usuario
 
     def iniciar(self, correo: str, password: str):

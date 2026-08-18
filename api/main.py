@@ -30,9 +30,10 @@ from api.schemas import (
     TransferenciaCrear, TransferenciaRespuesta, TasaCambioRespuesta,
     ActualizacionTasasRespuesta,
     TarjetaCrear, TarjetaRespuesta, PagoTarjetaCrear, DeteccionCrear, DeteccionConfirmar, DeteccionRespuesta,
-    RegistroPropietario, InicioSesion, UsuarioRespuesta,
+    RegistroPropietario, InicioSesion, UsuarioRespuesta, UsuarioCrearAdmin, UsuarioActualizarAdmin,
 )
 from core.database import create_database
+from core.ownership import usuario_actual_id
 from core.services import (
     AccountService, AttachmentService, BackupService, BudgetService, CategoryService, DashboardService,
     ExchangeService, GoalService, InvestmentService, MovementService,
@@ -103,6 +104,7 @@ async def proteger_api_remota(request: Request, call_next):
         esperado = f"Bearer {API_TOKEN}"
         if not secrets.compare_digest(recibido, esperado):
             return Response(content='{"detail":"No autorizado"}', status_code=401, media_type="application/json")
+    contexto_usuario = None
     if AUTH_REQUERIDA and request.url.path.startswith("/api/v1/") and request.url.path not in RUTAS_PUBLICAS:
         service = AuthService()
         try:
@@ -112,7 +114,12 @@ async def proteger_api_remota(request: Request, call_next):
         if usuario is None:
             return Response(content='{"detail":"Sesión requerida"}', status_code=401, media_type="application/json")
         request.state.usuario_id = usuario.id
-    response = await call_next(request)
+        contexto_usuario = usuario_actual_id.set(usuario.id)
+    try:
+        response = await call_next(request)
+    finally:
+        if contexto_usuario is not None:
+            usuario_actual_id.reset(contexto_usuario)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "no-referrer"
     response.headers["X-Frame-Options"] = "DENY"
@@ -134,7 +141,7 @@ def _error_negocio(error):
 
 
 def _usuario_publico(usuario):
-    return {"id": usuario.id, "nombre": usuario.nombre, "correo": usuario.correo}
+    return {"id": usuario.id, "nombre": usuario.nombre, "correo": usuario.correo, "rol": usuario.rol, "activo": bool(usuario.activo)}
 
 
 @app.get("/", include_in_schema=False)
@@ -155,7 +162,7 @@ def estado_autenticacion(request: Request):
     try:
         requiere_registro = service.requiere_registro()
         usuario = service.autenticar(request.cookies.get(COOKIE_SESION))
-        return {"requiere_registro": requiere_registro, "autenticado": usuario is not None, "usuario": {"id": usuario.id, "nombre": usuario.nombre, "correo": usuario.correo} if usuario else None}
+        return {"requiere_registro": requiere_registro, "autenticado": usuario is not None, "usuario": _usuario_publico(usuario) if usuario else None}
     finally:
         service.cerrar()
 
@@ -210,6 +217,45 @@ def usuario_actual(request: Request):
         service.cerrar()
 
 
+@app.get("/api/v1/auth/usuarios", response_model=list[UsuarioRespuesta])
+def listar_usuarios(request: Request):
+    service = AuthService()
+    try:
+        return [_usuario_publico(usuario) for usuario in service.listar_usuarios(request.state.usuario_id)]
+    except PermissionError as error:
+        raise HTTPException(status_code=403, detail=str(error)) from error
+    finally:
+        service.cerrar()
+
+
+@app.post("/api/v1/auth/usuarios", response_model=UsuarioRespuesta, status_code=201)
+def crear_usuario(datos: UsuarioCrearAdmin, request: Request):
+    service = AuthService()
+    try:
+        usuario = service.crear_usuario(request.state.usuario_id, datos.nombre, datos.correo, datos.password, datos.rol)
+        return _usuario_publico(usuario)
+    except PermissionError as error:
+        raise HTTPException(status_code=403, detail=str(error)) from error
+    except ValueError as error:
+        _error_negocio(error)
+    finally:
+        service.cerrar()
+
+
+@app.put("/api/v1/auth/usuarios/{usuario_id}", response_model=UsuarioRespuesta)
+def actualizar_usuario(usuario_id: int, datos: UsuarioActualizarAdmin, request: Request):
+    service = AuthService()
+    try:
+        usuario = service.actualizar_usuario(request.state.usuario_id, usuario_id, datos.activo, datos.rol)
+        return _usuario_publico(usuario)
+    except PermissionError as error:
+        raise HTTPException(status_code=403, detail=str(error)) from error
+    except ValueError as error:
+        _error_negocio(error)
+    finally:
+        service.cerrar()
+
+
 @app.get("/api/v1/configuracion/respaldo")
 def estado_respaldo():
     service = BackupService()
@@ -223,7 +269,14 @@ def estado_respaldo():
 
 
 @app.get("/api/v1/configuracion/respaldo/descargar")
-def descargar_respaldo():
+def descargar_respaldo(request: Request):
+    auth = AuthService()
+    try:
+        auth.verificar_administrador(request.state.usuario_id)
+    except PermissionError as error:
+        raise HTTPException(status_code=403, detail=str(error)) from error
+    finally:
+        auth.cerrar()
     service = BackupService()
     try:
         contenido = service.crear_respaldo()

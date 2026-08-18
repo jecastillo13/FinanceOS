@@ -10,7 +10,7 @@ uvicorn api.main:app --reload --port 8000
 
 Consulta la documentación interactiva en `http://localhost:8000/docs`. Los endpoints iniciales viven bajo `/api/v1` e incluyen cuentas, categorías, movimientos, metas y el resumen del Dashboard.
 
-> Esta API es local y todavía no tiene usuarios ni autenticación. No debe exponerse a Internet hasta completar PostgreSQL, JWT, almacenamiento seguro y control de acceso.
+> La API exige inicio de sesión y aísla los registros por usuario. Para publicarla en Internet aún se requieren HTTPS, PostgreSQL administrado, almacenamiento privado y operación supervisada.
 
 ## Pruebas de integridad financiera
 
@@ -139,7 +139,7 @@ flutter run --dart-define=API_URL=https://tu-api.example.com --dart-define=API_T
 
 La aplicacion movil incluye el flujo de camara y OCR en `mobile/lib/features/receipts/receipt_scan_page.dart`: toma la foto, propone comercio y total, exige confirmacion y adjunta la imagen al movimiento. La huella del comprobante evita descontar dos veces por reintentos o doble toque.
 
-El token protege una instalacion personal sincronizada. El registro de varias personas independientes requiere una migracion posterior con `usuario_id` en todas las entidades; no debe simularse compartiendo un token entre usuarios.
+El primer registro se convierte en administrador. Los usuarios adicionales se crean desde **Configuración → Personas con acceso** y reciben un espacio financiero independiente. La API aplica `usuario_id` en cuentas, categorías, movimientos, tarjetas, comprobantes, recurrentes, transferencias, presupuestos, metas, inversiones y auditoría.
 
 ## Arquitectura y crecimiento
 
@@ -154,7 +154,7 @@ Esta separación permite conservar las reglas actuales cuando se agregue una API
 
 1. Mantener SQLite para uso personal sin conexión y migraciones idempotentes para cada actualización.
 2. Ampliar la API FastAPI existente sin duplicar reglas de cálculo.
-3. Añadir autenticación, usuarios y PostgreSQL cuando haya sincronización entre dispositivos.
+3. Migrar la instalación desplegada a PostgreSQL administrado cuando haya sincronización pública entre dispositivos.
 4. Completar en Flutter los módulos móviles que ya están disponibles en Streamlit.
 
 ### Integridad y trazabilidad

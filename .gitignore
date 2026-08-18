@@ -25,6 +25,7 @@ backups/
 
 # Archivos temporales
 *.log
+.backup_check/
 
 # Frontend React
 frontend/node_modules/
