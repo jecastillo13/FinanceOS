@@ -4,7 +4,7 @@ import os
 from contextlib import asynccontextmanager
 from ipaddress import ip_address
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 
 from fastapi import FastAPI, File, HTTPException, Query, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -103,6 +103,20 @@ LIMITES_PUBLICOS = {
 }
 
 
+def _es_origen_de_la_aplicacion(request: Request, origen: str) -> bool:
+    """Acepta formularios únicamente desde el mismo host que sirve la interfaz."""
+    try:
+        origen_url = urlsplit(origen)
+    except ValueError:
+        return False
+    host_solicitud = request.headers.get("host", "").lower()
+    return bool(
+        origen_url.scheme in {"http", "https"}
+        and origen_url.netloc.lower() == host_solicitud
+        and origen_url.scheme == request.url.scheme
+    )
+
+
 @app.middleware("http")
 async def proteger_api_remota(request: Request, call_next):
     """Aplica red, abuso, origen y sesión antes de ejecutar reglas financieras."""
@@ -111,7 +125,8 @@ async def proteger_api_remota(request: Request, call_next):
         origen = request.headers.get("origin")
         # Los formularios del navegador deben provenir de una interfaz
         # autorizada. Los clientes móviles usan Bearer y no dependen de cookies.
-        if origen and origen not in ORIGENES_PERMITIDOS and origen != os.getenv("FINANCEOS_PUBLIC_URL", "").rstrip("/"):
+        origen_publico = os.getenv("FINANCEOS_PUBLIC_URL", "").rstrip("/")
+        if origen and not _es_origen_de_la_aplicacion(request, origen) and origen not in ORIGENES_PERMITIDOS and origen != origen_publico:
             return Response(content='{"detail":"Origen no autorizado"}', status_code=403, media_type="application/json")
     if request.url.path in LIMITES_PUBLICOS and cliente != "testclient":
         maximo, ventana = LIMITES_PUBLICOS[request.url.path]

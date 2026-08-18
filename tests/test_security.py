@@ -17,6 +17,24 @@ def test_api_aplica_cabeceras_de_seguridad():
     assert response.headers["cache-control"] == "no-store"
 
 
+def test_proteccion_de_origen_acepta_la_propia_aplicacion_y_rechaza_terceros():
+    cliente = TestClient(app)
+    cliente.cookies.set("financeos_session", "sesion-invalida")
+
+    mismo_origen = cliente.post(
+        "/ruta-de-prueba-inexistente",
+        headers={"Origin": "http://testserver"},
+    )
+    origen_externo = cliente.post(
+        "/ruta-de-prueba-inexistente",
+        headers={"Origin": "https://sitio-malicioso.example"},
+    )
+
+    assert mismo_origen.status_code == 404
+    assert origen_externo.status_code == 403
+    assert origen_externo.json()["detail"] == "Origen no autorizado"
+
+
 def test_firmas_de_comprobantes_rechazan_contenido_disfrazado():
     assert AttachmentService.FIRMAS_VALIDAS["application/pdf"](b"%PDF-1.7\n")
     assert AttachmentService.FIRMAS_VALIDAS["image/png"](b"\x89PNG\r\n\x1a\nresto")
