@@ -3,9 +3,9 @@ import {
   ArrowDownRight, ArrowLeftRight, ArrowUpRight, Bell, ChartNoAxesCombined,
   ChevronRight, CircleDollarSign, Command, CreditCard, LayoutDashboard, Menu,
   FileChartColumn, Plus, ReceiptText, RefreshCw, Repeat2, Search, Settings, Sparkles, Target, TrendingUp,
-  WalletCards, X, Tags, Globe2,
+  WalletCards, X, Tags, Globe2, Camera, ShieldCheck, UserPlus, HelpCircle, CheckCircle2,
 } from "lucide-react";
-import { Cuenta, financeApi, Graficas, Resumen } from "./api";
+import { Cuenta, financeApi, Graficas, Resumen, Usuario } from "./api";
 import AccountsPage from "./pages/AccountsPage";
 import MovementsPage from "./pages/MovementsPage";
 import BudgetsPage from "./pages/BudgetsPage";
@@ -40,8 +40,28 @@ function Skeletons() {
   return <div className="grid gap-3 sm:grid-cols-3">{Array.from({length:3}).map((_,i)=><div key={i} className="h-28 animate-pulse rounded-[1.75rem] bg-white/[.045]"/>)}</div>;
 }
 
-function FinanceApp({onLogout}:{onLogout:()=>Promise<void>}) {
+function WelcomeCenter({user,onClose,onNavigate}:{user:Usuario;onClose:()=>void;onNavigate:(page:string,anchor?:string)=>void}){
+  const admin=user.rol==="superadmin";
+  return <div className="welcome-layer" role="dialog" aria-modal="true" aria-labelledby="welcome-title">
+    <div className="welcome-backdrop"/>
+    <section className="welcome-center">
+      <button className="welcome-close" aria-label="Cerrar guía" onClick={onClose}><X/></button>
+      <div className="welcome-intro"><span className="welcome-logo"><CircleDollarSign/></span><div><span className="eyebrow">PRIMEROS PASOS · FINANCEOS</span><h2 id="welcome-title">Hola, {user.nombre}</h2><p>Todo está conectado. Elige una acción para comenzar y confirma siempre los datos antes de afectar tus saldos.</p></div></div>
+      <div className="welcome-grid">
+        <button onClick={()=>onNavigate("Movimientos","captura-comprobante")}><span className="welcome-action cyan"><Camera/></span><div><strong>Fotografiar una factura</strong><p>En celular abre la cámara; en computador también puedes subir PDF o imagen.</p></div><CheckCircle2/></button>
+        <button onClick={()=>onNavigate("Configuración","mfa-seguridad")}><span className="welcome-action violet"><ShieldCheck/></span><div><strong>Activar doble seguridad</strong><p>Conecta Google o Microsoft Authenticator y protege cada inicio de sesión.</p></div><CheckCircle2/></button>
+        {admin&&<button onClick={()=>onNavigate("Configuración","usuarios-acceso")}><span className="welcome-action orange"><UserPlus/></span><div><strong>Crear otro usuario</strong><p>Tú eres administrador. Cada persona tendrá datos financieros totalmente separados.</p></div><CheckCircle2/></button>}
+        <button onClick={()=>onNavigate("Cuentas")}><span className="welcome-action mint"><WalletCards/></span><div><strong>Revisar tus cuentas</strong><p>Verifica saldos y monedas antes de registrar movimientos.</p></div><CheckCircle2/></button>
+      </div>
+      <div className="welcome-note"><ShieldCheck/><p><strong>Privacidad por diseño.</strong> FinanceOS nunca mezcla información entre usuarios. Una fotografía no crea un movimiento hasta que tú confirmes cuenta, categoría y valor.</p></div>
+      <button className="welcome-enter" onClick={onClose}>Entrar al Centro Financiero <ChevronRight/></button>
+    </section>
+  </div>;
+}
+
+function FinanceApp({user,onLogout}:{user:Usuario;onLogout:()=>Promise<void>}) {
   const [menu, setMenu] = useState(false);
+  const [welcome, setWelcome] = useState(true);
   const [active, setActive] = useState<string>("Centro");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -58,6 +78,7 @@ function FinanceApp({onLogout}:{onLogout:()=>Promise<void>}) {
     finally { setLoading(false); }
   };
   useEffect(() => { void load(); }, []);
+  const navigate=(page:string,anchor?:string)=>{setActive(page);setWelcome(false);setMenu(false);if(anchor)setTimeout(()=>document.getElementById(anchor)?.scrollIntoView({behavior:"smooth",block:"center"}),180)};
 
   return <div className="app-shell">
     <div className="ambient ambient-one"/><div className="ambient ambient-two"/><div className="noise"/>
@@ -65,14 +86,14 @@ function FinanceApp({onLogout}:{onLogout:()=>Promise<void>}) {
     <aside className={`nav-rail ${menu ? "nav-open" : ""}`}>
       <div className="brand-orb"><CircleDollarSign size={25}/><span className="brand-tooltip">FinanceOS</span></div>
       <nav>{nav.map(([label,Icon])=><button key={label} className={active===label?"active":""} aria-label={label} title={label} onClick={()=>{setActive(label);setMenu(false)}}><Icon size={20}/><span>{label}</span>{active===label&&<i/>}</button>)}</nav>
-      <div className="mt-auto flex flex-col items-center gap-3"><span className="online-dot" title="API conectada"/><button aria-label="Cerrar navegación" className="rail-close lg:hidden" onClick={()=>setMenu(false)}><X size={18}/></button><button className="avatar" title="Cerrar sesión" aria-label="Cerrar sesión" onClick={()=>void onLogout()}>JC</button></div>
+      <div className="mt-auto flex flex-col items-center gap-3"><button className="rail-help" title="Guía de funciones" aria-label="Abrir guía de funciones" onClick={()=>{setWelcome(true);setMenu(false)}}><HelpCircle/></button><span className="online-dot" title="API conectada"/><button aria-label="Cerrar navegación" className="rail-close lg:hidden" onClick={()=>setMenu(false)}><X size={18}/></button><button className="avatar" title={`${user.nombre} · Cerrar sesión`} aria-label="Cerrar sesión" onClick={()=>void onLogout()}>{user.nombre.trim().slice(0,2).toUpperCase()}</button></div>
     </aside>
 
     <main className="relative z-10 min-h-screen px-4 pb-20 lg:ml-24 lg:px-8 xl:px-12">
       <header className="topbar mx-auto max-w-[1480px]">
         <div className="flex items-center gap-3"><button aria-label="Abrir menú" className="icon-button lg:hidden" onClick={()=>setMenu(true)}><Menu size={20}/></button><div><span className="eyebrow">FINANCEOS · EN LÍNEA</span><h1>{active}</h1></div></div>
         <button className="command-bar"><Search size={17}/><span>Buscar en FinanceOS</span><kbd><Command size={12}/> K</kbd></button>
-        <div className="flex gap-2"><button aria-label="Notificaciones" className="icon-button"><Bell size={18}/><i className="notification"/></button><button aria-label="Actualizar" onClick={()=>void load()} className="icon-button hover:rotate-45"><RefreshCw size={18}/></button></div>
+        <div className="flex gap-2"><button aria-label="Abrir guía" title="Guía de funciones" className="icon-button" onClick={()=>setWelcome(true)}><HelpCircle size={18}/></button><button aria-label="Notificaciones" className="icon-button"><Bell size={18}/><i className="notification"/></button><button aria-label="Actualizar" onClick={()=>void load()} className="icon-button hover:rotate-45"><RefreshCw size={18}/></button></div>
       </header>
 
       <div className="mx-auto max-w-[1480px]">
@@ -112,14 +133,15 @@ function FinanceApp({onLogout}:{onLogout:()=>Promise<void>}) {
         </> : active==="Cuentas" ? <AccountsPage accounts={accounts} onChanged={load}/> : active==="Tarjetas" ? <CardsPage accounts={accounts} onChanged={load}/> : active==="Categorías" ? <CategoriesPage/> : active==="Movimientos" ? <MovementsPage accounts={accounts}/> : active==="Recurrentes" ? <RecurringPage accounts={accounts}/> : active==="Transferencias" ? <TransfersPage accounts={accounts} onChanged={load}/> : active==="Presupuestos" ? <BudgetsPage/> : active==="Metas" ? <GoalsPage/> : active==="Inversiones" ? <InvestmentsPage/> : active==="Monedas" ? <CurrenciesPage/> : active==="Reportes" ? <ReportsPage/> : <SettingsPage/>}
       </div>
     </main>
+    {welcome&&<WelcomeCenter user={user} onClose={()=>setWelcome(false)} onNavigate={navigate}/>}
   </div>;
 }
 
 export default function App(){
-  const[auth,setAuth]=useState<{loading:boolean;configuracion:boolean;registroPublico:boolean;autenticado:boolean}>({loading:true,configuracion:false,registroPublico:false,autenticado:false});
-  const check=async()=>{try{const state=await financeApi.authStatus();setAuth({loading:false,configuracion:state.requiere_configuracion,registroPublico:state.registro_publico,autenticado:state.autenticado})}catch{setAuth({loading:false,configuracion:false,registroPublico:false,autenticado:false})}};
+  const[auth,setAuth]=useState<{loading:boolean;configuracion:boolean;registroPublico:boolean;autenticado:boolean;usuario?:Usuario}>({loading:true,configuracion:false,registroPublico:false,autenticado:false});
+  const check=async()=>{try{const state=await financeApi.authStatus();setAuth({loading:false,configuracion:state.requiere_configuracion,registroPublico:state.registro_publico,autenticado:state.autenticado,usuario:state.usuario})}catch{setAuth({loading:false,configuracion:false,registroPublico:false,autenticado:false})}};
   useEffect(()=>{void check()},[]);
   if(auth.loading)return <main className="auth-page"><div className="auth-loader"><CircleDollarSign/><span>Protegiendo FinanceOS…</span></div></main>;
   if(!auth.autenticado)return <AuthPage configuracionInicial={auth.configuracion} registroPublico={auth.registroPublico} onAuthenticated={()=>void check()}/>;
-  return <FinanceApp onLogout={async()=>{await financeApi.cerrarSesion();await check()}}/>;
+  return <FinanceApp user={auth.usuario!} onLogout={async()=>{await financeApi.cerrarSesion();await check()}}/>;
 }
