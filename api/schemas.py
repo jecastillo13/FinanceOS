@@ -3,6 +3,24 @@ from datetime import date, datetime
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class RegistroPropietario(BaseModel):
+    nombre: str = Field(min_length=2, max_length=100)
+    correo: str = Field(min_length=5, max_length=254, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+    password: str = Field(min_length=12, max_length=128)
+
+
+class InicioSesion(BaseModel):
+    correo: str = Field(min_length=5, max_length=254, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+    password: str = Field(min_length=1, max_length=128)
+
+
+class UsuarioRespuesta(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    nombre: str
+    correo: str
+
+
 class ORMResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

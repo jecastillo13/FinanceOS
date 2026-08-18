@@ -17,6 +17,35 @@ from sqlalchemy.orm import relationship
 from core.database import Base
 
 
+class Usuario(Base):
+    __tablename__ = "usuarios"
+
+    id = Column(Integer, primary_key=True)
+    nombre = Column(String(100), nullable=False)
+    correo = Column(String(254), nullable=False, unique=True, index=True)
+    password_hash = Column(String(255), nullable=False)
+    activo = Column(Integer, nullable=False, default=1)
+    intentos_fallidos = Column(Integer, nullable=False, default=0)
+    bloqueado_hasta = Column(DateTime)
+    creado_en = Column(DateTime, default=datetime.now, nullable=False)
+
+    sesiones = relationship("SesionUsuario", back_populates="usuario", cascade="all, delete-orphan")
+
+
+class SesionUsuario(Base):
+    __tablename__ = "sesiones_usuario"
+
+    id = Column(Integer, primary_key=True)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False, index=True)
+    token_hash = Column(String(64), nullable=False, unique=True, index=True)
+    creada_en = Column(DateTime, default=datetime.now, nullable=False)
+    vence_en = Column(DateTime, nullable=False)
+    revocada_en = Column(DateTime)
+    ultima_actividad = Column(DateTime, default=datetime.now, nullable=False)
+
+    usuario = relationship("Usuario", back_populates="sesiones")
+
+
 # =====================================================
 # CUENTAS
 # =====================================================

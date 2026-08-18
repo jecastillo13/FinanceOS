@@ -69,6 +69,8 @@ def create_database():
         TasaCambio,
         Tarjeta,
         OperacionDetectada,
+        Usuario,
+        SesionUsuario,
     )
 
     Base.metadata.create_all(bind=engine)

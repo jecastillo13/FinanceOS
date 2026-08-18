@@ -18,6 +18,7 @@ import ReportsPage from "./pages/ReportsPage";
 import CategoriesPage from "./pages/CategoriesPage";
 import CurrenciesPage from "./pages/CurrenciesPage";
 import CardsPage from "./pages/CardsPage";
+import AuthPage from "./pages/AuthPage";
 
 const DashboardCharts = lazy(() => import("./DashboardCharts"));
 const cop = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
@@ -39,7 +40,7 @@ function Skeletons() {
   return <div className="grid gap-3 sm:grid-cols-3">{Array.from({length:3}).map((_,i)=><div key={i} className="h-28 animate-pulse rounded-[1.75rem] bg-white/[.045]"/>)}</div>;
 }
 
-export default function App() {
+function FinanceApp({onLogout}:{onLogout:()=>Promise<void>}) {
   const [menu, setMenu] = useState(false);
   const [active, setActive] = useState<string>("Centro");
   const [loading, setLoading] = useState(true);
@@ -64,7 +65,7 @@ export default function App() {
     <aside className={`nav-rail ${menu ? "nav-open" : ""}`}>
       <div className="brand-orb"><CircleDollarSign size={25}/><span className="brand-tooltip">FinanceOS</span></div>
       <nav>{nav.map(([label,Icon])=><button key={label} className={active===label?"active":""} aria-label={label} title={label} onClick={()=>{setActive(label);setMenu(false)}}><Icon size={20}/><span>{label}</span>{active===label&&<i/>}</button>)}</nav>
-      <div className="mt-auto flex flex-col items-center gap-3"><span className="online-dot" title="API conectada"/><button aria-label="Cerrar navegación" className="rail-close lg:hidden" onClick={()=>setMenu(false)}><X size={18}/></button><div className="avatar">JC</div></div>
+      <div className="mt-auto flex flex-col items-center gap-3"><span className="online-dot" title="API conectada"/><button aria-label="Cerrar navegación" className="rail-close lg:hidden" onClick={()=>setMenu(false)}><X size={18}/></button><button className="avatar" title="Cerrar sesión" aria-label="Cerrar sesión" onClick={()=>void onLogout()}>JC</button></div>
     </aside>
 
     <main className="relative z-10 min-h-screen px-4 pb-20 lg:ml-24 lg:px-8 xl:px-12">
@@ -112,4 +113,13 @@ export default function App() {
       </div>
     </main>
   </div>;
+}
+
+export default function App(){
+  const[auth,setAuth]=useState<{loading:boolean;registro:boolean;autenticado:boolean}>({loading:true,registro:false,autenticado:false});
+  const check=async()=>{try{const state=await financeApi.authStatus();setAuth({loading:false,registro:state.requiere_registro,autenticado:state.autenticado})}catch{setAuth({loading:false,registro:false,autenticado:false})}};
+  useEffect(()=>{void check()},[]);
+  if(auth.loading)return <main className="auth-page"><div className="auth-loader"><CircleDollarSign/><span>Protegiendo FinanceOS…</span></div></main>;
+  if(!auth.autenticado)return <AuthPage registro={auth.registro} onAuthenticated={()=>void check()}/>;
+  return <FinanceApp onLogout={async()=>{await financeApi.cerrarSesion();await check()}}/>;
 }

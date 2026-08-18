@@ -34,31 +34,36 @@ export type Graficas = {
 const BASE_URL = import.meta.env.VITE_API_URL ?? "/api/v1";
 const API_TOKEN = import.meta.env.VITE_API_TOKEN ?? "";
 const authHeaders = (): Record<string,string> => API_TOKEN ? { Authorization: `Bearer ${API_TOKEN}` } : {};
+const requestOptions = { credentials: "include" as RequestCredentials };
 
 async function get<T>(path: string): Promise<T> {
-  const response = await fetch(`${BASE_URL}${path}`, { headers: authHeaders() });
+  const response = await fetch(`${BASE_URL}${path}`, { headers: authHeaders(), ...requestOptions });
   if (!response.ok) throw new Error(`La API respondió ${response.status}`);
   return response.json() as Promise<T>;
 }
 
 async function post<T>(path: string, body: unknown): Promise<T> {
-  const response = await fetch(`${BASE_URL}${path}`, { method: "POST", headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify(body) });
+  const response = await fetch(`${BASE_URL}${path}`, { method: "POST", headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify(body), ...requestOptions });
   if (!response.ok) { const data = await response.json().catch(() => null); throw new Error(data?.detail ?? `La API respondió ${response.status}`); }
   return response.json() as Promise<T>;
 }
 
 async function put<T>(path: string, body: unknown): Promise<T> {
-  const response = await fetch(`${BASE_URL}${path}`, { method: "PUT", headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify(body) });
+  const response = await fetch(`${BASE_URL}${path}`, { method: "PUT", headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify(body), ...requestOptions });
   if (!response.ok) { const data = await response.json().catch(() => null); throw new Error(data?.detail ?? `La API respondió ${response.status}`); }
   return response.json() as Promise<T>;
 }
 
 async function remove(path: string): Promise<void> {
-  const response = await fetch(`${BASE_URL}${path}`, { method: "DELETE", headers: authHeaders() });
+  const response = await fetch(`${BASE_URL}${path}`, { method: "DELETE", headers: authHeaders(), ...requestOptions });
   if (!response.ok) { const data = await response.json().catch(() => null); throw new Error(data?.detail ?? `La API respondió ${response.status}`); }
 }
 
 export const financeApi = {
+  authStatus: () => get<{ requiere_registro: boolean; autenticado: boolean; usuario?: { id:number; nombre:string; correo:string } }>("/auth/status"),
+  registrarPropietario: (body:{nombre:string;correo:string;password:string}) => post<{id:number;nombre:string;correo:string}>("/auth/registro",body),
+  iniciarSesion: (body:{correo:string;password:string}) => post<{id:number;nombre:string;correo:string}>("/auth/login",body),
+  cerrarSesion: () => post<{ok:boolean}>("/auth/logout",{}),
   resumen: () => get<Resumen>("/dashboard/resumen"),
   graficas: () => get<Graficas>("/dashboard/graficas"),
   cuentas: () => get<Cuenta[]>("/cuentas"),
@@ -85,7 +90,7 @@ export const financeApi = {
   confirmarDeteccion: (id: number, body: { categoria_id: number; tarjeta_id?: number; cuenta_id?: number; descripcion?: string }) => post<Deteccion>(`/detecciones/${id}/confirmar`, body),
   descartarDeteccion: (id: number) => post<Deteccion>(`/detecciones/${id}/descartar`, {}),
   comprobantes: (id: number) => get<Adjunto[]>(`/movimientos/${id}/comprobantes`),
-  adjuntarComprobante: async (id: number, archivo: File) => { const data=new FormData(); data.append("archivo",archivo); const response=await fetch(`${BASE_URL}/movimientos/${id}/comprobantes`,{method:"POST",headers:authHeaders(),body:data}); if(!response.ok){const body=await response.json().catch(()=>null);throw new Error(body?.detail??"No fue posible adjuntar el comprobante")} return response.json() as Promise<Adjunto>; },
+  adjuntarComprobante: async (id: number, archivo: File) => { const data=new FormData(); data.append("archivo",archivo); const response=await fetch(`${BASE_URL}/movimientos/${id}/comprobantes`,{method:"POST",headers:authHeaders(),body:data,...requestOptions}); if(!response.ok){const body=await response.json().catch(()=>null);throw new Error(body?.detail??"No fue posible adjuntar el comprobante")} return response.json() as Promise<Adjunto>; },
   presupuestos: (anio: number, mes: number) => get<Presupuesto[]>(`/presupuestos?anio=${anio}&mes=${mes}`),
   crearPresupuesto: (body: { anio: number; mes: number; categoria_id: number; valor: number }) => post<Presupuesto>("/presupuestos", body),
   metas: () => get<Meta[]>("/metas"),
@@ -97,7 +102,7 @@ export const financeApi = {
   crearInversion: (body: { activo: string; tipo: string; cantidad: number; precio_compra: number; precio_actual: number; broker: string; moneda: string; valores_totales: boolean }) => post<Inversion>("/inversiones", body),
   health: () => get<{ estado: string; servicio: string; version: string }>("/health"),
   estadoRespaldo: () => get<RespaldoEstado>("/configuracion/respaldo"),
-  descargarRespaldo: async () => { const response = await fetch(`${BASE_URL}/configuracion/respaldo/descargar`,{headers:authHeaders()}); if (!response.ok) throw new Error("No fue posible crear el respaldo"); return response.blob(); },
+  descargarRespaldo: async () => { const response = await fetch(`${BASE_URL}/configuracion/respaldo/descargar`,{headers:authHeaders(),...requestOptions}); if (!response.ok) throw new Error("No fue posible crear el respaldo"); return response.blob(); },
   recurrentes: () => get<GastoRecurrente[]>("/gastos-recurrentes"),
   crearRecurrente: (body: { nombre: string; valor: number; frecuencia: string; proxima_fecha_pago: string; categoria_id: number }) => post<GastoRecurrente>("/gastos-recurrentes", body),
   actualizarRecurrente: (id: number, body: { nombre: string; valor: number; frecuencia: string; proxima_fecha_pago: string; categoria_id: number; activa: boolean }) => put<GastoRecurrente>(`/gastos-recurrentes/${id}`, body),
@@ -107,7 +112,7 @@ export const financeApi = {
   crearTransferencia: (body: { fecha: string; cuenta_origen_id: number; cuenta_destino_id: number; valor: number; descripcion: string }) => post<Transferencia>("/transferencias", body),
   eliminarTransferencia: (id: number) => remove(`/transferencias/${id}`),
   reporte: (anio: number, mes: number) => get<ReporteResumen>(`/reportes/${anio}/${mes}/resumen`),
-  descargarReporte: async (anio: number, mes: number, formato: "csv"|"xlsx"|"pdf") => { const response=await fetch(`${BASE_URL}/reportes/${anio}/${mes}/${formato}`,{headers:authHeaders()}); if(!response.ok) throw new Error("No fue posible generar el reporte"); return response.blob(); },
+  descargarReporte: async (anio: number, mes: number, formato: "csv"|"xlsx"|"pdf") => { const response=await fetch(`${BASE_URL}/reportes/${anio}/${mes}/${formato}`,{headers:authHeaders(),...requestOptions}); if(!response.ok) throw new Error("No fue posible generar el reporte"); return response.blob(); },
   eliminarPresupuesto: (id: number) => remove(`/presupuestos/${id}`),
   actualizarInversion: (id: number, body: { activo: string; tipo: string; cantidad: number; precio_compra: number; precio_actual: number; broker: string; moneda: string; valores_totales: boolean }) => put<Inversion>(`/inversiones/${id}`, body),
   eliminarInversion: (id: number) => remove(`/inversiones/${id}`),

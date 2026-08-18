@@ -30,12 +30,13 @@ from api.schemas import (
     TransferenciaCrear, TransferenciaRespuesta, TasaCambioRespuesta,
     ActualizacionTasasRespuesta,
     TarjetaCrear, TarjetaRespuesta, PagoTarjetaCrear, DeteccionCrear, DeteccionConfirmar, DeteccionRespuesta,
+    RegistroPropietario, InicioSesion, UsuarioRespuesta,
 )
 from core.database import create_database
 from core.services import (
     AccountService, AttachmentService, BackupService, BudgetService, CategoryService, DashboardService,
     ExchangeService, GoalService, InvestmentService, MovementService,
-    RecurringExpenseService, ReportService, TransferService, CardService,
+    RecurringExpenseService, ReportService, TransferService, CardService, AuthService,
 )
 
 
@@ -77,6 +78,9 @@ app.add_middleware(TrustedHostMiddleware, allowed_hosts=HOSTS_PERMITIDOS)
 
 API_TOKEN = os.getenv("FINANCEOS_API_TOKEN", "").strip()
 SOLO_RED_PRIVADA = os.getenv("FINANCEOS_PRIVATE_NETWORK_ONLY", "true").strip().lower() in {"1", "true", "yes", "si"}
+AUTH_REQUERIDA = os.getenv("FINANCEOS_AUTH_REQUIRED", "true").strip().lower() in {"1", "true", "yes", "si"}
+COOKIE_SESION = "financeos_session"
+RUTAS_PUBLICAS = {"/api/v1/health", "/api/v1/auth/status", "/api/v1/auth/registro", "/api/v1/auth/login"}
 
 
 @app.middleware("http")
@@ -94,11 +98,20 @@ async def proteger_api_remota(request: Request, call_next):
             direccion = None
         if direccion and not (direccion.is_private or direccion.is_loopback):
             return Response(content='{"detail":"FinanceOS solo acepta conexiones privadas"}', status_code=403, media_type="application/json")
-    if API_TOKEN and request.url.path.startswith("/api/v1/") and request.url.path != "/api/v1/health":
+    if API_TOKEN and request.url.path.startswith("/api/v1/") and request.url.path not in RUTAS_PUBLICAS:
         recibido = request.headers.get("authorization", "")
         esperado = f"Bearer {API_TOKEN}"
         if not secrets.compare_digest(recibido, esperado):
             return Response(content='{"detail":"No autorizado"}', status_code=401, media_type="application/json")
+    if AUTH_REQUERIDA and request.url.path.startswith("/api/v1/") and request.url.path not in RUTAS_PUBLICAS:
+        service = AuthService()
+        try:
+            usuario = service.autenticar(request.cookies.get(COOKIE_SESION))
+        finally:
+            service.cerrar()
+        if usuario is None:
+            return Response(content='{"detail":"Sesión requerida"}', status_code=401, media_type="application/json")
+        request.state.usuario_id = usuario.id
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "no-referrer"
@@ -120,6 +133,10 @@ def _error_negocio(error):
     raise HTTPException(status_code=400, detail=str(error)) from error
 
 
+def _usuario_publico(usuario):
+    return {"id": usuario.id, "nombre": usuario.nombre, "correo": usuario.correo}
+
+
 @app.get("/", include_in_schema=False)
 def inicio():
     """Sirve la interfaz compilada o abre la documentación si aún no existe."""
@@ -130,6 +147,67 @@ def inicio():
 @app.get("/api/v1/health")
 def health():
     return {"estado": "ok", "servicio": "financeos-api", "version": app.version}
+
+
+@app.get("/api/v1/auth/status")
+def estado_autenticacion(request: Request):
+    service = AuthService()
+    try:
+        requiere_registro = service.requiere_registro()
+        usuario = service.autenticar(request.cookies.get(COOKIE_SESION))
+        return {"requiere_registro": requiere_registro, "autenticado": usuario is not None, "usuario": {"id": usuario.id, "nombre": usuario.nombre, "correo": usuario.correo} if usuario else None}
+    finally:
+        service.cerrar()
+
+
+@app.post("/api/v1/auth/registro", response_model=UsuarioRespuesta, status_code=201)
+def registrar_propietario(datos: RegistroPropietario, response: Response):
+    service = AuthService()
+    try:
+        usuario = service.registrar_propietario(datos.nombre, datos.correo, datos.password)
+        usuario, token = service.iniciar(datos.correo, datos.password)
+        response.set_cookie(COOKIE_SESION, token, max_age=43200, httponly=True, secure=os.getenv("FINANCEOS_HTTPS", "false").lower() == "true", samesite="strict", path="/")
+        return _usuario_publico(usuario)
+    except ValueError as error:
+        _error_negocio(error)
+    finally:
+        service.cerrar()
+
+
+@app.post("/api/v1/auth/login", response_model=UsuarioRespuesta)
+def iniciar_sesion(datos: InicioSesion, response: Response):
+    service = AuthService()
+    try:
+        usuario, token = service.iniciar(datos.correo, datos.password)
+        response.set_cookie(COOKIE_SESION, token, max_age=43200, httponly=True, secure=os.getenv("FINANCEOS_HTTPS", "false").lower() == "true", samesite="strict", path="/")
+        return _usuario_publico(usuario)
+    except ValueError as error:
+        raise HTTPException(status_code=401, detail=str(error)) from error
+    finally:
+        service.cerrar()
+
+
+@app.post("/api/v1/auth/logout")
+def cerrar_sesion(request: Request, response: Response):
+    service = AuthService()
+    try:
+        service.cerrar_sesion(request.cookies.get(COOKIE_SESION))
+    finally:
+        service.cerrar()
+    response.delete_cookie(COOKIE_SESION, path="/")
+    return {"ok": True}
+
+
+@app.get("/api/v1/auth/me", response_model=UsuarioRespuesta)
+def usuario_actual(request: Request):
+    service = AuthService()
+    try:
+        usuario = service.autenticar(request.cookies.get(COOKIE_SESION))
+        if usuario is None:
+            raise HTTPException(status_code=401, detail="Sesión requerida")
+        return _usuario_publico(usuario)
+    finally:
+        service.cerrar()
 
 
 @app.get("/api/v1/configuracion/respaldo")

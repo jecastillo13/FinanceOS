@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../core/design_system.dart';
-import '../receipts/receipt_scan_page.dart';
 
 const financeWebUrl = String.fromEnvironment('WEB_URL', defaultValue: 'http://10.0.2.2:8000');
 
@@ -56,11 +55,5 @@ class _HybridShellState extends State<HybridShell>{
       if(_progress<100)LinearProgressIndicator(value:_progress/100,color:FinanceColors.cyan,backgroundColor:Colors.transparent),
       if(_error!=null)_errorView(),
     ])),
-    floatingActionButton:FloatingActionButton.extended(
-      backgroundColor:FinanceColors.primary,
-      foregroundColor:Colors.white,
-      onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const ReceiptScanPage())),
-      icon:const Icon(Icons.document_scanner_rounded),label:const Text('Escanear'),
-    ),
   );
 }

@@ -17,6 +17,8 @@ La API incorpora estas defensas:
 - documentación de la API desactivada en producción;
 - comprobantes limitados a 10 MB, con tipo y firma real JPG, PNG, WEBP o PDF;
 - nombres aleatorios para los archivos y auditoría de operaciones sensibles.
+- propietario local con contraseña Argon2id, bloqueo temporal por intentos
+  fallidos y sesiones opacas revocables en cookie `HttpOnly`.
 
 Esto reduce la superficie de ataque, pero ningún sistema puede prometer que es
 imposible de vulnerar. Mantén Windows, Python, Node, Flutter y sus dependencias
@@ -32,15 +34,22 @@ actualizados, usa una contraseña de inicio de sesión fuerte y activa BitLocker
 5. Permite el puerto de la API en el firewall solo para la red privada.
 6. Guarda copias de seguridad cifradas fuera del computador.
 
-El token compartido de desarrollo no reemplaza un inicio de sesión. Tampoco debe
-considerarse secreto si está compilado dentro del frontend o del APK.
+El token compartido de desarrollo no reemplaza el inicio de sesión y tampoco debe
+considerarse secreto si está compilado dentro del frontend o del APK. Web y móvil
+usan la sesión servida por la API; la captura de facturas se abre desde
+Movimientos para que cámara, PDF y OCR respeten la misma autenticación.
+
+El estado actual admite un único propietario local. Esto protege la instalación
+personal, pero no autoriza todavía un servicio multiusuario. Antes de crear más
+usuarios se añadirán propietarios a todas las entidades financieras y pruebas
+que impidan consultar objetos ajenos cambiando un ID.
 
 ## Requisitos antes de publicar en Internet
 
 Antes de ofrecer FinanceOS a varios usuarios se debe implementar:
 
-- autenticación individual con contraseñas cifradas (Argon2id) o un proveedor OIDC;
-- sesiones cortas, renovación segura y revocación;
+- autenticación individual adicional o un proveedor OIDC para multiusuario;
+- renovación segura de sesiones y recuperación de contraseña;
 - `usuario_id` y autorización por propietario en cada cuenta, movimiento, meta,
   tarjeta, inversión y comprobante;
 - PostgreSQL administrado con cifrado, copias de seguridad y migraciones;
