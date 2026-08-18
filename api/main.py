@@ -1181,6 +1181,7 @@ def _serializar_inversion(item):
         precio_actual=inversion.precio_actual,
         broker=inversion.broker,
         moneda=inversion.moneda,
+        valores_totales=inversion.valores_totales,
         costo=item["costo"],
         valor=item["valor"],
         ganancia=item["ganancia"],

@@ -361,6 +361,7 @@ class InversionRespuesta(ORMResponse):
     precio_actual: float
     broker: str | None
     moneda: str
+    valores_totales: bool
     costo: float
     valor: float
     ganancia: float
