@@ -139,7 +139,17 @@ flutter run --dart-define=API_URL=https://tu-api.example.com --dart-define=API_T
 
 La aplicacion movil incluye el flujo de camara y OCR en `mobile/lib/features/receipts/receipt_scan_page.dart`: toma la foto, propone comercio y total, exige confirmacion y adjunta la imagen al movimiento. La huella del comprobante evita descontar dos veces por reintentos o doble toque.
 
-El primer registro se convierte en administrador. Los usuarios adicionales se crean desde **Configuración → Personas con acceso** y reciben un espacio financiero independiente. La API aplica `usuario_id` en cuentas, categorías, movimientos, tarjetas, comprobantes, recurrentes, transferencias, presupuestos, metas, inversiones y auditoría.
+FinanceOS separa el registro normal de la administración de la plataforma:
+
+- En una instalación privada (`FINANCEOS_PUBLIC_SIGNUP=false`), el primer registro configura el `superadmin`; después, el registro queda cerrado.
+- En una publicación (`FINANCEOS_PUBLIC_SIGNUP=true`), todo autorregistro crea únicamente un `usuario` con espacio financiero independiente.
+- El `superadmin` de una publicación se crea desde una terminal privada del servidor, nunca desde la web ni desde la app:
+
+```powershell
+python scripts/create_superadmin.py --nombre "Administrador" --correo "admin@dominio.com"
+```
+
+El comando solicita una contraseña oculta de al menos 12 caracteres. El superadministrador puede crear o desactivar usuarios desde **Configuración → Personas con acceso**, pero no convertirlos en superadministradores. La API aplica `usuario_id` en cuentas, categorías, movimientos, tarjetas, comprobantes, recurrentes, transferencias, presupuestos, metas, inversiones y auditoría.
 
 ## Arquitectura y crecimiento
 

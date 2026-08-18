@@ -18,7 +18,7 @@ La API incorpora estas defensas:
 - comprobantes limitados a 10 MB, con tipo y firma real JPG, PNG, WEBP o PDF;
 - nombres aleatorios para los archivos y auditoría de operaciones sensibles.
 - usuarios con contraseña Argon2id, bloqueo temporal por intentos fallidos,
-  sesiones opacas revocables en cookie `HttpOnly` y roles administrador/usuario;
+  sesiones opacas revocables en cookie `HttpOnly` y roles superadmin/usuario;
 - filtrado automático por propietario en todas las entidades financieras;
 - pruebas que verifican que cambiar un ID no permite consultar datos ajenos.
 
@@ -41,10 +41,17 @@ considerarse secreto si está compilado dentro del frontend o del APK. Web y mó
 usan la sesión servida por la API; la captura de facturas se abre desde
 Movimientos para que cámara, PDF y OCR respeten la misma autenticación.
 
-El primer usuario es el administrador de la instalación. Solo él puede crear o
-desactivar accesos desde Configuración. Cada usuario nuevo recibe su catálogo de
-categorías y comienza con un espacio independiente. Los respaldos completos son
-una operación administrativa porque contienen información de toda la instalación.
+En modo privado (`FINANCEOS_PUBLIC_SIGNUP=false`), solo el primer registro puede
+configurar la instalación y recibe el rol `superadmin`; después se cierra el
+registro. En modo público (`FINANCEOS_PUBLIC_SIGNUP=true`), todos los registros
+crean usuarios normales. El superadministrador se provisiona exclusivamente
+desde una terminal privada del servidor con `scripts/create_superadmin.py`.
+
+El rol nunca se elige desde React, Flutter ni una solicitud pública. El
+superadministrador puede crear o desactivar accesos desde Configuración, pero no
+ascender usuarios desde la interfaz. Cada usuario recibe su catálogo y espacio
+independiente. Los respaldos completos son exclusivos del superadministrador
+porque contienen información de toda la instalación.
 
 ## Requisitos antes de publicar en Internet
 
@@ -57,6 +64,7 @@ Antes de ofrecer FinanceOS a varios usuarios se debe implementar:
 - secretos únicamente en el servidor, nunca dentro de React o Flutter;
 - almacenamiento privado de comprobantes y enlaces firmados de corta duración;
 - límites de solicitudes, bloqueo ante intentos repetidos y registro de auditoría;
+- verificación de correo para el autorregistro público;
 - política de retención, exportación y eliminación completa de datos personales;
 - análisis de dependencias y pruebas de autorización antes de cada versión.
 

@@ -24,12 +24,11 @@ class UsuarioRespuesta(BaseModel):
 
 
 class UsuarioCrearAdmin(RegistroPropietario):
-    rol: str = Field(default="usuario", pattern=r"^(usuario|administrador)$")
+    pass
 
 
 class UsuarioActualizarAdmin(BaseModel):
     activo: bool
-    rol: str = Field(pattern=r"^(usuario|administrador)$")
 
 
 class ORMResponse(BaseModel):

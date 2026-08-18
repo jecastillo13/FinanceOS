@@ -116,10 +116,10 @@ function FinanceApp({onLogout}:{onLogout:()=>Promise<void>}) {
 }
 
 export default function App(){
-  const[auth,setAuth]=useState<{loading:boolean;registro:boolean;autenticado:boolean}>({loading:true,registro:false,autenticado:false});
-  const check=async()=>{try{const state=await financeApi.authStatus();setAuth({loading:false,registro:state.requiere_registro,autenticado:state.autenticado})}catch{setAuth({loading:false,registro:false,autenticado:false})}};
+  const[auth,setAuth]=useState<{loading:boolean;configuracion:boolean;registroPublico:boolean;autenticado:boolean}>({loading:true,configuracion:false,registroPublico:false,autenticado:false});
+  const check=async()=>{try{const state=await financeApi.authStatus();setAuth({loading:false,configuracion:state.requiere_configuracion,registroPublico:state.registro_publico,autenticado:state.autenticado})}catch{setAuth({loading:false,configuracion:false,registroPublico:false,autenticado:false})}};
   useEffect(()=>{void check()},[]);
   if(auth.loading)return <main className="auth-page"><div className="auth-loader"><CircleDollarSign/><span>Protegiendo FinanceOS…</span></div></main>;
-  if(!auth.autenticado)return <AuthPage registro={auth.registro} onAuthenticated={()=>void check()}/>;
+  if(!auth.autenticado)return <AuthPage configuracionInicial={auth.configuracion} registroPublico={auth.registroPublico} onAuthenticated={()=>void check()}/>;
   return <FinanceApp onLogout={async()=>{await financeApi.cerrarSesion();await check()}}/>;
 }

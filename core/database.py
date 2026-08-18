@@ -81,6 +81,7 @@ def create_database():
         # inspección idempotente evita depender de SQLite al escalar a web.
         with engine.begin() as conexion:
             _migrar_propiedad_por_usuario(conexion)
+            _migrar_roles_publicacion(conexion)
 
 
 def _migrar_categoria(conexion):
@@ -146,7 +147,10 @@ def _migrar_propiedad_por_usuario(conexion):
         conexion.execute(text("ALTER TABLE usuarios ADD COLUMN rol VARCHAR(20) NOT NULL DEFAULT 'usuario'"))
     propietario = conexion.execute(text("SELECT id FROM usuarios ORDER BY id LIMIT 1")).scalar()
     if propietario is not None:
-        conexion.execute(text("UPDATE usuarios SET rol = 'administrador' WHERE id = :id"), {"id": propietario})
+        conexion.execute(text(
+            "UPDATE usuarios SET rol = 'administrador' WHERE id = :id "
+            "AND NOT EXISTS (SELECT 1 FROM usuarios WHERE rol IN ('administrador', 'superadmin'))"
+        ), {"id": propietario})
 
     tablas = set(inspect(engine).get_table_names())
     for tabla in TABLAS_CON_PROPIETARIO:
@@ -171,6 +175,13 @@ def _migrar_propiedad_por_usuario(conexion):
     ))
 
 
+def _migrar_roles_publicacion(conexion):
+    """Convierte el administrador local existente en superadministrador."""
+    if "usuarios" not in set(inspect(engine).get_table_names()):
+        return
+    conexion.execute(text("UPDATE usuarios SET rol = 'superadmin' WHERE rol = 'administrador'"))
+
+
 def _ejecutar_migraciones():
     """Aplica migraciones idempotentes y registra la version local."""
     migraciones = (
@@ -180,6 +191,7 @@ def _ejecutar_migraciones():
         ("004_tarjetas_y_detecciones", _crear_indices_operativos),
         ("005_idempotencia_movimientos", _migrar_idempotencia_movimientos),
         ("006_propiedad_por_usuario", _migrar_propiedad_por_usuario),
+        ("007_roles_publicacion", _migrar_roles_publicacion),
     )
     with engine.begin() as conexion:
         conexion.execute(text("""

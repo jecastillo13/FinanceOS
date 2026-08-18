@@ -160,9 +160,16 @@ def health():
 def estado_autenticacion(request: Request):
     service = AuthService()
     try:
-        requiere_registro = service.requiere_registro()
+        requiere_configuracion = service.requiere_registro()
+        registro_publico = service.registro_publico_habilitado()
         usuario = service.autenticar(request.cookies.get(COOKIE_SESION))
-        return {"requiere_registro": requiere_registro, "autenticado": usuario is not None, "usuario": _usuario_publico(usuario) if usuario else None}
+        return {
+            "requiere_configuracion": requiere_configuracion,
+            "registro_publico": registro_publico,
+            "registro_disponible": requiere_configuracion or registro_publico,
+            "autenticado": usuario is not None,
+            "usuario": _usuario_publico(usuario) if usuario else None,
+        }
     finally:
         service.cerrar()
 
@@ -171,7 +178,7 @@ def estado_autenticacion(request: Request):
 def registrar_propietario(datos: RegistroPropietario, response: Response):
     service = AuthService()
     try:
-        usuario = service.registrar_propietario(datos.nombre, datos.correo, datos.password)
+        usuario = service.registrar(datos.nombre, datos.correo, datos.password)
         usuario, token = service.iniciar(datos.correo, datos.password)
         response.set_cookie(COOKIE_SESION, token, max_age=43200, httponly=True, secure=os.getenv("FINANCEOS_HTTPS", "false").lower() == "true", samesite="strict", path="/")
         return _usuario_publico(usuario)
@@ -232,7 +239,7 @@ def listar_usuarios(request: Request):
 def crear_usuario(datos: UsuarioCrearAdmin, request: Request):
     service = AuthService()
     try:
-        usuario = service.crear_usuario(request.state.usuario_id, datos.nombre, datos.correo, datos.password, datos.rol)
+        usuario = service.crear_usuario(request.state.usuario_id, datos.nombre, datos.correo, datos.password)
         return _usuario_publico(usuario)
     except PermissionError as error:
         raise HTTPException(status_code=403, detail=str(error)) from error
@@ -246,7 +253,7 @@ def crear_usuario(datos: UsuarioCrearAdmin, request: Request):
 def actualizar_usuario(usuario_id: int, datos: UsuarioActualizarAdmin, request: Request):
     service = AuthService()
     try:
-        usuario = service.actualizar_usuario(request.state.usuario_id, usuario_id, datos.activo, datos.rol)
+        usuario = service.actualizar_usuario(request.state.usuario_id, usuario_id, datos.activo)
         return _usuario_publico(usuario)
     except PermissionError as error:
         raise HTTPException(status_code=403, detail=str(error)) from error

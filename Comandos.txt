@@ -136,6 +136,25 @@ NUEVO FRONTEND REACT
    npm run build
 
 ============================================================
+USUARIOS Y PUBLICACION
+============================================================
+
+Modo privado/local (predeterminado):
+   FINANCEOS_PUBLIC_SIGNUP=false
+
+El primer registro crea el superadministrador y luego se cierra el registro.
+
+Modo público (todos los registros son usuarios normales):
+   FINANCEOS_PUBLIC_SIGNUP=true
+
+Crear un superadministrador desde la terminal privada del servidor:
+   python scripts/create_superadmin.py --nombre "Administrador" --correo "admin@dominio.com"
+
+La contraseña se solicita de forma oculta y no queda guardada en el historial.
+No ejecutes este comando desde una terminal pública ni permitas elegir el rol
+desde el frontend.
+
+============================================================
 TARJETAS Y AVISOS BANCARIOS
 ============================================================
 
