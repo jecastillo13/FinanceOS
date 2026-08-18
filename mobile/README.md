@@ -1,6 +1,6 @@
 # FinanceOS Mobile
 
-Este frontend Flutter consume la API local de `../api` sin duplicar cálculos financieros.
+Este cliente es completamente nativo en Flutter y consume la API de `../api` sin duplicar cálculos financieros. Incluye sesión Bearer guardada en Android Keystore/iOS Keychain, dashboard, módulos financieros, formularios de creación, eliminación confirmada, reportes, usuarios, MFA, cámara y OCR local.
 
 Cuando Flutter esté instalado:
 
@@ -9,6 +9,14 @@ cd mobile
 flutter pub get
 flutter run --dart-define=API_URL=http://IP-DE-TU-PC:8000
 ```
+
+Para generar el APK instalable:
+
+```powershell
+flutter build apk --debug --dart-define=API_URL=http://IP-DE-TU-PC:8000
+```
+
+El resultado queda en `build/app/outputs/flutter-apk/app-debug.apk`.
 
 ## Generar el proyecto nativo
 

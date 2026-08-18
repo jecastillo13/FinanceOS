@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'core/design_system.dart';
-import 'features/navigation/hybrid_shell.dart';
+import 'features/auth/auth_gate.dart';
 
 void main() => runApp(const FinanceOSMobile());
 
@@ -13,6 +13,6 @@ class FinanceOSMobile extends StatelessWidget {
         title: 'FinanceOS',
         debugShowCheckedModeBanner: false,
         theme: FinanceTheme.dark,
-        home: const HybridShell(),
+        home: const AuthGate(),
       );
 }

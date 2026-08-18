@@ -15,7 +15,9 @@ abstract final class FinanceColors {
 
 abstract final class FinanceTheme {
   static ThemeData get dark {
-    final scheme = ColorScheme.fromSeed(seedColor: FinanceColors.primary, brightness: Brightness.dark).copyWith(
+    final scheme = ColorScheme.fromSeed(
+            seedColor: FinanceColors.primary, brightness: Brightness.dark)
+        .copyWith(
       surface: FinanceColors.surface,
       primary: FinanceColors.primary,
       secondary: FinanceColors.cyan,
@@ -26,12 +28,29 @@ abstract final class FinanceTheme {
       brightness: Brightness.dark,
       colorScheme: scheme,
       scaffoldBackgroundColor: FinanceColors.background,
-      appBarTheme: const AppBarTheme(backgroundColor: Colors.transparent, elevation: 0, surfaceTintColor: Colors.transparent),
-      cardTheme: CardThemeData(color: FinanceColors.surface, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))),
+      appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          surfaceTintColor: Colors.transparent),
+      cardTheme: CardThemeData(
+          color: FinanceColors.surface,
+          elevation: 0,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))),
       textTheme: const TextTheme(
-        headlineMedium: TextStyle(color: FinanceColors.text, fontSize: 29, height: 1.1, fontWeight: FontWeight.w800, letterSpacing: -.8),
-        titleLarge: TextStyle(color: FinanceColors.text, fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: -.3),
-        bodyMedium: TextStyle(color: FinanceColors.muted, fontSize: 14, height: 1.45),
+        headlineMedium: TextStyle(
+            color: FinanceColors.text,
+            fontSize: 29,
+            height: 1.1,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -.8),
+        titleLarge: TextStyle(
+            color: FinanceColors.text,
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -.3),
+        bodyMedium:
+            TextStyle(color: FinanceColors.muted, fontSize: 14, height: 1.45),
       ),
     );
   }
@@ -45,8 +64,10 @@ class FinanceAurora extends StatefulWidget {
   State<FinanceAurora> createState() => _FinanceAuroraState();
 }
 
-class _FinanceAuroraState extends State<FinanceAurora> with SingleTickerProviderStateMixin {
-  late final AnimationController _controller = AnimationController(vsync: this, duration: const Duration(seconds: 22));
+class _FinanceAuroraState extends State<FinanceAurora>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller =
+      AnimationController(vsync: this, duration: const Duration(seconds: 22));
 
   @override
   void didChangeDependencies() {
@@ -77,7 +98,11 @@ class _FinanceAuroraState extends State<FinanceAurora> with SingleTickerProvider
                 gradient: RadialGradient(
                   center: Alignment(-.70 + value * 1.35, -.92 + value * .48),
                   radius: 1.28,
-                  colors: const [Color(0xC13B63D7), Color(0x88253E84), FinanceColors.background],
+                  colors: const [
+                    Color(0xC13B63D7),
+                    Color(0x88253E84),
+                    FinanceColors.background
+                  ],
                   stops: const [0, .36, 1],
                 ),
               ),
@@ -98,7 +123,11 @@ class _FinanceAuroraState extends State<FinanceAurora> with SingleTickerProvider
 }
 
 class FinanceSurface extends StatelessWidget {
-  const FinanceSurface({super.key, required this.child, this.padding = const EdgeInsets.all(18), this.accent});
+  const FinanceSurface(
+      {super.key,
+      required this.child,
+      this.padding = const EdgeInsets.all(18),
+      this.accent});
   final Widget child;
   final EdgeInsets padding;
   final Color? accent;
@@ -108,13 +137,20 @@ class FinanceSurface extends StatelessWidget {
         padding: padding,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: (accent ?? FinanceColors.border).withValues(alpha: .60)),
+          border: Border.all(
+              color: (accent ?? FinanceColors.border).withValues(alpha: .60)),
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [(accent ?? FinanceColors.surfaceHigh).withValues(alpha: .32), FinanceColors.surface.withValues(alpha: .94)],
+            colors: [
+              (accent ?? FinanceColors.surfaceHigh).withValues(alpha: .32),
+              FinanceColors.surface.withValues(alpha: .94)
+            ],
           ),
-          boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 30, offset: Offset(0, 14))],
+          boxShadow: const [
+            BoxShadow(
+                color: Color(0x33000000), blurRadius: 30, offset: Offset(0, 14))
+          ],
         ),
         child: child,
       );
