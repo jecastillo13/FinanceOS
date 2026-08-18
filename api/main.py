@@ -1,7 +1,6 @@
 """Punto de entrada de la API local de FinanceOS."""
 
 import os
-import secrets
 from contextlib import asynccontextmanager
 from ipaddress import ip_address
 from pathlib import Path
@@ -30,10 +29,13 @@ from api.schemas import (
     TransferenciaCrear, TransferenciaRespuesta, TasaCambioRespuesta,
     ActualizacionTasasRespuesta,
     TarjetaCrear, TarjetaRespuesta, PagoTarjetaCrear, DeteccionCrear, DeteccionConfirmar, DeteccionRespuesta,
-    RegistroPropietario, InicioSesion, UsuarioRespuesta, UsuarioCrearAdmin, UsuarioActualizarAdmin,
+    RegistroPropietario, InicioSesion, SolicitudRecuperacion, TokenAccion, RestablecerPassword,
+    SesionMovilRespuesta, CodigoMfa, DesactivarMfa, UsuarioRespuesta, UsuarioCrearAdmin, UsuarioActualizarAdmin,
 )
 from core.database import create_database
+from core.config import validar_produccion
 from core.ownership import usuario_actual_id
+from core.security import limitador
 from core.services import (
     AccountService, AttachmentService, BackupService, BudgetService, CategoryService, DashboardService,
     ExchangeService, GoalService, InvestmentService, MovementService,
@@ -46,6 +48,7 @@ ENTORNO = os.getenv("FINANCEOS_ENV", "development").strip().lower()
 
 @asynccontextmanager
 async def ciclo_vida(_app: FastAPI):
+    validar_produccion()
     create_database()
     yield
 
@@ -61,33 +64,58 @@ app = FastAPI(
 FRONTEND_DIST = PROJECT_ROOT / "frontend" / "dist"
 if (FRONTEND_DIST / "assets").is_dir():
     app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="frontend-assets")
+ORIGENES_CONFIGURADOS = [origin.strip() for origin in os.getenv("FINANCEOS_CORS_ORIGINS", "").split(",") if origin.strip()]
+ORIGENES_DESARROLLO = ["http://localhost:8501", "http://localhost:3000", "http://localhost:5173"] if ENTORNO != "production" else []
+ORIGENES_PERMITIDOS = ORIGENES_DESARROLLO + ORIGENES_CONFIGURADOS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:8501", "http://localhost:3000", "http://localhost:5173",
-        *[origin.strip() for origin in os.getenv("FINANCEOS_CORS_ORIGINS", "").split(",") if origin.strip()],
-    ],
-    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
+    allow_origins=ORIGENES_PERMITIDOS,
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?" if ENTORNO != "production" else None,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 HOSTS_PERMITIDOS = [host.strip() for host in os.getenv(
     "FINANCEOS_ALLOWED_HOSTS", "localhost,127.0.0.1,10.0.2.2,192.168.1.5,testserver"
 ).split(",") if host.strip()]
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=HOSTS_PERMITIDOS)
 
-API_TOKEN = os.getenv("FINANCEOS_API_TOKEN", "").strip()
 SOLO_RED_PRIVADA = os.getenv("FINANCEOS_PRIVATE_NETWORK_ONLY", "true").strip().lower() in {"1", "true", "yes", "si"}
 AUTH_REQUERIDA = os.getenv("FINANCEOS_AUTH_REQUIRED", "true").strip().lower() in {"1", "true", "yes", "si"}
 COOKIE_SESION = "financeos_session"
-RUTAS_PUBLICAS = {"/api/v1/health", "/api/v1/auth/status", "/api/v1/auth/registro", "/api/v1/auth/login"}
+RUTAS_PUBLICAS = {
+    "/api/v1/health", "/api/v1/auth/status", "/api/v1/auth/registro", "/api/v1/auth/login",
+    "/api/v1/auth/mobile/login", "/api/v1/auth/recuperacion/solicitar",
+    "/api/v1/auth/recuperacion/restablecer", "/api/v1/auth/verificar-correo",
+    "/api/v1/auth/verificacion/reenviar",
+}
+
+LIMITES_PUBLICOS = {
+    "/api/v1/auth/login": (10, 900),
+    "/api/v1/auth/mobile/login": (10, 900),
+    "/api/v1/auth/registro": (5, 3600),
+    "/api/v1/auth/recuperacion/solicitar": (5, 3600),
+    "/api/v1/auth/recuperacion/restablecer": (10, 3600),
+    "/api/v1/auth/verificar-correo": (10, 3600),
+    "/api/v1/auth/verificacion/reenviar": (5, 3600),
+}
 
 
 @app.middleware("http")
 async def proteger_api_remota(request: Request, call_next):
-    """Bloquea redes públicas y protege opcionalmente la API con un token."""
+    """Aplica red, abuso, origen y sesión antes de ejecutar reglas financieras."""
     cliente = request.client.host if request.client else ""
+    if request.method in {"POST", "PUT", "PATCH", "DELETE"} and request.cookies.get(COOKIE_SESION):
+        origen = request.headers.get("origin")
+        # Los formularios del navegador deben provenir de una interfaz
+        # autorizada. Los clientes móviles usan Bearer y no dependen de cookies.
+        if origen and origen not in ORIGENES_PERMITIDOS and origen != os.getenv("FINANCEOS_PUBLIC_URL", "").rstrip("/"):
+            return Response(content='{"detail":"Origen no autorizado"}', status_code=403, media_type="application/json")
+    if request.url.path in LIMITES_PUBLICOS and cliente != "testclient":
+        maximo, ventana = LIMITES_PUBLICOS[request.url.path]
+        permitido, espera = limitador.permitir(f"{cliente}:{request.url.path}", maximo, ventana)
+        if not permitido:
+            return Response(content='{"detail":"Demasiados intentos. Espera antes de continuar."}', status_code=429, media_type="application/json", headers={"Retry-After": str(espera)})
     if SOLO_RED_PRIVADA and cliente:
         try:
             direccion = ip_address(cliente)
@@ -99,16 +127,15 @@ async def proteger_api_remota(request: Request, call_next):
             direccion = None
         if direccion and not (direccion.is_private or direccion.is_loopback):
             return Response(content='{"detail":"FinanceOS solo acepta conexiones privadas"}', status_code=403, media_type="application/json")
-    if API_TOKEN and request.url.path.startswith("/api/v1/") and request.url.path not in RUTAS_PUBLICAS:
-        recibido = request.headers.get("authorization", "")
-        esperado = f"Bearer {API_TOKEN}"
-        if not secrets.compare_digest(recibido, esperado):
-            return Response(content='{"detail":"No autorizado"}', status_code=401, media_type="application/json")
     contexto_usuario = None
     if AUTH_REQUERIDA and request.url.path.startswith("/api/v1/") and request.url.path not in RUTAS_PUBLICAS:
         service = AuthService()
         try:
-            usuario = service.autenticar(request.cookies.get(COOKIE_SESION))
+            portador = request.headers.get("authorization", "")
+            token_sesion = request.cookies.get(COOKIE_SESION)
+            if portador.lower().startswith("bearer "):
+                token_sesion = portador[7:].strip()
+            usuario = service.autenticar(token_sesion)
         finally:
             service.cerrar()
         if usuario is None:
@@ -141,7 +168,22 @@ def _error_negocio(error):
 
 
 def _usuario_publico(usuario):
-    return {"id": usuario.id, "nombre": usuario.nombre, "correo": usuario.correo, "rol": usuario.rol, "activo": bool(usuario.activo)}
+    return {"id": usuario.id, "nombre": usuario.nombre, "correo": usuario.correo, "rol": usuario.rol, "activo": bool(usuario.activo), "mfa_habilitado": bool(usuario.mfa_habilitado)}
+
+
+def _guardar_cookie(response: Response, token: str):
+    response.set_cookie(
+        COOKIE_SESION, token, max_age=43200, httponly=True,
+        secure=os.getenv("FINANCEOS_HTTPS", "false").lower() == "true",
+        samesite="strict", path="/",
+    )
+
+
+def _token_request(request: Request):
+    portador = request.headers.get("authorization", "")
+    if portador.lower().startswith("bearer "):
+        return portador[7:].strip()
+    return request.cookies.get(COOKIE_SESION)
 
 
 @app.get("/", include_in_schema=False)
@@ -156,13 +198,27 @@ def health():
     return {"estado": "ok", "servicio": "financeos-api", "version": app.version}
 
 
+@app.get("/api/v1/configuracion/seguridad")
+def estado_seguridad():
+    controles = {
+        "sesiones_individuales": AUTH_REQUERIDA,
+        "https": os.getenv("FINANCEOS_HTTPS", "false").lower() == "true",
+        "postgresql": os.getenv("FINANCEOS_DATABASE_URL", "").startswith("postgresql+"),
+        "correo_transaccional": bool(os.getenv("FINANCEOS_SMTP_HOST", "").strip()),
+        "registro_publico": os.getenv("FINANCEOS_PUBLIC_SIGNUP", "false").lower() == "true",
+        "red_privada": SOLO_RED_PRIVADA,
+    }
+    esenciales = ["sesiones_individuales", "https", "postgresql", "correo_transaccional"]
+    return {"entorno": ENTORNO, "listo_publicacion": all(controles[c] for c in esenciales), "controles": controles}
+
+
 @app.get("/api/v1/auth/status")
 def estado_autenticacion(request: Request):
     service = AuthService()
     try:
         requiere_configuracion = service.requiere_registro()
         registro_publico = service.registro_publico_habilitado()
-        usuario = service.autenticar(request.cookies.get(COOKIE_SESION))
+        usuario = service.autenticar(_token_request(request))
         return {
             "requiere_configuracion": requiere_configuracion,
             "registro_publico": registro_publico,
@@ -179,8 +235,9 @@ def registrar_propietario(datos: RegistroPropietario, response: Response):
     service = AuthService()
     try:
         usuario = service.registrar(datos.nombre, datos.correo, datos.password)
-        usuario, token = service.iniciar(datos.correo, datos.password)
-        response.set_cookie(COOKIE_SESION, token, max_age=43200, httponly=True, secure=os.getenv("FINANCEOS_HTTPS", "false").lower() == "true", samesite="strict", path="/")
+        if usuario.correo_verificado_en is not None:
+            usuario, token = service.iniciar(datos.correo, datos.password)
+            _guardar_cookie(response, token)
         return _usuario_publico(usuario)
     except ValueError as error:
         _error_negocio(error)
@@ -192,11 +249,100 @@ def registrar_propietario(datos: RegistroPropietario, response: Response):
 def iniciar_sesion(datos: InicioSesion, response: Response):
     service = AuthService()
     try:
-        usuario, token = service.iniciar(datos.correo, datos.password)
-        response.set_cookie(COOKIE_SESION, token, max_age=43200, httponly=True, secure=os.getenv("FINANCEOS_HTTPS", "false").lower() == "true", samesite="strict", path="/")
+        usuario, token = service.iniciar(datos.correo, datos.password, datos.mfa_codigo)
+        _guardar_cookie(response, token)
         return _usuario_publico(usuario)
     except ValueError as error:
         raise HTTPException(status_code=401, detail=str(error)) from error
+    finally:
+        service.cerrar()
+
+
+@app.post("/api/v1/auth/mobile/login", response_model=SesionMovilRespuesta)
+def iniciar_sesion_movil(datos: InicioSesion):
+    service = AuthService()
+    try:
+        usuario, token = service.iniciar(datos.correo, datos.password, datos.mfa_codigo)
+        return {"usuario": _usuario_publico(usuario), "token": token, "vence_en_segundos": 43200}
+    except ValueError as error:
+        raise HTTPException(status_code=401, detail=str(error)) from error
+    finally:
+        service.cerrar()
+
+
+@app.post("/api/v1/auth/recuperacion/solicitar", status_code=202)
+def solicitar_recuperacion(datos: SolicitudRecuperacion):
+    service = AuthService()
+    try:
+        service.solicitar_recuperacion(datos.correo)
+        return {"mensaje": "Si la cuenta existe, recibirás instrucciones para continuar."}
+    finally:
+        service.cerrar()
+
+
+@app.post("/api/v1/auth/recuperacion/restablecer")
+def restablecer_password(datos: RestablecerPassword):
+    service = AuthService()
+    try:
+        service.restablecer_password(datos.token, datos.password)
+        return {"mensaje": "Contraseña actualizada. Inicia sesión nuevamente."}
+    except ValueError as error:
+        _error_negocio(error)
+    finally:
+        service.cerrar()
+
+
+@app.post("/api/v1/auth/verificar-correo")
+def verificar_correo(datos: TokenAccion):
+    service = AuthService()
+    try:
+        service.verificar_correo(datos.token)
+        return {"mensaje": "Correo verificado. Ya puedes iniciar sesión."}
+    except ValueError as error:
+        _error_negocio(error)
+    finally:
+        service.cerrar()
+
+
+@app.post("/api/v1/auth/verificacion/reenviar", status_code=202)
+def reenviar_verificacion(datos: SolicitudRecuperacion):
+    service = AuthService()
+    try:
+        service.reenviar_verificacion(datos.correo)
+        return {"mensaje": "Si la cuenta está pendiente, enviaremos un enlace nuevo."}
+    finally:
+        service.cerrar()
+
+
+@app.post("/api/v1/auth/mfa/preparar")
+def preparar_mfa(request: Request):
+    service = AuthService()
+    try:
+        return service.preparar_mfa(request.state.usuario_id)
+    finally:
+        service.cerrar()
+
+
+@app.post("/api/v1/auth/mfa/confirmar")
+def confirmar_mfa(datos: CodigoMfa, request: Request):
+    service = AuthService()
+    try:
+        service.confirmar_mfa(request.state.usuario_id, datos.codigo)
+        return {"mensaje": "Autenticación multifactor activada."}
+    except ValueError as error:
+        _error_negocio(error)
+    finally:
+        service.cerrar()
+
+
+@app.post("/api/v1/auth/mfa/desactivar")
+def desactivar_mfa(datos: DesactivarMfa, request: Request):
+    service = AuthService()
+    try:
+        service.desactivar_mfa(request.state.usuario_id, datos.password, datos.codigo)
+        return {"mensaje": "Autenticación multifactor desactivada."}
+    except ValueError as error:
+        _error_negocio(error)
     finally:
         service.cerrar()
 
@@ -205,7 +351,7 @@ def iniciar_sesion(datos: InicioSesion, response: Response):
 def cerrar_sesion(request: Request, response: Response):
     service = AuthService()
     try:
-        service.cerrar_sesion(request.cookies.get(COOKIE_SESION))
+        service.cerrar_sesion(_token_request(request))
     finally:
         service.cerrar()
     response.delete_cookie(COOKIE_SESION, path="/")
@@ -216,7 +362,7 @@ def cerrar_sesion(request: Request, response: Response):
 def usuario_actual(request: Request):
     service = AuthService()
     try:
-        usuario = service.autenticar(request.cookies.get(COOKIE_SESION))
+        usuario = service.autenticar(_token_request(request))
         if usuario is None:
             raise HTTPException(status_code=401, detail="Sesión requerida")
         return _usuario_publico(usuario)

@@ -27,9 +27,10 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // La publicación debe firmarse con una clave privada de producción.
+            // Nunca reutilizar la clave de depuración en Play Store.
+            isMinifyEnabled = true
+            isShrinkResources = true
         }
     }
 }

@@ -29,9 +29,13 @@ class Usuario(Base):
     activo = Column(Integer, nullable=False, default=1)
     intentos_fallidos = Column(Integer, nullable=False, default=0)
     bloqueado_hasta = Column(DateTime)
+    correo_verificado_en = Column(DateTime)
+    mfa_secret_encrypted = Column(Text)
+    mfa_habilitado = Column(Integer, nullable=False, default=0)
     creado_en = Column(DateTime, default=datetime.now, nullable=False)
 
     sesiones = relationship("SesionUsuario", back_populates="usuario", cascade="all, delete-orphan")
+    tokens_seguridad = relationship("TokenSeguridadUsuario", back_populates="usuario", cascade="all, delete-orphan")
 
 
 class SesionUsuario(Base):
@@ -46,6 +50,20 @@ class SesionUsuario(Base):
     ultima_actividad = Column(DateTime, default=datetime.now, nullable=False)
 
     usuario = relationship("Usuario", back_populates="sesiones")
+
+
+class TokenSeguridadUsuario(Base):
+    __tablename__ = "tokens_seguridad_usuario"
+
+    id = Column(Integer, primary_key=True)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False, index=True)
+    proposito = Column(String(30), nullable=False, index=True)
+    token_hash = Column(String(64), nullable=False, unique=True, index=True)
+    creado_en = Column(DateTime, default=datetime.now, nullable=False)
+    vence_en = Column(DateTime, nullable=False)
+    usado_en = Column(DateTime)
+
+    usuario = relationship("Usuario", back_populates="tokens_seguridad")
 
 
 # =====================================================

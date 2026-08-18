@@ -129,12 +129,12 @@ database/             Base de datos local (ignorada por Git)
 
 ## Web y movil protegidos
 
-La API admite PostgreSQL mediante `FINANCEOS_DATABASE_URL` y proteccion Bearer opcional mediante `FINANCEOS_API_TOKEN`. Copia `.env.example`, configura valores seguros en el servidor y no publiques ese archivo.
+La API admite PostgreSQL mediante `FINANCEOS_DATABASE_URL` y exige sesiones individuales. Copia `.env.example`, configura valores seguros en el servidor y no publiques ese archivo. No se compilan secretos compartidos dentro de React ni del APK.
 
-En desarrollo local el token puede omitirse. Para compilar la web protegida define tambien `VITE_API_TOKEN`. En Flutter usa:
+Para ejecutar Flutter contra una API publicada usa:
 
 ```powershell
-flutter run --dart-define=API_URL=https://tu-api.example.com --dart-define=API_TOKEN=TU_TOKEN
+flutter run --dart-define=API_URL=https://tu-api.example.com
 ```
 
 La aplicacion movil incluye el flujo de camara y OCR en `mobile/lib/features/receipts/receipt_scan_page.dart`: toma la foto, propone comercio y total, exige confirmacion y adjunta la imagen al movimiento. La huella del comprobante evita descontar dos veces por reintentos o doble toque.
@@ -150,6 +150,23 @@ python scripts/create_superadmin.py --nombre "Administrador" --correo "admin@dom
 ```
 
 El comando solicita una contraseña oculta de al menos 12 caracteres. El superadministrador puede crear o desactivar usuarios desde **Configuración → Personas con acceso**, pero no convertirlos en superadministradores. La API aplica `usuario_id` en cuentas, categorías, movimientos, tarjetas, comprobantes, recurrentes, transferencias, presupuestos, metas, inversiones y auditoría.
+
+La autenticación incluye verificación de correo, recuperación con enlace de un
+solo uso, bloqueo temporal, MFA TOTP y sesiones revocables. En desarrollo, los
+correos se escriben en `database/correo-desarrollo.txt`; producción exige SMTP.
+
+### Base de despliegue segura
+
+```powershell
+Copy-Item .env.production.example .env
+# Completa el dominio y los secretos únicamente en el servidor.
+docker compose -f compose.production.yml config
+docker compose -f compose.production.yml up -d --build
+```
+
+El despliegue usa PostgreSQL, Caddy con HTTPS automático y contenedores sin
+privilegios. Consulta [Seguridad y privacidad](docs/SEGURIDAD_Y_PRIVACIDAD.md)
+antes de exponer el servicio.
 
 ## Arquitectura y crecimiento
 

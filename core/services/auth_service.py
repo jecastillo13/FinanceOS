@@ -1,6 +1,7 @@
 """Autenticación local segura con Argon2id y sesiones opacas revocables."""
 
 import hashlib
+import logging
 import os
 import secrets
 from datetime import datetime, timedelta
@@ -9,10 +10,14 @@ from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 
 from core.database import get_session
-from core.models import Categoria, SesionUsuario, Usuario
+from core.models import Categoria, SesionUsuario, TokenSeguridadUsuario, Usuario
+from core.services.email_service import EmailService
+from core.services.mfa_service import MfaService
 from core.ownership import TABLAS_CON_PROPIETARIO
 from core.default_categories import CATEGORIAS_PREDETERMINADAS, COLORES_POR_TIPO
 from sqlalchemy import text
+
+logger = logging.getLogger(__name__)
 
 
 class AuthService:
@@ -42,7 +47,29 @@ class AuthService:
                 activa=1, orden=orden, usuario_id=usuario_id,
             ))
 
+    @staticmethod
+    def _validar_password(password: str):
+        if len(password) < 12 or len(password) > 128:
+            raise ValueError("La contraseña debe tener entre 12 y 128 caracteres.")
+        if password.lower() == password or password.upper() == password or not any(c.isdigit() for c in password):
+            raise ValueError("Usa mayúsculas, minúsculas y al menos un número.")
+
+    def _crear_token_seguridad(self, usuario_id: int, proposito: str, duracion: timedelta):
+        ahora = datetime.now()
+        self.db.query(TokenSeguridadUsuario).filter(
+            TokenSeguridadUsuario.usuario_id == usuario_id,
+            TokenSeguridadUsuario.proposito == proposito,
+            TokenSeguridadUsuario.usado_en.is_(None),
+        ).update({TokenSeguridadUsuario.usado_en: ahora}, synchronize_session=False)
+        token = secrets.token_urlsafe(48)
+        self.db.add(TokenSeguridadUsuario(
+            usuario_id=usuario_id, proposito=proposito,
+            token_hash=self._hash_token(token), vence_en=ahora + duracion,
+        ))
+        return token
+
     def _crear_identidad(self, nombre: str, correo: str, password: str, rol: str, crear_catalogo: bool = True):
+        self._validar_password(password)
         correo_limpio = correo.strip().lower()
         if self.db.query(Usuario.id).filter(Usuario.correo == correo_limpio).first():
             raise ValueError("Ya existe un usuario con ese correo.")
@@ -71,6 +98,16 @@ class AuthService:
                 self.db.execute(text(f"UPDATE {tabla} SET usuario_id = :id WHERE usuario_id IS NULL"), {"id": usuario.id})
             if self.db.query(Categoria.id).filter(Categoria.usuario_id == usuario.id).first() is None:
                 self._agregar_catalogo(usuario.id)
+            usuario.correo_verificado_en = datetime.now()
+        if rol == "usuario" and self.registro_publico_habilitado():
+            token = self._crear_token_seguridad(usuario.id, "verificar_correo", timedelta(hours=24))
+            self.db.commit(); self.db.refresh(usuario)
+            try:
+                EmailService().enviar_verificacion(usuario.correo, token)
+            except Exception:
+                logger.exception("No fue posible entregar el correo de verificación")
+            return usuario
+        usuario.correo_verificado_en = usuario.correo_verificado_en or datetime.now()
         self.db.commit(); self.db.refresh(usuario)
         return usuario
 
@@ -80,6 +117,7 @@ class AuthService:
 
     def crear_superadmin(self, nombre: str, correo: str, password: str):
         usuario = self._crear_identidad(nombre, correo, password, "superadmin")
+        usuario.correo_verificado_en = datetime.now()
         self.db.commit(); self.db.refresh(usuario)
         return usuario
 
@@ -99,6 +137,7 @@ class AuthService:
     def crear_usuario(self, solicitante_id: int, nombre: str, correo: str, password: str):
         self._administrador(solicitante_id)
         usuario = self._crear_identidad(nombre, correo, password, "usuario")
+        usuario.correo_verificado_en = datetime.now()
         self.db.commit(); self.db.refresh(usuario)
         return usuario
 
@@ -124,7 +163,7 @@ class AuthService:
         self.db.commit(); self.db.refresh(usuario)
         return usuario
 
-    def iniciar(self, correo: str, password: str):
+    def iniciar(self, correo: str, password: str, mfa_codigo: str | None = None):
         usuario = self.db.query(Usuario).filter(Usuario.correo == correo.strip().lower()).first()
         ahora = datetime.now()
         if usuario is None:
@@ -143,6 +182,14 @@ class AuthService:
                 usuario.intentos_fallidos = 0
             self.db.commit()
             raise ValueError("Credenciales inválidas.") from error
+        if usuario.correo_verificado_en is None:
+            raise ValueError("Debes verificar tu correo antes de iniciar sesión.")
+        if usuario.mfa_habilitado:
+            if not mfa_codigo:
+                raise ValueError("MFA_REQUIRED")
+            secreto = MfaService().descifrar(usuario.mfa_secret_encrypted)
+            if not MfaService().verificar(secreto, mfa_codigo):
+                raise ValueError("El código de verificación no es válido.")
         usuario.intentos_fallidos = 0; usuario.bloqueado_hasta = None
         if self.hasher.check_needs_rehash(usuario.password_hash):
             usuario.password_hash = self.hasher.hash(password)
@@ -150,6 +197,93 @@ class AuthService:
         sesion = SesionUsuario(usuario_id=usuario.id, token_hash=self._hash_token(token), vence_en=ahora + self.DURACION)
         self.db.add(sesion); self.db.commit()
         return usuario, token
+
+    def preparar_mfa(self, usuario_id: int):
+        usuario = self.db.get(Usuario, usuario_id)
+        if not usuario or not usuario.activo:
+            raise ValueError("El usuario no existe.")
+        secreto = MfaService.generar_secreto()
+        usuario.mfa_secret_encrypted = MfaService().cifrar(secreto)
+        usuario.mfa_habilitado = 0
+        self.db.commit()
+        return {"secreto": secreto, "uri": MfaService.uri(secreto, usuario.correo)}
+
+    def confirmar_mfa(self, usuario_id: int, codigo: str):
+        usuario = self.db.get(Usuario, usuario_id)
+        if not usuario or not usuario.mfa_secret_encrypted:
+            raise ValueError("Primero inicia la configuración de MFA.")
+        servicio = MfaService()
+        if not servicio.verificar(servicio.descifrar(usuario.mfa_secret_encrypted), codigo):
+            raise ValueError("El código de verificación no es válido.")
+        usuario.mfa_habilitado = 1
+        self.db.commit()
+
+    def desactivar_mfa(self, usuario_id: int, password: str, codigo: str):
+        usuario = self.db.get(Usuario, usuario_id)
+        if not usuario or not usuario.mfa_habilitado:
+            raise ValueError("MFA no está activo.")
+        try:
+            self.hasher.verify(usuario.password_hash, password)
+        except VerifyMismatchError as error:
+            raise ValueError("Credenciales inválidas.") from error
+        servicio = MfaService()
+        if not servicio.verificar(servicio.descifrar(usuario.mfa_secret_encrypted), codigo):
+            raise ValueError("El código de verificación no es válido.")
+        usuario.mfa_habilitado = 0
+        usuario.mfa_secret_encrypted = None
+        self.db.commit()
+
+    def solicitar_recuperacion(self, correo: str):
+        usuario = self.db.query(Usuario).filter(Usuario.correo == correo.strip().lower(), Usuario.activo == 1).first()
+        if usuario:
+            token = self._crear_token_seguridad(usuario.id, "recuperar_password", timedelta(minutes=30))
+            self.db.commit()
+            try:
+                EmailService().enviar_recuperacion(usuario.correo, token)
+            except Exception:
+                logger.exception("No fue posible entregar el correo de recuperación")
+
+    def reenviar_verificacion(self, correo: str):
+        usuario = self.db.query(Usuario).filter(Usuario.correo == correo.strip().lower(), Usuario.activo == 1).first()
+        if usuario and usuario.correo_verificado_en is None:
+            token = self._crear_token_seguridad(usuario.id, "verificar_correo", timedelta(hours=24))
+            self.db.commit()
+            try:
+                EmailService().enviar_verificacion(usuario.correo, token)
+            except Exception:
+                logger.exception("No fue posible reenviar el correo de verificación")
+
+    def verificar_correo(self, token: str):
+        registro = self._token_valido(token, "verificar_correo")
+        registro.usuario.correo_verificado_en = datetime.now()
+        registro.usado_en = datetime.now()
+        self.db.commit()
+
+    def restablecer_password(self, token: str, password: str):
+        self._validar_password(password)
+        registro = self._token_valido(token, "recuperar_password")
+        ahora = datetime.now()
+        registro.usuario.password_hash = self.hasher.hash(password)
+        registro.usuario.intentos_fallidos = 0
+        registro.usuario.bloqueado_hasta = None
+        registro.usado_en = ahora
+        self.db.query(SesionUsuario).filter(
+            SesionUsuario.usuario_id == registro.usuario_id,
+            SesionUsuario.revocada_en.is_(None),
+        ).update({SesionUsuario.revocada_en: ahora}, synchronize_session=False)
+        self.db.commit()
+
+    def _token_valido(self, token: str, proposito: str):
+        ahora = datetime.now()
+        registro = self.db.query(TokenSeguridadUsuario).filter(
+            TokenSeguridadUsuario.token_hash == self._hash_token(token),
+            TokenSeguridadUsuario.proposito == proposito,
+            TokenSeguridadUsuario.usado_en.is_(None),
+            TokenSeguridadUsuario.vence_en > ahora,
+        ).first()
+        if not registro:
+            raise ValueError("El enlace no es válido o ya venció.")
+        return registro
 
     def autenticar(self, token: str | None):
         if not token: return None

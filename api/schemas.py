@@ -12,6 +12,33 @@ class RegistroPropietario(BaseModel):
 class InicioSesion(BaseModel):
     correo: str = Field(min_length=5, max_length=254, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
     password: str = Field(min_length=1, max_length=128)
+    mfa_codigo: str | None = Field(default=None, pattern=r"^\d{6}$")
+
+
+class SolicitudRecuperacion(BaseModel):
+    correo: str = Field(min_length=5, max_length=254, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+class TokenAccion(BaseModel):
+    token: str = Field(min_length=32, max_length=200)
+
+
+class RestablecerPassword(TokenAccion):
+    password: str = Field(min_length=12, max_length=128)
+
+
+class SesionMovilRespuesta(BaseModel):
+    usuario: "UsuarioRespuesta"
+    token: str
+    vence_en_segundos: int = 43200
+
+
+class CodigoMfa(BaseModel):
+    codigo: str = Field(pattern=r"^\d{6}$")
+
+
+class DesactivarMfa(CodigoMfa):
+    password: str = Field(min_length=1, max_length=128)
 
 
 class UsuarioRespuesta(BaseModel):
@@ -21,6 +48,7 @@ class UsuarioRespuesta(BaseModel):
     correo: str
     rol: str
     activo: bool
+    mfa_habilitado: bool = False
 
 
 class UsuarioCrearAdmin(RegistroPropietario):

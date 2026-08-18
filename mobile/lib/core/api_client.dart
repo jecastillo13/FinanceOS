@@ -8,7 +8,6 @@ const apiBaseUrl = String.fromEnvironment(
   'API_URL',
   defaultValue: 'http://10.0.2.2:8000',
 );
-const apiToken = String.fromEnvironment('API_TOKEN', defaultValue: '');
 
 class ApiClient {
   ApiClient({http.Client? client}) : _client = client ?? http.Client();
@@ -17,7 +16,6 @@ class ApiClient {
 
   Map<String, String> get _headers => {
         'Content-Type': 'application/json',
-        if (apiToken.isNotEmpty) 'Authorization': 'Bearer $apiToken',
       };
 
   Future<Map<String, dynamic>> resumenDashboard() => _getObject('/api/v1/dashboard/resumen');
@@ -128,7 +126,6 @@ class ApiClient {
       'POST',
       Uri.parse('$apiBaseUrl/api/v1/movimientos/$movimientoId/comprobantes'),
     );
-    if (apiToken.isNotEmpty) request.headers['Authorization'] = 'Bearer $apiToken';
     request.files.add(await http.MultipartFile.fromPath('archivo', rutaArchivo));
     final response = await http.Response.fromStream(await request.send());
     if (response.statusCode >= 400) throw ApiException(response.statusCode, response.body);

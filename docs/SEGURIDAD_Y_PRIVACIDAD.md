@@ -11,7 +11,6 @@ La API incorpora estas defensas:
 
 - acceso limitado a direcciones privadas y locales;
 - lista de nombres de host permitidos;
-- token opcional en las rutas financieras;
 - CORS limitado a los frontends autorizados;
 - cabeceras contra interpretación de contenido, marcos y filtración de origen;
 - documentación de la API desactivada en producción;
@@ -21,6 +20,13 @@ La API incorpora estas defensas:
   sesiones opacas revocables en cookie `HttpOnly` y roles superadmin/usuario;
 - filtrado automático por propietario en todas las entidades financieras;
 - pruebas que verifican que cambiar un ID no permite consultar datos ajenos.
+- límites por IP en registro, inicio de sesión y recuperación;
+- verificación de correo y recuperación con tokens de un solo uso y vencimiento;
+- MFA TOTP compatible con aplicaciones autenticadoras, con secreto cifrado;
+- configuración de producción que falla cerrada si falta HTTPS, PostgreSQL,
+  SMTP, hosts explícitos o la clave de cifrado MFA;
+- Android de producción sin tráfico HTTP, sin copias de seguridad del sistema y
+  con bloqueo de capturas de pantalla.
 
 Esto reduce la superficie de ataque, pero ningún sistema puede prometer que es
 imposible de vulnerar. Mantén Windows, Python, Node, Flutter y sus dependencias
@@ -30,15 +36,13 @@ actualizados, usa una contraseña de inicio de sesión fuerte y activa BitLocker
 
 1. Copia `.env.example` como `.env` sin subirlo a Git. La API carga ese archivo
    automáticamente al iniciar.
-2. Genera un token largo y aleatorio para `FINANCEOS_API_TOKEN`.
-3. Conserva `FINANCEOS_PRIVATE_NETWORK_ONLY=true` mientras la API viva en tu PC.
-4. Ajusta `FINANCEOS_ALLOWED_HOSTS` a los hosts realmente utilizados.
-5. Permite el puerto de la API en el firewall solo para la red privada.
-6. Guarda copias de seguridad cifradas fuera del computador.
+2. Conserva `FINANCEOS_PRIVATE_NETWORK_ONLY=true` mientras la API viva en tu PC.
+3. Ajusta `FINANCEOS_ALLOWED_HOSTS` a los hosts realmente utilizados.
+4. Permite el puerto de la API en el firewall solo para la red privada.
+5. Guarda copias de seguridad cifradas fuera del computador.
 
-El token compartido de desarrollo no reemplaza el inicio de sesión y tampoco debe
-considerarse secreto si está compilado dentro del frontend o del APK. Web y móvil
-usan la sesión servida por la API; la captura de facturas se abre desde
+Web y móvil usan sesiones individuales servidas por la API; no contienen una
+clave maestra compartida. La captura de facturas se abre desde
 Movimientos para que cámara, PDF y OCR respeten la misma autenticación.
 
 En modo privado (`FINANCEOS_PUBLIC_SIGNUP=false`), solo el primer registro puede
@@ -53,20 +57,32 @@ ascender usuarios desde la interfaz. Cada usuario recibe su catálogo y espacio
 independiente. Los respaldos completos son exclusivos del superadministrador
 porque contienen información de toda la instalación.
 
-## Requisitos antes de publicar en Internet
+## Controles incluidos para producción
+
+`compose.production.yml` levanta PostgreSQL, la API y Caddy. Caddy gestiona TLS,
+la API valida la configuración antes de arrancar y el contenedor se ejecuta como
+usuario sin privilegios, con sistema de archivos de solo lectura. El frontend
+muestra en Configuración un Centro de Seguridad sin revelar secretos.
+
+GitHub Actions ejecuta pruebas, compilación y auditorías de dependencias.
+Dependabot vigila Python, npm, Flutter y las propias acciones.
+
+## Requisitos operativos antes de publicar en Internet
 
 Antes de ofrecer FinanceOS a varios usuarios se debe implementar:
 
-- MFA o un proveedor OIDC para una publicación multiusuario en Internet;
-- renovación segura de sesiones y recuperación de contraseña;
-- PostgreSQL administrado con cifrado, copias de seguridad y migraciones;
-- HTTPS obligatorio detrás de un proxy o plataforma confiable;
+- contratar y configurar dominio, servidor, PostgreSQL administrado y SMTP;
+- activar MFA en las cuentas administrativas y recomendarlo a todas las personas;
+- probar restauraciones de copias de seguridad cifradas;
 - secretos únicamente en el servidor, nunca dentro de React o Flutter;
 - almacenamiento privado de comprobantes y enlaces firmados de corta duración;
-- límites de solicitudes, bloqueo ante intentos repetidos y registro de auditoría;
-- verificación de correo para el autorregistro público;
+- usar Redis o limitación en el proxy al ejecutar varias instancias de la API;
 - política de retención, exportación y eliminación completa de datos personales;
 - análisis de dependencias y pruebas de autorización antes de cada versión.
+
+FinanceOS no se debe publicar directamente desde el computador personal. El
+archivo de despliegue es una base reproducible; la contratación del dominio,
+correo y servicios administrados requiere una decisión del propietario.
 
 ## Modelo de sincronización
 

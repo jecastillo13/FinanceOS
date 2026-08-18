@@ -71,6 +71,7 @@ def create_database():
         OperacionDetectada,
         Usuario,
         SesionUsuario,
+        TokenSeguridadUsuario,
     )
 
     Base.metadata.create_all(bind=engine)
@@ -82,6 +83,8 @@ def create_database():
         with engine.begin() as conexion:
             _migrar_propiedad_por_usuario(conexion)
             _migrar_roles_publicacion(conexion)
+            _migrar_seguridad_cuentas(conexion)
+            _migrar_mfa(conexion)
 
 
 def _migrar_categoria(conexion):
@@ -182,6 +185,31 @@ def _migrar_roles_publicacion(conexion):
     conexion.execute(text("UPDATE usuarios SET rol = 'superadmin' WHERE rol = 'administrador'"))
 
 
+def _migrar_seguridad_cuentas(conexion):
+    """Añade verificación de correo sin bloquear instalaciones privadas existentes."""
+    if "usuarios" not in set(inspect(engine).get_table_names()):
+        return
+    columnas = {columna["name"] for columna in inspect(engine).get_columns("usuarios")}
+    if "correo_verificado_en" not in columnas:
+        conexion.execute(text("ALTER TABLE usuarios ADD COLUMN correo_verificado_en DATETIME"))
+        # Las cuentas anteriores ya demostraron posesión mediante su uso local.
+        # Los nuevos registros públicos se verifican en AuthService.
+        conexion.execute(text(
+            "UPDATE usuarios SET correo_verificado_en = creado_en "
+            "WHERE correo_verificado_en IS NULL"
+        ))
+
+
+def _migrar_mfa(conexion):
+    if "usuarios" not in set(inspect(engine).get_table_names()):
+        return
+    columnas = {columna["name"] for columna in inspect(engine).get_columns("usuarios")}
+    if "mfa_secret_encrypted" not in columnas:
+        conexion.execute(text("ALTER TABLE usuarios ADD COLUMN mfa_secret_encrypted TEXT"))
+    if "mfa_habilitado" not in columnas:
+        conexion.execute(text("ALTER TABLE usuarios ADD COLUMN mfa_habilitado INTEGER NOT NULL DEFAULT 0"))
+
+
 def _ejecutar_migraciones():
     """Aplica migraciones idempotentes y registra la version local."""
     migraciones = (
@@ -192,6 +220,8 @@ def _ejecutar_migraciones():
         ("005_idempotencia_movimientos", _migrar_idempotencia_movimientos),
         ("006_propiedad_por_usuario", _migrar_propiedad_por_usuario),
         ("007_roles_publicacion", _migrar_roles_publicacion),
+        ("008_seguridad_cuentas", _migrar_seguridad_cuentas),
+        ("009_mfa", _migrar_mfa),
     )
     with engine.begin() as conexion:
         conexion.execute(text("""

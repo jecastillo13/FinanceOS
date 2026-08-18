@@ -1,0 +1,70 @@
+services:
+  database:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: financeos
+      POSTGRES_USER: financeos
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U financeos -d financeos"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [private]
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      FINANCEOS_ENV: production
+      FINANCEOS_DATABASE_URL: postgresql+psycopg://financeos:${POSTGRES_PASSWORD}@database:5432/financeos
+      FINANCEOS_PUBLIC_URL: https://${FINANCEOS_DOMAIN}
+      FINANCEOS_CORS_ORIGINS: https://${FINANCEOS_DOMAIN}
+      FINANCEOS_ALLOWED_HOSTS: ${FINANCEOS_DOMAIN},app
+      FINANCEOS_PRIVATE_NETWORK_ONLY: "false"
+      FINANCEOS_HTTPS: "true"
+      FINANCEOS_AUTH_REQUIRED: "true"
+      FINANCEOS_PUBLIC_SIGNUP: ${FINANCEOS_PUBLIC_SIGNUP:-false}
+      FINANCEOS_SMTP_HOST: ${FINANCEOS_SMTP_HOST}
+      FINANCEOS_SMTP_PORT: ${FINANCEOS_SMTP_PORT:-587}
+      FINANCEOS_SMTP_USER: ${FINANCEOS_SMTP_USER}
+      FINANCEOS_SMTP_PASSWORD: ${FINANCEOS_SMTP_PASSWORD}
+      FINANCEOS_EMAIL_FROM: ${FINANCEOS_EMAIL_FROM}
+      FINANCEOS_MFA_ENCRYPTION_KEY: ${FINANCEOS_MFA_ENCRYPTION_KEY:?Define FINANCEOS_MFA_ENCRYPTION_KEY}
+    volumes:
+      - uploads:/app/uploads
+      - backups:/app/backups
+    networks: [private]
+    security_opt: [no-new-privileges:true]
+    read_only: true
+    tmpfs: [/tmp]
+
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on: [app]
+    environment:
+      FINANCEOS_DOMAIN: ${FINANCEOS_DOMAIN}
+    ports: ["80:80", "443:443", "443:443/udp"]
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [private]
+    security_opt: [no-new-privileges:true]
+
+networks:
+  private:
+
+volumes:
+  postgres_data:
+  uploads:
+  backups:
+  caddy_data:
+  caddy_config:

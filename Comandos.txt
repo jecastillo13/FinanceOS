@@ -155,6 +155,32 @@ No ejecutes este comando desde una terminal pública ni permitas elegir el rol
 desde el frontend.
 
 ============================================================
+DESPLIEGUE SEGURO (SERVIDOR)
+============================================================
+
+1. Crear configuración privada:
+   Copy-Item .env.production.example .env
+
+2. Generar clave para cifrar MFA:
+   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+
+3. Completar .env con dominio, PostgreSQL, SMTP y clave MFA.
+
+4. Validar sin iniciar:
+   docker compose -f compose.production.yml config
+
+5. Construir e iniciar:
+   docker compose -f compose.production.yml up -d --build
+
+6. Ver estado:
+   docker compose -f compose.production.yml ps
+
+7. Ver registros sin mostrar el archivo .env:
+   docker compose -f compose.production.yml logs --tail 100 app proxy
+
+No publiques el puerto 8000. Solo Caddy debe exponer 80/443.
+
+============================================================
 TARJETAS Y AVISOS BANCARIOS
 ============================================================
 

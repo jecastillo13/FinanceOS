@@ -16,6 +16,8 @@ env/
 # Comprobantes locales de movimientos
 uploads/
 backups/
+database/correo-desarrollo.txt
+database/.mfa_key
 
 # VS Code
 .vscode/
