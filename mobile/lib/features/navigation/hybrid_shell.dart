@@ -1,5 +1,8 @@
+import 'package:file_picker/file_picker.dart' as native_picker;
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter_android/webview_flutter_android.dart';
 
 import '../../core/design_system.dart';
 
@@ -14,6 +17,7 @@ class HybridShell extends StatefulWidget {
 
 class _HybridShellState extends State<HybridShell>{
   late final WebViewController _controller;
+  final ImagePicker _imagePicker = ImagePicker();
   int _progress=0; String? _error;
 
   @override void initState(){super.initState();_controller=WebViewController()
@@ -23,8 +27,41 @@ class _HybridShellState extends State<HybridShell>{
       onProgress:(value)=>setState(()=>_progress=value),
       onPageFinished:(_)=>setState((){_progress=100;_error=null;}),
       onWebResourceError:(error){if(error.isForMainFrame==true)setState(()=>_error=error.description);},
-    ))
-    ..loadRequest(Uri.parse(financeWebUrl));}
+    ));
+    final platformController = _controller.platform;
+    if (platformController is AndroidWebViewController) {
+      platformController.setOnShowFileSelector(_selectFiles);
+    }
+    _controller.loadRequest(Uri.parse(financeWebUrl));}
+
+  Future<List<String>> _selectFiles(FileSelectorParams params) async {
+    if (params.isCaptureEnabled) {
+      final photo = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 90,
+      );
+      return photo == null ? <String>[] : <String>[Uri.file(photo.path).toString()];
+    }
+
+    const extensions = <String>['pdf', 'png', 'jpg', 'jpeg', 'webp'];
+    final List<native_picker.PlatformFile> files;
+    if (params.mode == FileSelectorMode.openMultiple) {
+      files = await native_picker.FilePicker.pickFiles(
+        type: native_picker.FileType.custom,
+        allowedExtensions: extensions,
+      );
+    } else {
+      final file = await native_picker.FilePicker.pickFile(
+        type: native_picker.FileType.custom,
+        allowedExtensions: extensions,
+      );
+      files = file == null ? <native_picker.PlatformFile>[] : <native_picker.PlatformFile>[file];
+    }
+    return files
+        .where((file) => file.path != null)
+        .map((file) => Uri.file(file.path!).toString())
+        .toList();
+  }
 
   Widget _errorView()=>Positioned.fill(
     child:ColoredBox(
