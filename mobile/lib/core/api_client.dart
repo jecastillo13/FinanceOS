@@ -90,6 +90,17 @@ class ApiClient {
       _postObject('/api/v1/inversiones', body);
   Future<Map<String, dynamic>> crearTarjeta(Map<String, dynamic> body) =>
       _postObject('/api/v1/tarjetas', body);
+  Future<Map<String, dynamic>> pagarRecurrente(int id, int cuentaId) =>
+      _postObject('/api/v1/gastos-recurrentes/$id/pagar',
+          {'cuenta_id': cuentaId, 'fecha_pago': _fecha(DateTime.now())});
+  Future<Map<String, dynamic>> pagarTarjeta(
+          int id, int cuentaId, double valor) =>
+      _postObject('/api/v1/tarjetas/$id/pagar', {
+        'cuenta_origen_id': cuentaId,
+        'valor': valor,
+        'fecha': _fecha(DateTime.now()),
+        'descripcion': 'Pago desde FinanceOS Mobile'
+      });
   Future<Map<String, dynamic>> actualizarTasas() =>
       _postObject('/api/v1/monedas/tasas/actualizar', {});
 
