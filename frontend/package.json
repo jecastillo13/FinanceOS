@@ -12,7 +12,7 @@
     "@tesseract.js-data/spa": "^1.0.0",
     "@vitejs/plugin-react": "4.7.0",
     "lucide-react": "0.468.0",
-    "pdfjs-dist": "^4.8.69",
+    "pdfjs-dist": "^6.2.108",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "recharts": "2.15.0",
