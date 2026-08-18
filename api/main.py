@@ -64,6 +64,8 @@ app = FastAPI(
 FRONTEND_DIST = PROJECT_ROOT / "frontend" / "dist"
 if (FRONTEND_DIST / "assets").is_dir():
     app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="frontend-assets")
+if (FRONTEND_DIST / "tessdata").is_dir():
+    app.mount("/tessdata", StaticFiles(directory=FRONTEND_DIST / "tessdata"), name="ocr-language-data")
 ORIGENES_CONFIGURADOS = [origin.strip() for origin in os.getenv("FINANCEOS_CORS_ORIGINS", "").split(",") if origin.strip()]
 ORIGENES_DESARROLLO = ["http://localhost:8501", "http://localhost:3000", "http://localhost:5173"] if ENTORNO != "production" else []
 ORIGENES_PERMITIDOS = ORIGENES_DESARROLLO + ORIGENES_CONFIGURADOS

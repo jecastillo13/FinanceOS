@@ -47,9 +47,15 @@ export async function readReceipt(file: File, onProgress: (value: number) => voi
 
 async function recognizeImage(image: Blob, onProgress: (value: number) => void): Promise<string> {
   const { createWorker } = await import("tesseract.js");
-  const worker = await createWorker("spa", undefined, { logger: message => {
+  const worker = await createWorker("spa", undefined, {
+    langPath: `${window.location.origin}/tessdata`,
+    logger: message => {
     if (message.status === "recognizing text") onProgress(Math.round((message.progress || 0) * 100));
   }});
-  try { return (await worker.recognize(image)).data.text; }
+  try {
+    const text = (await worker.recognize(image)).data.text.trim();
+    if (text.length < 8) throw new Error("La imagen no contiene texto legible. Acércate, evita reflejos y vuelve a intentarlo.");
+    return text;
+  }
   finally { await worker.terminate(); }
 }
