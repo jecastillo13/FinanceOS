@@ -107,7 +107,7 @@ class _TopBar extends StatelessWidget {
         Container(width: 46, height: 46, decoration: BoxDecoration(borderRadius: BorderRadius.circular(15), gradient: const LinearGradient(colors: [FinanceColors.primary, Color(0xFF584BE7)]), boxShadow: const [BoxShadow(color: Color(0x557C83FF), blurRadius: 20)]), child: const Icon(Icons.account_balance_wallet_rounded, color: Colors.white)),
         const SizedBox(width: 12),
         const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('FinanceOS', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)), Text('Centro financiero personal', style: TextStyle(color: FinanceColors.muted, fontSize: 12))])),
-        Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7), decoration: BoxDecoration(color: FinanceColors.success.withOpacity(.10), border: Border.all(color: FinanceColors.success.withOpacity(.25)), borderRadius: BorderRadius.circular(20)), child: const Row(children: [Icon(Icons.circle, size: 7, color: FinanceColors.success), SizedBox(width: 6), Text('Activo', style: TextStyle(color: FinanceColors.success, fontSize: 11, fontWeight: FontWeight.w700))])),
+        Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7), decoration: BoxDecoration(color: FinanceColors.success.withValues(alpha: .10), border: Border.all(color: FinanceColors.success.withValues(alpha: .25)), borderRadius: BorderRadius.circular(20)), child: const Row(children: [Icon(Icons.circle, size: 7, color: FinanceColors.success), SizedBox(width: 6), Text('Activo', style: TextStyle(color: FinanceColors.success, fontSize: 11, fontWeight: FontWeight.w700))])),
         IconButton(tooltip: 'Compras detectadas', onPressed: ()=>Navigator.of(context).push(MaterialPageRoute(builder:(_)=>const DetectionsPage())), icon: const Icon(Icons.notifications_active_rounded)),
         IconButton(tooltip: 'Escanear factura', onPressed: ()=>Navigator.of(context).push(MaterialPageRoute(builder:(_)=>const ReceiptScanPage())), icon: const Icon(Icons.document_scanner_rounded)),
         IconButton(onPressed: onRefresh, icon: const Icon(Icons.refresh_rounded)),
@@ -138,7 +138,7 @@ class _MetricCard extends StatelessWidget {
   final Color accent;
   @override
   Widget build(BuildContext context) => FinanceSurface(accent: accent, padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Container(width: 36, height: 36, decoration: BoxDecoration(color: accent.withOpacity(.14), borderRadius: BorderRadius.circular(12)), child: Icon(icon, size: 19, color: accent)),
+        Container(width: 36, height: 36, decoration: BoxDecoration(color: accent.withValues(alpha: .14), borderRadius: BorderRadius.circular(12)), child: Icon(icon, size: 19, color: accent)),
         const SizedBox(height: 13), Text(label, style: const TextStyle(color: FinanceColors.muted, fontSize: 12)), const SizedBox(height: 4),
         FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800))),
       ]));
@@ -164,7 +164,7 @@ class _CategoryBars extends StatelessWidget {
       final label = item['categoría']?.toString() ?? 'Sin categoría';
       return Padding(padding: const EdgeInsets.only(bottom: 15), child: Column(children: [
         Row(children: [Expanded(child: Text(label, style: const TextStyle(fontWeight: FontWeight.w700))), Text(money(value), style: const TextStyle(color: FinanceColors.muted, fontSize: 12))]),
-        const SizedBox(height: 7), ClipRRect(borderRadius: BorderRadius.circular(20), child: LinearProgressIndicator(value: maxValue == 0 ? 0 : value / maxValue, minHeight: 7, backgroundColor: FinanceColors.border.withOpacity(.35), valueColor: const AlwaysStoppedAnimation(FinanceColors.primary))),
+        const SizedBox(height: 7), ClipRRect(borderRadius: BorderRadius.circular(20), child: LinearProgressIndicator(value: maxValue == 0 ? 0 : value / maxValue, minHeight: 7, backgroundColor: FinanceColors.border.withValues(alpha: .35), valueColor: const AlwaysStoppedAnimation(FinanceColors.primary))),
       ]));
     }).toList());
   }
@@ -193,7 +193,7 @@ class _CashFlowPainter extends CustomPainter {
     final chart = Rect.fromLTWH(8, 12, size.width - 16, size.height - 34);
     for (var i = 0; i < 4; i++) {
       final y = chart.top + chart.height * i / 3;
-      canvas.drawLine(Offset(chart.left, y), Offset(chart.right, y), Paint()..color = FinanceColors.border.withOpacity(.28)..strokeWidth = 1);
+      canvas.drawLine(Offset(chart.left, y), Offset(chart.right, y), Paint()..color = FinanceColors.border.withValues(alpha: .28)..strokeWidth = 1);
     }
     _drawSeries(canvas, chart, maxValue, 'ingresos', FinanceColors.success);
     _drawSeries(canvas, chart, maxValue, 'gastos', FinanceColors.danger);
@@ -208,7 +208,7 @@ class _CashFlowPainter extends CustomPainter {
       final y = chart.bottom - chart.height * value / maxValue;
       if (i == 0) { path.moveTo(x, y); } else { path.lineTo(x, y); }
     }
-    canvas.drawPath(path, Paint()..color = color.withOpacity(.18)..style = PaintingStyle.stroke..strokeWidth = 9..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10));
+    canvas.drawPath(path, Paint()..color = color.withValues(alpha: .18)..style = PaintingStyle.stroke..strokeWidth = 9..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10));
     canvas.drawPath(path, Paint()..color = color..style = PaintingStyle.stroke..strokeCap = StrokeCap.round..strokeJoin = StrokeJoin.round..strokeWidth = 3);
   }
 

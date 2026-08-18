@@ -24,6 +24,12 @@ class AttachmentService:
         "application/pdf": ".pdf",
     }
     TAMANO_MAXIMO = 10 * 1024 * 1024
+    FIRMAS_VALIDAS = {
+        "image/jpeg": lambda datos: datos.startswith(b"\xff\xd8\xff"),
+        "image/png": lambda datos: datos.startswith(b"\x89PNG\r\n\x1a\n"),
+        "image/webp": lambda datos: len(datos) >= 12 and datos.startswith(b"RIFF") and datos[8:12] == b"WEBP",
+        "application/pdf": lambda datos: datos.startswith(b"%PDF-"),
+    }
 
     def __init__(self):
         self.db = get_session()
@@ -37,6 +43,8 @@ class AttachmentService:
             raise ValueError("Solo puedes adjuntar imágenes JPG, PNG, WEBP o archivos PDF.")
         if not contenido or len(contenido) > self.TAMANO_MAXIMO:
             raise ValueError("El comprobante debe pesar entre 1 byte y 10 MB.")
+        if not self.FIRMAS_VALIDAS[tipo_mime](contenido):
+            raise ValueError("El contenido del comprobante no coincide con un archivo válido.")
 
         # Una repeticion de red o un doble toque no debe crear dos adjuntos.
         for existente in movimiento.adjuntos:
@@ -52,7 +60,7 @@ class AttachmentService:
         ruta.write_bytes(contenido)
         adjunto = AdjuntoMovimiento(
             movimiento_id=movimiento.id,
-            nombre=Path(nombre or f"comprobante{extension}").name,
+            nombre=Path(nombre or f"comprobante{extension}").name[:180],
             ruta=str(ruta.relative_to(BASE_DIR)),
             tipo_mime=tipo_mime,
             tamano=len(contenido),

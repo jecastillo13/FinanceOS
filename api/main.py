@@ -2,13 +2,22 @@
 
 import os
 import secrets
+from contextlib import asynccontextmanager
+from ipaddress import ip_address
 from pathlib import Path
 from urllib.parse import quote
 
 from fastapi import FastAPI, File, HTTPException, Query, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from dotenv import load_dotenv
+
+# La configuración privada se carga antes de importar la base de datos y los
+# servicios, porque estos también consultan variables de entorno al iniciarse.
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+load_dotenv(PROJECT_ROOT / ".env")
 
 from api.schemas import (
     AdjuntoRespuesta, CategoriaActualizar, CategoriaGuardar, CategoriaRespuesta,
@@ -30,8 +39,24 @@ from core.services import (
 )
 
 
-app = FastAPI(title="FinanceOS API", version="0.1.0", description="API local preparada para las aplicaciones web y móvil de FinanceOS.")
-FRONTEND_DIST = Path(__file__).resolve().parents[1] / "frontend" / "dist"
+ENTORNO = os.getenv("FINANCEOS_ENV", "development").strip().lower()
+
+
+@asynccontextmanager
+async def ciclo_vida(_app: FastAPI):
+    create_database()
+    yield
+
+
+app = FastAPI(
+    title="FinanceOS API", version="0.1.0",
+    description="API local preparada para las aplicaciones web y móvil de FinanceOS.",
+    docs_url=None if ENTORNO == "production" else "/docs",
+    redoc_url=None if ENTORNO == "production" else "/redoc",
+    openapi_url=None if ENTORNO == "production" else "/openapi.json",
+    lifespan=ciclo_vida,
+)
+FRONTEND_DIST = PROJECT_ROOT / "frontend" / "dist"
 if (FRONTEND_DIST / "assets").is_dir():
     app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="frontend-assets")
 app.add_middleware(
@@ -45,28 +70,54 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+HOSTS_PERMITIDOS = [host.strip() for host in os.getenv(
+    "FINANCEOS_ALLOWED_HOSTS", "localhost,127.0.0.1,10.0.2.2,192.168.1.5,testserver"
+).split(",") if host.strip()]
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=HOSTS_PERMITIDOS)
 
 API_TOKEN = os.getenv("FINANCEOS_API_TOKEN", "").strip()
+SOLO_RED_PRIVADA = os.getenv("FINANCEOS_PRIVATE_NETWORK_ONLY", "true").strip().lower() in {"1", "true", "yes", "si"}
 
 
 @app.middleware("http")
 async def proteger_api_remota(request: Request, call_next):
-    """Proteccion opcional para exponer una instalacion personal fuera del equipo."""
+    """Bloquea redes públicas y protege opcionalmente la API con un token."""
+    cliente = request.client.host if request.client else ""
+    if SOLO_RED_PRIVADA and cliente:
+        try:
+            direccion = ip_address(cliente)
+        except ValueError:
+            # Starlette usa nombres simbólicos en pruebas. En producción se exige
+            # siempre una dirección IP real para no abrir accidentalmente la API.
+            if ENTORNO == "production":
+                return Response(content='{"detail":"Origen no válido"}', status_code=403, media_type="application/json")
+            direccion = None
+        if direccion and not (direccion.is_private or direccion.is_loopback):
+            return Response(content='{"detail":"FinanceOS solo acepta conexiones privadas"}', status_code=403, media_type="application/json")
     if API_TOKEN and request.url.path.startswith("/api/v1/") and request.url.path != "/api/v1/health":
         recibido = request.headers.get("authorization", "")
         esperado = f"Bearer {API_TOKEN}"
         if not secrets.compare_digest(recibido, esperado):
             return Response(content='{"detail":"No autorizado"}', status_code=401, media_type="application/json")
-    return await call_next(request)
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Permissions-Policy"] = "camera=(self), microphone=(), geolocation=()"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: blob:; connect-src 'self'; font-src 'self' data:; "
+        "worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    )
+    if request.url.path.startswith("/api/v1/"):
+        response.headers["Cache-Control"] = "no-store"
+    if os.getenv("FINANCEOS_HTTPS", "false").strip().lower() in {"1", "true", "yes", "si"}:
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
 
 
 def _error_negocio(error):
     raise HTTPException(status_code=400, detail=str(error)) from error
-
-
-@app.on_event("startup")
-def iniciar_base_datos():
-    create_database()
 
 
 @app.get("/", include_in_schema=False)

@@ -108,11 +108,11 @@ class FinanceSurface extends StatelessWidget {
         padding: padding,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: (accent ?? FinanceColors.border).withOpacity(.60)),
+          border: Border.all(color: (accent ?? FinanceColors.border).withValues(alpha: .60)),
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [(accent ?? FinanceColors.surfaceHigh).withOpacity(.32), FinanceColors.surface.withOpacity(.94)],
+            colors: [(accent ?? FinanceColors.surfaceHigh).withValues(alpha: .32), FinanceColors.surface.withValues(alpha: .94)],
           ),
           boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 30, offset: Offset(0, 14))],
         ),
