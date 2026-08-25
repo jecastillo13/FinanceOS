@@ -28,6 +28,7 @@ database/.mfa_key
 # Archivos temporales
 *.log
 .backup_check/
+.pytest-tmp/
 
 # Frontend React
 frontend/node_modules/

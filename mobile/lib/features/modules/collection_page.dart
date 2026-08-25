@@ -73,9 +73,10 @@ class _CollectionPageState extends State<CollectionPage> {
       await _api.eliminar(widget.deleteResource!, item['id'] as int);
       _reload();
     } catch (error) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('$error')));
+      }
     }
   }
 
@@ -101,14 +102,16 @@ class _CollectionPageState extends State<CollectionPage> {
                 child: FutureBuilder<List<dynamic>>(
           future: _items,
           builder: (context, snapshot) {
-            if (snapshot.connectionState != ConnectionState.done)
+            if (snapshot.connectionState != ConnectionState.done) {
               return const Center(child: CircularProgressIndicator());
-            if (snapshot.hasError)
+            }
+            if (snapshot.hasError) {
               return Center(
                   child: Padding(
                       padding: const EdgeInsets.all(24),
                       child: Text('${snapshot.error}',
                           textAlign: TextAlign.center)));
+            }
             final items = snapshot.data ?? const [];
             return RefreshIndicator(
               onRefresh: () async => _reload(),

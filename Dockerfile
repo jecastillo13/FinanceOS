@@ -16,4 +16,4 @@ COPY --from=web /src/frontend/dist /app/frontend/dist
 RUN mkdir -p /app/uploads /app/backups && chown -R financeos:financeos /app
 USER financeos
 EXPOSE 8000
-CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]
+CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "172.30.0.2"]

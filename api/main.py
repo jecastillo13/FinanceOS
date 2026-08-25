@@ -30,12 +30,12 @@ from api.schemas import (
     ActualizacionTasasRespuesta,
     TarjetaCrear, TarjetaRespuesta, PagoTarjetaCrear, DeteccionCrear, DeteccionConfirmar, DeteccionRespuesta,
     RegistroPropietario, InicioSesion, SolicitudRecuperacion, TokenAccion, RestablecerPassword,
-    SesionMovilRespuesta, CodigoMfa, DesactivarMfa, UsuarioRespuesta, UsuarioCrearAdmin, UsuarioActualizarAdmin,
+    SesionMovilRespuesta, SesionActivaRespuesta, CodigoMfa, DesactivarMfa, UsuarioRespuesta, UsuarioCrearAdmin, UsuarioActualizarAdmin,
 )
 from core.database import create_database
 from core.config import validar_produccion
 from core.ownership import usuario_actual_id
-from core.security import limitador
+from core.security import limitador_compartido
 from core.services import (
     AccountService, AttachmentService, BackupService, BudgetService, CategoryService, DashboardService,
     ExchangeService, GoalService, InvestmentService, MovementService,
@@ -130,7 +130,8 @@ async def proteger_api_remota(request: Request, call_next):
             return Response(content='{"detail":"Origen no autorizado"}', status_code=403, media_type="application/json")
     if request.url.path in LIMITES_PUBLICOS and cliente != "testclient":
         maximo, ventana = LIMITES_PUBLICOS[request.url.path]
-        permitido, espera = limitador.permitir(f"{cliente}:{request.url.path}", maximo, ventana)
+        accion = "login" if request.url.path in {"/api/v1/auth/login", "/api/v1/auth/mobile/login"} else request.url.path
+        permitido, espera = limitador_compartido.permitir(f"ip:{cliente}:{accion}", maximo, ventana)
         if not permitido:
             return Response(content='{"detail":"Demasiados intentos. Espera antes de continuar."}', status_code=429, media_type="application/json", headers={"Retry-After": str(espera)})
     if SOLO_RED_PRIVADA and cliente:
@@ -266,10 +267,10 @@ def registrar_propietario(datos: RegistroPropietario, response: Response):
 
 
 @app.post("/api/v1/auth/login", response_model=UsuarioRespuesta)
-def iniciar_sesion(datos: InicioSesion, response: Response):
+def iniciar_sesion(datos: InicioSesion, response: Response, request: Request):
     service = AuthService()
     try:
-        usuario, token = service.iniciar(datos.correo, datos.password, datos.mfa_codigo)
+        usuario, token = service.iniciar(datos.correo, datos.password, datos.mfa_codigo, request.headers.get("user-agent", "Navegador web"), request.client.host if request.client else "")
         _guardar_cookie(response, token)
         return _usuario_publico(usuario)
     except ValueError as error:
@@ -279,10 +280,10 @@ def iniciar_sesion(datos: InicioSesion, response: Response):
 
 
 @app.post("/api/v1/auth/mobile/login", response_model=SesionMovilRespuesta)
-def iniciar_sesion_movil(datos: InicioSesion):
+def iniciar_sesion_movil(datos: InicioSesion, request: Request):
     service = AuthService()
     try:
-        usuario, token = service.iniciar(datos.correo, datos.password, datos.mfa_codigo)
+        usuario, token = service.iniciar(datos.correo, datos.password, datos.mfa_codigo, request.headers.get("user-agent", "Aplicación móvil"), request.client.host if request.client else "")
         return {"usuario": _usuario_publico(usuario), "token": token, "vence_en_segundos": 43200}
     except ValueError as error:
         raise HTTPException(status_code=401, detail=str(error)) from error
@@ -380,6 +381,33 @@ def cerrar_sesion(request: Request, response: Response):
     return {"ok": True}
 
 
+@app.get("/api/v1/auth/sesiones", response_model=list[SesionActivaRespuesta])
+def listar_sesiones(request: Request):
+    service = AuthService()
+    try:
+        return [
+            {
+                "id": sesion.id, "dispositivo": sesion.dispositivo,
+                "creada_en": sesion.creada_en, "ultima_actividad": sesion.ultima_actividad,
+                "vence_en": sesion.vence_en, "actual": actual,
+            }
+            for sesion, actual in service.listar_sesiones(request.state.usuario_id, _token_request(request))
+        ]
+    finally:
+        service.cerrar()
+
+
+@app.delete("/api/v1/auth/sesiones/{sesion_id}", status_code=204, response_class=Response)
+def revocar_sesion(sesion_id: int, request: Request):
+    service = AuthService()
+    try:
+        if not service.revocar_sesion(request.state.usuario_id, sesion_id):
+            raise HTTPException(status_code=404, detail="La sesión no existe.")
+        return Response(status_code=204)
+    finally:
+        service.cerrar()
+
+
 @app.get("/api/v1/auth/me", response_model=UsuarioRespuesta)
 def usuario_actual(request: Request):
     service = AuthService()
@@ -432,7 +460,14 @@ def actualizar_usuario(usuario_id: int, datos: UsuarioActualizarAdmin, request: 
 
 
 @app.get("/api/v1/configuracion/respaldo")
-def estado_respaldo():
+def estado_respaldo(request: Request):
+    auth = AuthService()
+    try:
+        auth.verificar_administrador(request.state.usuario_id)
+    except PermissionError as error:
+        raise HTTPException(status_code=403, detail=str(error)) from error
+    finally:
+        auth.cerrar()
     service = BackupService()
     estado = service.estado()
     return {

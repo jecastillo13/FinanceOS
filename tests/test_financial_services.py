@@ -2,6 +2,7 @@ import os
 import tempfile
 import unittest
 from datetime import date
+from decimal import Decimal
 from pathlib import Path
 
 
@@ -93,7 +94,7 @@ class FinancialServicesTest(unittest.TestCase):
             self.assertEqual(service.contar_movimientos(), 1)
         finally:
             service.cerrar()
-        self.assertAlmostEqual(self._saldo(cuenta_id), 240_100.01, places=2)
+        self.assertEqual(self._saldo(cuenta_id), Decimal("240100.01000000"))
 
     def test_detectar_y_confirmar_compra_debito_sin_duplicarla(self):
         cuenta_id = self._crear_cuenta("Debito", 1_000_000)

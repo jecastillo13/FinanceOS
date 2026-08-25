@@ -13,7 +13,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
-    networks: [private]
+    networks:
+      private:
+        ipv4_address: 172.30.0.4
 
   app:
     build: .
@@ -41,15 +43,25 @@ services:
     volumes:
       - uploads:/app/uploads
       - backups:/app/backups
-    networks: [private]
+    networks:
+      private:
+        ipv4_address: 172.30.0.3
     security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
     read_only: true
     tmpfs: [/tmp]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   proxy:
     image: caddy:2-alpine
     restart: unless-stopped
-    depends_on: [app]
+    depends_on:
+      app:
+        condition: service_healthy
     environment:
       FINANCEOS_DOMAIN: ${FINANCEOS_DOMAIN}
     ports: ["80:80", "443:443", "443:443/udp"]
@@ -57,11 +69,16 @@ services:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
-    networks: [private]
+    networks:
+      private:
+        ipv4_address: 172.30.0.2
     security_opt: [no-new-privileges:true]
 
 networks:
   private:
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
 
 volumes:
   postgres_data:

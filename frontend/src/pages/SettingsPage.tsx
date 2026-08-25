@@ -13,7 +13,7 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
-import { financeApi, RespaldoEstado, Usuario } from "../api";
+import { financeApi, RespaldoEstado, SesionActiva, Usuario } from "../api";
 
 export default function SettingsPage() {
   const [health, setHealth] = useState<{
@@ -32,6 +32,7 @@ export default function SettingsPage() {
     uri: string;
   } | null>(null);
   const [users, setUsers] = useState<Usuario[]>([]);
+  const [sessions, setSessions] = useState<SesionActiva[]>([]);
   const [canManage, setCanManage] = useState(false);
   const [open, setOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -52,17 +53,13 @@ export default function SettingsPage() {
     }
   };
   useEffect(() => {
-    Promise.all([
-      financeApi.health(),
-      financeApi.estadoRespaldo(),
-      financeApi.estadoSeguridad(),
-      financeApi.authStatus(),
-    ]).then(([h, b, s, a]) => {
-      setHealth(h);
-      setBackup(b);
-      setSecurity(s);
+    void financeApi.health().then(setHealth);
+    void financeApi.estadoSeguridad().then(setSecurity);
+    void financeApi.authStatus().then(a => {
       setCurrentUser(a.usuario ?? null);
+      if (a.usuario?.rol === "superadmin") void financeApi.estadoRespaldo().then(setBackup);
     });
+    void financeApi.sesiones().then(setSessions);
     void loadUsers();
   }, []);
   useEffect(() => {
@@ -329,6 +326,12 @@ export default function SettingsPage() {
         >
           {currentUser?.mfa_habilitado ? "Protegida" : "Activar MFA"}
         </button>
+      </section>
+      <section className="users-panel">
+        <div className="panel-heading"><div><span className="eyebrow">SESIONES ACTIVAS</span><h3>Tus dispositivos</h3><p>Revoca cualquier acceso que no reconozcas. Las sesiones inactivas vencen automáticamente.</p></div></div>
+        <div className="users-grid">
+          {sessions.map(session => <article key={session.id}><span className="user-avatar"><ShieldCheck/></span><div><strong>{session.actual ? "Este dispositivo" : session.dispositivo}</strong><p>Actividad: {new Date(session.ultima_actividad).toLocaleString("es-CO")}</p></div>{session.actual ? <span className="user-state">Sesión actual</span> : <button className="user-state" onClick={async()=>{await financeApi.revocarSesion(session.id); setSessions(await financeApi.sesiones())}}>Cerrar sesión</button>}</article>)}
+        </div>
       </section>
       {canManage && (
         <section id="usuarios-acceso" className="users-panel">

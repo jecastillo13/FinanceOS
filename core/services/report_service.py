@@ -2,6 +2,7 @@ import csv
 from calendar import monthrange
 from datetime import date
 from io import BytesIO, StringIO
+from decimal import Decimal
 
 from sqlalchemy.orm import joinedload
 
@@ -11,8 +12,17 @@ from core.services.exchange_service import ExchangeService
 
 
 class ReportService:
-    """Prepara reportes sin cargar exportadores pesados durante la navegación."""
+    """Prepara reportes y neutraliza contenido activo en exportaciones."""
 
+    PREFIJOS_FORMULA = ("=", "+", "-", "@", "\t", "\r", "\n")
+
+    @classmethod
+    def neutralizar_celda(cls, valor):
+        """Conserva texto visible sin permitir que una hoja lo ejecute como fórmula."""
+        if not isinstance(valor, str):
+            return valor
+        efectivo = valor.lstrip(" \u00a0\ufeff")
+        return "'" + valor if efectivo.startswith(cls.PREFIJOS_FORMULA) else valor
     def __init__(self):
         self.db = get_session()
         self.exchange = ExchangeService()
@@ -34,8 +44,8 @@ class ReportService:
 
         filas = []
         monedas_sin_tasa = set()
-        ingresos_cop = 0.0
-        gastos_cop = 0.0
+        ingresos_cop = Decimal("0")
+        gastos_cop = Decimal("0")
         for movimiento in movimientos:
             moneda = (movimiento.cuenta.moneda or "COP").upper()
             valor_cop = self.exchange.convertir(abs(movimiento.valor), moneda, "COP")
@@ -81,9 +91,12 @@ class ReportService:
         for fila in reporte["filas"]:
             escritor.writerow(
                 [
-                    fila["fecha"].isoformat(), fila["tipo"], fila["descripcion"], fila["categoria"],
-                    fila["grupo"], fila["cuenta"], fila["moneda"], fila["valor_original"],
-                    "" if fila["valor_cop"] is None else fila["valor_cop"], fila["observaciones"],
+                    fila["fecha"].isoformat(), *[
+                        ReportService.neutralizar_celda(fila[campo])
+                        for campo in ("tipo", "descripcion", "categoria", "grupo", "cuenta", "moneda")
+                    ], fila["valor_original"],
+                    "" if fila["valor_cop"] is None else fila["valor_cop"],
+                    ReportService.neutralizar_celda(fila["observaciones"]),
                 ]
             )
         return salida.getvalue().encode("utf-8-sig")
@@ -116,8 +129,11 @@ class ReportService:
         movimientos.append(encabezados)
         for fila in reporte["filas"]:
             movimientos.append(
-                [fila["fecha"], fila["tipo"], fila["descripcion"], fila["categoria"], fila["grupo"],
-                 fila["cuenta"], fila["moneda"], fila["valor_original"], fila["valor_cop"], fila["observaciones"]]
+                [fila["fecha"], *[
+                    ReportService.neutralizar_celda(fila[campo])
+                    for campo in ("tipo", "descripcion", "categoria", "grupo", "cuenta", "moneda")
+                ], fila["valor_original"], fila["valor_cop"],
+                 ReportService.neutralizar_celda(fila["observaciones"])]
             )
 
         azul = PatternFill("solid", fgColor="1E3A8A")

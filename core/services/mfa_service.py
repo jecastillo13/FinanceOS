@@ -10,12 +10,13 @@ import time
 from pathlib import Path
 from urllib.parse import quote
 
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 
 
 class MfaService:
     def __init__(self):
-        clave = os.getenv("FINANCEOS_MFA_ENCRYPTION_KEY", "").encode()
+        clave_archivo = os.getenv("FINANCEOS_MFA_ENCRYPTION_KEY_FILE", "").strip()
+        clave = Path(clave_archivo).read_bytes().strip() if clave_archivo else os.getenv("FINANCEOS_MFA_ENCRYPTION_KEY", "").encode()
         if not clave:
             if os.getenv("FINANCEOS_ENV", "development").lower() == "production":
                 raise RuntimeError("FINANCEOS_MFA_ENCRYPTION_KEY es obligatoria en producción")
@@ -26,17 +27,38 @@ class MfaService:
                 clave = Fernet.generate_key()
                 ruta.parent.mkdir(parents=True, exist_ok=True)
                 ruta.write_bytes(clave)
-        self.cifrador = Fernet(clave)
+        self.clave_actual_id = os.getenv("FINANCEOS_MFA_CURRENT_KEY_ID", "primary").strip() or "primary"
+        self.cifradores = {self.clave_actual_id: Fernet(clave)}
+        for entrada in filter(None, (item.strip() for item in os.getenv("FINANCEOS_MFA_PREVIOUS_KEYS", "").split(","))):
+            identificador, separador, valor = entrada.partition(":")
+            if not separador or not identificador or identificador in self.cifradores:
+                raise RuntimeError("FINANCEOS_MFA_PREVIOUS_KEYS debe usar id:clave,id:clave.")
+            self.cifradores[identificador] = Fernet(valor.encode())
+        self.cifrador = self.cifradores[self.clave_actual_id]
 
     @staticmethod
     def generar_secreto():
         return base64.b32encode(secrets.token_bytes(20)).decode().rstrip("=")
 
     def cifrar(self, secreto: str):
-        return self.cifrador.encrypt(secreto.encode()).decode()
+        return f"v1:{self.clave_actual_id}:{self.cifrador.encrypt(secreto.encode()).decode()}"
 
     def descifrar(self, secreto_cifrado: str):
-        return self.cifrador.decrypt(secreto_cifrado.encode()).decode()
+        if secreto_cifrado.startswith("v1:"):
+            _, identificador, token = secreto_cifrado.split(":", 2)
+            cifrador = self.cifradores.get(identificador)
+            if cifrador is None:
+                raise RuntimeError(f"No está disponible la clave MFA '{identificador}'.")
+            return cifrador.decrypt(token.encode()).decode()
+        for cifrador in self.cifradores.values():
+            try:
+                return cifrador.decrypt(secreto_cifrado.encode()).decode()
+            except InvalidToken:
+                continue
+        raise RuntimeError("No fue posible descifrar el secreto MFA con las claves configuradas.")
+
+    def necesita_rotacion(self, secreto_cifrado: str):
+        return not secreto_cifrado.startswith(f"v1:{self.clave_actual_id}:")
 
     @staticmethod
     def codigo(secreto: str, instante: int | None = None):

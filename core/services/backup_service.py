@@ -98,10 +98,11 @@ class BackupService:
         temporal.write_bytes(datos_db)
         try:
             self._validar_sqlite(temporal)
+            adjuntos_saneados = self._preparar_adjuntos(temporal, adjuntos)
             respaldo_seguridad = self._guardar_respaldo_seguridad()
             engine.dispose()
             os.replace(temporal, destino)
-            self._restaurar_adjuntos(adjuntos)
+            self._restaurar_adjuntos(adjuntos_saneados)
             return respaldo_seguridad
         finally:
             temporal.unlink(missing_ok=True)
@@ -137,9 +138,46 @@ class BackupService:
         return ruta
 
     @staticmethod
+    def _preparar_adjuntos(database_path, adjuntos):
+        from core.services.attachment_service import AttachmentService
+
+        mimes = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp", ".pdf": "application/pdf"}
+        saneados = {}
+        for nombre, contenido in adjuntos.items():
+            tipo_mime = mimes.get(PurePosixPath(nombre).suffix.lower())
+            if tipo_mime is None:
+                raise ValueError("El respaldo contiene un adjunto de tipo no permitido.")
+            saneados[nombre] = AttachmentService.validar_y_sanear(contenido, tipo_mime)
+
+        conexion = sqlite3.connect(database_path)
+        try:
+            tablas = {fila[0] for fila in conexion.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+            if "adjuntos_movimiento" not in tablas:
+                return saneados
+            for adjunto_id, ruta in conexion.execute("SELECT id, ruta FROM adjuntos_movimiento"):
+                ruta_posix = PurePosixPath(str(ruta).replace("\\", "/"))
+                if ruta_posix.is_absolute() or ".." in ruta_posix.parts or not ruta_posix.parts or ruta_posix.parts[0] != "uploads":
+                    raise ValueError("La base del respaldo contiene rutas de adjuntos no permitidas.")
+                nombre = ruta_posix.as_posix()
+                contenido = saneados.get(nombre)
+                if contenido is None:
+                    raise ValueError("El respaldo no contiene todos los comprobantes registrados.")
+                conexion.execute(
+                    "UPDATE adjuntos_movimiento SET ruta = ?, tamano = ? WHERE id = ?",
+                    (nombre, len(contenido), adjunto_id),
+                )
+            conexion.commit()
+        finally:
+            conexion.close()
+        return saneados
+
+    @staticmethod
     def _restaurar_adjuntos(adjuntos):
-        base = Path(BASE_DIR)
+        base = Path(BASE_DIR).resolve()
+        uploads = (base / "uploads").resolve()
         for nombre, contenido in adjuntos.items():
             destino = base.joinpath(*PurePosixPath(nombre).parts)
+            if not destino.resolve().is_relative_to(uploads):
+                raise ValueError("El respaldo contiene rutas de adjuntos no permitidas.")
             destino.parent.mkdir(parents=True, exist_ok=True)
             destino.write_bytes(contenido)

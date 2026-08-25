@@ -130,7 +130,9 @@ class _ReceiptScanPageState extends State<ReceiptScanPage> {
         amount == null ||
         amount <= 0 ||
         _accountId == null ||
-        _categoryId == null) return;
+        _categoryId == null) {
+      return;
+    }
     setState(() {
       _busy = true;
       _error = null;

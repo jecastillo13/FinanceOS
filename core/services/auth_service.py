@@ -22,9 +22,12 @@ logger = logging.getLogger(__name__)
 
 class AuthService:
     DURACION = timedelta(hours=12)
+    INACTIVIDAD_MAXIMA = timedelta(minutes=30)
+    MAX_INTENTOS_MFA = 5
     BLOQUEO = timedelta(minutes=15)
     MAX_INTENTOS = 5
     hasher = PasswordHasher(time_cost=3, memory_cost=65536, parallelism=4)
+    HASH_SIMULADO = hasher.hash("contraseña-inválida")
 
     def __init__(self):
         self.db = get_session()
@@ -174,12 +177,15 @@ class AuthService:
         self.db.commit(); self.db.refresh(usuario)
         return usuario
 
-    def iniciar(self, correo: str, password: str, mfa_codigo: str | None = None):
-        usuario = self.db.query(Usuario).filter(Usuario.correo == correo.strip().lower()).first()
+    def iniciar(self, correo: str, password: str, mfa_codigo: str | None = None, dispositivo: str = "Dispositivo desconocido", ip: str = ""):
+        consulta = self.db.query(Usuario).filter(Usuario.correo == correo.strip().lower())
+        if self.db.bind.dialect.name != "sqlite":
+            consulta = consulta.with_for_update()
+        usuario = consulta.first()
         ahora = datetime.now()
         if usuario is None:
             # Consume un costo similar para reducir enumeración por tiempo.
-            try: self.hasher.verify(self.hasher.hash("contraseña-inválida"), password)
+            try: self.hasher.verify(self.HASH_SIMULADO, password)
             except VerifyMismatchError: pass
             raise ValueError("Credenciales inválidas.")
         if usuario.bloqueado_hasta and usuario.bloqueado_hasta > ahora:
@@ -198,14 +204,28 @@ class AuthService:
         if usuario.mfa_habilitado:
             if not mfa_codigo:
                 raise ValueError("MFA_REQUIRED")
-            secreto = MfaService().descifrar(usuario.mfa_secret_encrypted)
+            mfa = MfaService()
+            secreto = mfa.descifrar(usuario.mfa_secret_encrypted)
+            if mfa.necesita_rotacion(usuario.mfa_secret_encrypted):
+                usuario.mfa_secret_encrypted = mfa.cifrar(secreto)
             if not MfaService().verificar(secreto, mfa_codigo):
+                usuario.intentos_fallidos += 1
+                if usuario.intentos_fallidos >= self.MAX_INTENTOS_MFA:
+                    usuario.bloqueado_hasta = ahora + self.BLOQUEO
+                    usuario.intentos_fallidos = 0
+                self.db.commit()
                 raise ValueError("El código de verificación no es válido.")
         usuario.intentos_fallidos = 0; usuario.bloqueado_hasta = None
         if self.hasher.check_needs_rehash(usuario.password_hash):
             usuario.password_hash = self.hasher.hash(password)
         token = secrets.token_urlsafe(48)
-        sesion = SesionUsuario(usuario_id=usuario.id, token_hash=self._hash_token(token), vence_en=ahora + self.DURACION)
+        sesion = SesionUsuario(
+            usuario_id=usuario.id,
+            token_hash=self._hash_token(token),
+            vence_en=ahora + self.DURACION,
+            dispositivo=str(dispositivo or "Dispositivo desconocido")[:160],
+            ip_hash=self._hash_token(ip) if ip else None,
+        )
         self.db.add(sesion); self.db.commit()
         return usuario, token
 
@@ -303,8 +323,35 @@ class AuthService:
         ahora = datetime.now()
         sesion = self.db.query(SesionUsuario).filter(SesionUsuario.token_hash == self._hash_token(token), SesionUsuario.revocada_en.is_(None), SesionUsuario.vence_en > ahora).first()
         if not sesion or not sesion.usuario.activo: return None
-        sesion.ultima_actividad = ahora; self.db.commit()
+        if sesion.ultima_actividad < ahora - self.INACTIVIDAD_MAXIMA:
+            sesion.revocada_en = ahora
+            self.db.commit()
+            return None
+        # Evita una escritura en cada petición sin debilitar el timeout ocioso.
+        if sesion.ultima_actividad < ahora - timedelta(minutes=1):
+            sesion.ultima_actividad = ahora
+            self.db.commit()
         return sesion.usuario
+
+    def listar_sesiones(self, usuario_id: int, token_actual: str | None = None):
+        hash_actual = self._hash_token(token_actual) if token_actual else None
+        ahora = datetime.now()
+        sesiones = self.db.query(SesionUsuario).filter(
+            SesionUsuario.usuario_id == usuario_id,
+            SesionUsuario.revocada_en.is_(None),
+            SesionUsuario.vence_en > ahora,
+        ).order_by(SesionUsuario.ultima_actividad.desc()).all()
+        return [(sesion, sesion.token_hash == hash_actual) for sesion in sesiones]
+
+    def revocar_sesion(self, usuario_id: int, sesion_id: int):
+        sesion = self.db.query(SesionUsuario).filter(
+            SesionUsuario.id == sesion_id, SesionUsuario.usuario_id == usuario_id,
+        ).first()
+        if sesion is None:
+            return False
+        sesion.revocada_en = datetime.now()
+        self.db.commit()
+        return True
 
     def cerrar_sesion(self, token: str | None):
         if not token: return

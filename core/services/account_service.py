@@ -1,7 +1,7 @@
 from core.database import get_session
 from core.models import Cuenta
 from core.services.audit_service import registrar_auditoria
-from core.services.validation import moneda_valida, texto_requerido
+from core.services.validation import moneda_valida, monto_decimal, texto_requerido
 from core.services.exchange_service import ExchangeService
 
 
@@ -42,7 +42,8 @@ class AccountService:
         nombre = texto_requerido(nombre, "El nombre de la cuenta", 100)
         tipo = texto_requerido(tipo, "El tipo de cuenta", 50)
         moneda = moneda_valida(moneda)
-        cuenta = Cuenta(nombre=nombre, tipo=tipo, saldo=float(saldo), moneda=moneda, color=color, icono=icono)
+        saldo = monto_decimal(saldo, "El saldo", permitir_cero=True, permitir_negativo=True)
+        cuenta = Cuenta(nombre=nombre, tipo=tipo, saldo=saldo, moneda=moneda, color=color, icono=icono)
         self.db.add(cuenta)
         registrar_auditoria(self.db, "CUENTA_CREADA", f"Cuenta creada: {nombre} ({moneda.upper()}).")
         self.db.commit()
@@ -56,7 +57,7 @@ class AccountService:
         nombre = texto_requerido(nombre, "El nombre de la cuenta", 100)
         tipo = texto_requerido(tipo, "El tipo de cuenta", 50)
         moneda = moneda_valida(moneda)
-        saldo = float(saldo)
+        saldo = monto_decimal(saldo, "El saldo", permitir_cero=True, permitir_negativo=True)
         if cuenta.movimientos and (saldo != cuenta.saldo or moneda != cuenta.moneda.upper()):
             raise ValueError("No puedes cambiar el saldo ni la moneda de una cuenta con movimientos. Registra un ajuste como movimiento.")
         cuenta.nombre, cuenta.tipo, cuenta.saldo = nombre, tipo, saldo

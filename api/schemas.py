@@ -1,6 +1,12 @@
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel as PydanticBaseModel, ConfigDict, Field
+
+
+class BaseModel(PydanticBaseModel):
+    """Contrato API común: JSON financiero nunca admite NaN ni infinitos."""
+
+    model_config = ConfigDict(allow_inf_nan=False)
 
 
 class RegistroPropietario(BaseModel):
@@ -32,6 +38,15 @@ class SesionMovilRespuesta(BaseModel):
     usuario: "UsuarioRespuesta"
     token: str
     vence_en_segundos: int = 43200
+
+
+class SesionActivaRespuesta(BaseModel):
+    id: int
+    dispositivo: str
+    creada_en: datetime
+    ultima_actividad: datetime
+    vence_en: datetime
+    actual: bool
 
 
 class CodigoMfa(BaseModel):
@@ -67,7 +82,7 @@ class ORMResponse(BaseModel):
 class CuentaCrear(BaseModel):
     nombre: str = Field(min_length=1, max_length=100)
     tipo: str = Field(min_length=1, max_length=50)
-    saldo: float = 0
+    saldo: float = Field(default=0, ge=-1_000_000_000_000, le=1_000_000_000_000)
     moneda: str = "COP"
     color: str = "#2563EB"
     icono: str = "🏦"

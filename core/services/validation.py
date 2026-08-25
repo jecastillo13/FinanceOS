@@ -1,5 +1,7 @@
 """Reglas de validacion compartidas por los servicios de FinanceOS."""
 
+from decimal import Decimal, InvalidOperation
+
 
 TIPOS_CATEGORIA = {"Ingreso", "Gasto", "Transferencia", "Ahorro", "Inversion"}
 FRECUENCIAS_RECURRENCIA = {"Semanal", "Quincenal", "Mensual", "Anual"}
@@ -14,14 +16,27 @@ def texto_requerido(valor, campo, maximo):
     return texto
 
 
-def monto_positivo(valor, campo="El valor"):
+LIMITE_MONETARIO = Decimal("1000000000000")
+
+
+def monto_decimal(valor, campo="El valor", *, permitir_cero=False, permitir_negativo=False):
     try:
-        monto = abs(float(valor))
-    except (TypeError, ValueError) as error:
+        monto = Decimal(str(valor))
+    except (InvalidOperation, TypeError, ValueError) as error:
         raise ValueError(f"{campo} debe ser un numero valido.") from error
-    if monto <= 0:
+    if not monto.is_finite():
+        raise ValueError(f"{campo} debe ser un numero finito.")
+    if abs(monto) > LIMITE_MONETARIO:
+        raise ValueError(f"{campo} supera el limite permitido.")
+    if not permitir_negativo and monto < 0:
+        raise ValueError(f"{campo} no puede ser negativo.")
+    if not permitir_cero and monto == 0:
         raise ValueError(f"{campo} debe ser mayor que cero.")
     return monto
+
+
+def monto_positivo(valor, campo="El valor"):
+    return monto_decimal(valor, campo)
 
 
 def moneda_valida(moneda):

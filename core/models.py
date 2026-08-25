@@ -4,7 +4,7 @@ from sqlalchemy import (
     Column,
     Integer,
     String,
-    Float,
+    Numeric,
     Date,
     DateTime,
     ForeignKey,
@@ -48,8 +48,20 @@ class SesionUsuario(Base):
     vence_en = Column(DateTime, nullable=False)
     revocada_en = Column(DateTime)
     ultima_actividad = Column(DateTime, default=datetime.now, nullable=False)
+    dispositivo = Column(String(160), nullable=False, default="Dispositivo desconocido")
+    ip_hash = Column(String(64))
 
     usuario = relationship("Usuario", back_populates="sesiones")
+
+
+class IntentoAcceso(Base):
+    """Contador compartido entre procesos para controles antiabuso."""
+
+    __tablename__ = "intentos_acceso"
+
+    clave = Column(String(255), primary_key=True)
+    cantidad = Column(Integer, nullable=False, default=0)
+    ventana_inicio = Column(DateTime, default=datetime.now, nullable=False)
 
 
 class TokenSeguridadUsuario(Base):
@@ -90,7 +102,7 @@ class Cuenta(PropiedadUsuario, Base):
     )
 
     saldo = Column(
-        Float,
+        Numeric(24, 8),
         default=0
     )
 
@@ -183,7 +195,7 @@ class Movimiento(PropiedadUsuario, Base):
     )
 
     valor = Column(
-        Float,
+        Numeric(24, 8),
         nullable=False
     )
 
@@ -250,7 +262,7 @@ class OperacionDetectada(PropiedadUsuario, Base):
     origen = Column(String(30), nullable=False, default="Manual")
     texto_original = Column(Text, nullable=False)
     comercio = Column(String(160), nullable=False, default="Compra detectada")
-    valor = Column(Float, nullable=False)
+    valor = Column(Numeric(24, 8), nullable=False)
     moneda = Column(String(10), nullable=False, default="COP")
     fecha = Column(DateTime, default=datetime.now, nullable=False)
     banco = Column(String(100), nullable=False, default="")
@@ -289,7 +301,7 @@ class GastoRecurrente(PropiedadUsuario, Base):
 
     id = Column(Integer, primary_key=True)
     nombre = Column(String(120), nullable=False)
-    valor = Column(Float, nullable=False)
+    valor = Column(Numeric(24, 8), nullable=False)
     frecuencia = Column(String(20), nullable=False, default="Mensual")
     proxima_fecha_pago = Column(Date, nullable=False)
     ultima_fecha_pago = Column(Date)
@@ -308,7 +320,7 @@ class Transferencia(PropiedadUsuario, Base):
 
     id = Column(Integer, primary_key=True)
     fecha = Column(Date, default=date.today, nullable=False)
-    valor = Column(Float, nullable=False)
+    valor = Column(Numeric(24, 8), nullable=False)
     descripcion = Column(String(250))
     cuenta_origen_id = Column(Integer, ForeignKey("cuentas.id"), nullable=False)
     cuenta_destino_id = Column(Integer, ForeignKey("cuentas.id"), nullable=False)
@@ -329,7 +341,7 @@ class Presupuesto(PropiedadUsuario, Base):
     id = Column(Integer, primary_key=True)
     anio = Column(Integer, nullable=False)
     mes = Column(Integer, nullable=False)
-    valor = Column(Float, nullable=False)
+    valor = Column(Numeric(24, 8), nullable=False)
     categoria_id = Column(Integer, ForeignKey("categorias.id"), nullable=False)
 
     categoria = relationship("Categoria")
@@ -353,11 +365,11 @@ class Meta(PropiedadUsuario, Base):
     )
 
     objetivo = Column(
-        Float
+        Numeric(24, 8)
     )
 
     ahorrado = Column(
-        Float,
+        Numeric(24, 8),
         default=0
     )
 
@@ -383,7 +395,7 @@ class MetaOperacion(PropiedadUsuario, Base):
     meta_id = Column(Integer, ForeignKey("metas.id"), nullable=False)
     movimiento_id = Column(Integer, ForeignKey("movimientos.id"), nullable=True)
     tipo = Column(String(20), nullable=False)
-    valor_meta = Column(Float, nullable=False)
+    valor_meta = Column(Numeric(24, 8), nullable=False)
     fecha = Column(Date, default=date.today, nullable=False)
     descripcion = Column(String(250), default="")
 
@@ -412,15 +424,15 @@ class Inversion(PropiedadUsuario, Base):
     )
 
     cantidad = Column(
-        Float
+        Numeric(24, 8)
     )
 
     precio_compra = Column(
-        Float
+        Numeric(24, 8)
     )
 
     precio_actual = Column(
-        Float
+        Numeric(24, 8)
     )
 
     broker = Column(
@@ -503,7 +515,7 @@ class TasaCambio(Base):
     )
 
     tasa = Column(
-        Float,
+        Numeric(24, 8),
         nullable=False
     )
 

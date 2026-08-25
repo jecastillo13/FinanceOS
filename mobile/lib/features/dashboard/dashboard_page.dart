@@ -45,11 +45,13 @@ class _DashboardPageState extends State<DashboardPage> {
             child: FutureBuilder<_DashboardData>(
               future: _data,
               builder: (context, snapshot) {
-                if (snapshot.connectionState != ConnectionState.done)
+                if (snapshot.connectionState != ConnectionState.done) {
                   return const _LoadingState();
-                if (snapshot.hasError)
+                }
+                if (snapshot.hasError) {
                   return _ErrorState(
                       error: snapshot.error.toString(), onRetry: _refresh);
+                }
                 return _DashboardContent(
                     data: snapshot.data!,
                     money: _money,
@@ -298,12 +300,13 @@ class _CategoryBars extends StatelessWidget {
   final String Function(Object?) money;
   @override
   Widget build(BuildContext context) {
-    if (items.isEmpty)
+    if (items.isEmpty) {
       return const Padding(
           padding: EdgeInsets.symmetric(vertical: 22),
           child: Center(
               child: Text('Aún no hay gastos para analizar.',
                   style: TextStyle(color: FinanceColors.muted))));
+    }
     final maxValue = items
         .map((e) => (e['valor'] as num?)?.toDouble() ?? 0)
         .fold<double>(0, (actual, value) => math.max(actual, value));

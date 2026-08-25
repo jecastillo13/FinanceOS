@@ -80,19 +80,21 @@ class _AuthGateState extends State<AuthGate> {
       await _api.logout();
     } catch (_) {}
     await _storage.delete(key: 'financeos_session');
-    if (mounted)
+    if (mounted) {
       setState(() {
         _authenticated = false;
         _needsMfa = false;
         _password.clear();
         _mfa.clear();
       });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_loading)
+    if (_loading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     if (_authenticated) return MobileShell(onLogout: _logout);
     return Scaffold(
       body: FinanceAurora(

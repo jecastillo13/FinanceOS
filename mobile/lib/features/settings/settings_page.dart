@@ -11,6 +11,7 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   final _api = ApiClient();
   late Future<List<dynamic>> users = load();
+  late Future<List<dynamic>> sessions = _api.sesiones();
   String? message;
   Future<List<dynamic>> load() async {
     try {
@@ -57,17 +58,19 @@ class _SettingsPageState extends State<SettingsPage> {
                           await _api.confirmarMfa(code.text);
                           if (context.mounted) Navigator.pop(context, true);
                         } catch (error) {
-                          if (context.mounted)
+                          if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(content: Text('$error')));
+                          }
                         }
                       },
                       child: const Text('Confirmar'))
                 ],
               ));
       code.dispose();
-      if (accepted == true)
+      if (accepted == true) {
         setState(() => message = 'MFA activado correctamente.');
+      }
     } catch (error) {
       setState(() => message = '$error');
     }
@@ -110,9 +113,10 @@ class _SettingsPageState extends State<SettingsPage> {
                         });
                         if (context.mounted) Navigator.pop(context, true);
                       } catch (error) {
-                        if (context.mounted)
+                        if (context.mounted) {
                           ScaffoldMessenger.of(context)
                               .showSnackBar(SnackBar(content: Text('$error')));
+                        }
                       }
                     },
                     child: const Text('Crear'))
@@ -161,6 +165,41 @@ class _SettingsPageState extends State<SettingsPage> {
                             style:
                                 const TextStyle(color: FinanceColors.success)))
                 ])),
+            const SizedBox(height: 16),
+            FinanceSurface(
+                child: FutureBuilder<List<dynamic>>(
+              future: sessions,
+              builder: (context, active) => Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Sesiones activas',
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 6),
+                    const Text(
+                        'Cierra cualquier dispositivo que no reconozcas.',
+                        style: TextStyle(color: FinanceColors.muted)),
+                    ...(active.data ?? []).map((session) => ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.devices_rounded),
+                          title: Text(session['actual'] == true
+                              ? 'Este dispositivo'
+                              : '${session['dispositivo']}'),
+                          subtitle: Text(
+                              'Última actividad: ${session['ultima_actividad']}'),
+                          trailing: session['actual'] == true
+                              ? const Chip(label: Text('Actual'))
+                              : IconButton(
+                                  icon: const Icon(Icons.logout_rounded),
+                                  onPressed: () async {
+                                    await _api.revocarSesion(session['id'] as int);
+                                    if (mounted) {
+                                      setState(() => sessions = _api.sesiones());
+                                    }
+                                  }),
+                        )),
+                  ]),
+            )),
             const SizedBox(height: 16),
             FinanceSurface(
                 child: Column(

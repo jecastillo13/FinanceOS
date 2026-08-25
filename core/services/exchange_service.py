@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 
 from core.database import get_session
 from core.models import TasaCambio
@@ -109,8 +110,8 @@ class ExchangeService:
 
         if origen == destino:
 
-            self._tasas_cache[clave] = 1.0
-            return 1.0
+            self._tasas_cache[clave] = Decimal("1")
+            return Decimal("1")
 
         registro = (
 
@@ -170,7 +171,7 @@ class ExchangeService:
 
     def _tasa_desde_usd(self, moneda):
         if moneda == "USD":
-            return 1.0
+            return Decimal("1")
 
         registro = (
             self.db.query(TasaCambio)
@@ -203,7 +204,7 @@ class ExchangeService:
             return None
 
         return round(
-            valor * tasa,
+            Decimal(str(valor)) * Decimal(str(tasa)),
             2
         )
 

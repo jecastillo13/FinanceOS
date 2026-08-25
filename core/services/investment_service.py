@@ -77,10 +77,10 @@ class InvestmentService:
         valor_base = self.exchange.convertir(valor, inversion.moneda, moneda_base)
         return {
             "inversion": inversion,
-            "costo": round(costo, 2),
-            "valor": round(valor, 2),
-            "ganancia": round(ganancia, 2),
-            "rentabilidad": round(rentabilidad, 2),
+            "costo": float(round(costo, 2)),
+            "valor": float(round(valor, 2)),
+            "ganancia": float(round(ganancia, 2)),
+            "rentabilidad": float(round(rentabilidad, 2)),
             "costo_base": costo_base,
             "valor_base": valor_base,
             "moneda_base": moneda_base,

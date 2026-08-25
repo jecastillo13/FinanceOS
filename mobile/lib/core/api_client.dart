@@ -36,6 +36,8 @@ class ApiClient {
   Future<Map<String, dynamic>> confirmarMfa(String codigo) =>
       _postObject('/api/v1/auth/mfa/confirmar', {'codigo': codigo});
   Future<List<dynamic>> usuarios() => _getList('/api/v1/auth/usuarios');
+  Future<List<dynamic>> sesiones() => _getList('/api/v1/auth/sesiones');
+  Future<void> revocarSesion(int id) => _delete('/api/v1/auth/sesiones/$id');
   Future<Map<String, dynamic>> crearUsuario(Map<String, dynamic> body) =>
       _postObject('/api/v1/auth/usuarios', body);
   Future<void> logout() async {
@@ -186,27 +188,33 @@ class ApiClient {
       'POST',
       Uri.parse('$apiBaseUrl/api/v1/movimientos/$movimientoId/comprobantes'),
     );
+    if (sessionToken != null) {
+      request.headers['Authorization'] = 'Bearer $sessionToken';
+    }
     request.files
         .add(await http.MultipartFile.fromPath('archivo', rutaArchivo));
     final response = await http.Response.fromStream(await request.send());
-    if (response.statusCode >= 400)
+    if (response.statusCode >= 400) {
       throw ApiException(response.statusCode, response.body);
+    }
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
   Future<Map<String, dynamic>> _getObject(String path) async {
     final response =
         await _client.get(Uri.parse('$apiBaseUrl$path'), headers: _headers);
-    if (response.statusCode >= 400)
+    if (response.statusCode >= 400) {
       throw ApiException(response.statusCode, response.body);
+    }
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
   Future<List<dynamic>> _getList(String path) async {
     final response =
         await _client.get(Uri.parse('$apiBaseUrl$path'), headers: _headers);
-    if (response.statusCode >= 400)
+    if (response.statusCode >= 400) {
       throw ApiException(response.statusCode, response.body);
+    }
     return jsonDecode(response.body) as List<dynamic>;
   }
 
@@ -217,8 +225,9 @@ class ApiClient {
       headers: _headers,
       body: jsonEncode(body),
     );
-    if (response.statusCode >= 400)
+    if (response.statusCode >= 400) {
       throw ApiException(response.statusCode, response.body);
+    }
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
@@ -226,16 +235,18 @@ class ApiClient {
       String path, Map<String, dynamic> body) async {
     final response = await _client.put(Uri.parse('$apiBaseUrl$path'),
         headers: _headers, body: jsonEncode(body));
-    if (response.statusCode >= 400)
+    if (response.statusCode >= 400) {
       throw ApiException(response.statusCode, response.body);
+    }
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
   Future<void> _delete(String path) async {
     final response =
         await _client.delete(Uri.parse('$apiBaseUrl$path'), headers: _headers);
-    if (response.statusCode >= 400)
+    if (response.statusCode >= 400) {
       throw ApiException(response.statusCode, response.body);
+    }
   }
 
   String _fecha(DateTime value) => value.toIso8601String().split('T').first;

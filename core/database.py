@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import Numeric, create_engine, inspect, text
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker
 import os
@@ -72,6 +72,7 @@ def create_database():
         Usuario,
         SesionUsuario,
         TokenSeguridadUsuario,
+        IntentoAcceso,
     )
 
     Base.metadata.create_all(bind=engine)
@@ -85,6 +86,8 @@ def create_database():
             _migrar_roles_publicacion(conexion)
             _migrar_seguridad_cuentas(conexion)
             _migrar_mfa(conexion)
+            _migrar_sesiones_seguras(conexion)
+            _migrar_dinero_decimal(conexion)
 
 
 def _migrar_categoria(conexion):
@@ -210,6 +213,47 @@ def _migrar_mfa(conexion):
         conexion.execute(text("ALTER TABLE usuarios ADD COLUMN mfa_habilitado INTEGER NOT NULL DEFAULT 0"))
 
 
+def _migrar_sesiones_seguras(conexion):
+    if "sesiones_usuario" not in set(inspect(engine).get_table_names()):
+        return
+    columnas = {columna["name"] for columna in inspect(engine).get_columns("sesiones_usuario")}
+    if "dispositivo" not in columnas:
+        conexion.execute(text("ALTER TABLE sesiones_usuario ADD COLUMN dispositivo VARCHAR(160) NOT NULL DEFAULT 'Dispositivo desconocido'"))
+    if "ip_hash" not in columnas:
+        conexion.execute(text("ALTER TABLE sesiones_usuario ADD COLUMN ip_hash VARCHAR(64)"))
+
+
+def _migrar_dinero_decimal(conexion):
+    """Normaliza columnas monetarias; SQLite conserva afinidad dinámica y valida en servicios."""
+    if engine.dialect.name != "postgresql":
+        return
+    columnas = {
+        "cuentas": ("saldo",), "movimientos": ("valor",),
+        "operaciones_detectadas": ("valor",), "gastos_recurrentes": ("valor",),
+        "transferencias": ("valor",), "presupuestos": ("valor",),
+        "metas": ("objetivo", "ahorrado"), "meta_operaciones": ("valor_meta",),
+        "inversiones": ("cantidad", "precio_compra", "precio_actual"),
+        "tasas_cambio": ("tasa",),
+    }
+    tablas = set(inspect(engine).get_table_names())
+    for tabla, nombres in columnas.items():
+        if tabla not in tablas:
+            continue
+        presentes = {columna["name"]: columna for columna in inspect(engine).get_columns(tabla)}
+        for nombre in nombres:
+            columna = presentes.get(nombre)
+            tipo = columna and columna["type"]
+            if columna and not (
+                isinstance(tipo, Numeric)
+                and tipo.precision == 24
+                and tipo.scale == 8
+            ):
+                conexion.execute(text(
+                    f'ALTER TABLE "{tabla}" ALTER COLUMN "{nombre}" '
+                    f'TYPE NUMERIC(24, 8) USING ROUND("{nombre}"::numeric, 8)'
+                ))
+
+
 def _ejecutar_migraciones():
     """Aplica migraciones idempotentes y registra la version local."""
     migraciones = (
@@ -222,6 +266,8 @@ def _ejecutar_migraciones():
         ("007_roles_publicacion", _migrar_roles_publicacion),
         ("008_seguridad_cuentas", _migrar_seguridad_cuentas),
         ("009_mfa", _migrar_mfa),
+        ("010_sesiones_seguras", _migrar_sesiones_seguras),
+        ("011_dinero_decimal", _migrar_dinero_decimal),
     )
     with engine.begin() as conexion:
         conexion.execute(text("""

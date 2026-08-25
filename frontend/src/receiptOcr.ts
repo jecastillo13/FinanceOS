@@ -3,9 +3,15 @@ import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
 pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker;
 
+const MAX_FILE_BYTES = 10 * 1024 * 1024;
+const MAX_PDF_PAGES = 25;
+const MAX_IMAGE_PIXELS = 24_000_000;
+
 export async function readReceipt(file: File, onProgress: (value: number) => void): Promise<string> {
+  if (!file.size || file.size > MAX_FILE_BYTES) throw new Error("El comprobante debe pesar menos de 10 MB.");
   if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
     const pdf = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
+    if (pdf.numPages < 1 || pdf.numPages > MAX_PDF_PAGES) throw new Error("El PDF supera el límite de 25 páginas.");
     const pages: string[] = [];
     for (let number = 1; number <= Math.min(pdf.numPages, 3); number += 1) {
       const page = await pdf.getPage(number);
@@ -46,6 +52,10 @@ export async function readReceipt(file: File, onProgress: (value: number) => voi
 }
 
 async function recognizeImage(image: Blob, onProgress: (value: number) => void): Promise<string> {
+  const bitmap = await createImageBitmap(image);
+  try {
+    if (bitmap.width * bitmap.height > MAX_IMAGE_PIXELS) throw new Error("La imagen supera el límite seguro de resolución.");
+  } finally { bitmap.close(); }
   const { createWorker } = await import("tesseract.js");
   const worker = await createWorker("spa", undefined, {
     langPath: `${window.location.origin}/tessdata`,

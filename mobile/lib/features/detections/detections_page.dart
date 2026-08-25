@@ -22,9 +22,10 @@ class _DetectionsPageState extends State<DetectionsPage> {
       _text.clear();
       _reload();
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('$e')));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -70,12 +71,14 @@ class _DetectionsPageState extends State<DetectionsPage> {
         FutureBuilder<List<dynamic>>(
             future: _items,
             builder: (context, s) {
-              if (!s.hasData)
+              if (!s.hasData) {
                 return const Center(child: CircularProgressIndicator());
-              if (s.data!.isEmpty)
+              }
+              if (s.data!.isEmpty) {
                 return const FinanceSurface(
                     child: Text('No hay compras pendientes.',
                         style: TextStyle(color: FinanceColors.muted)));
+              }
               return Column(
                   children: s.data!.map((raw) {
                 final d = raw as Map<String, dynamic>;
