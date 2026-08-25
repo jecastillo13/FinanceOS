@@ -1,0 +1,7 @@
+flowchart LR
+    C[Web o móvil] --> P[Proxy]
+    P --> A[API]
+    A --> E[Endpoints]
+    E --> G[Guardas y errores distribuidos]
+    G --> D[(Datos)]
+

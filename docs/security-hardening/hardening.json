@@ -1,0 +1,81 @@
+{
+  "documentType": "codex-security.hardening-analysis",
+  "schemaVersion": "1.0",
+  "analysisId": "hardening_20260825_financeos",
+  "sourceEvidence": {
+    "kind": "document_collection",
+    "label": "Requisitos de seguridad y defensa en profundidad",
+    "collectionSha256": "20ff2ade5e42a4ba624fcc143d9ad3a5d0eb541417a639d1c07e86e532191eeb",
+    "artifactCount": 1,
+    "sourceDrift": "present"
+  },
+  "assessment": {
+    "outcome": "opportunities_identified",
+    "summary": "Centralizar el perímetro HTTP reduce omisiones sin añadir infraestructura al camino crítico."
+  },
+  "constraints": {
+    "profile": "balanced",
+    "changeHorizons": ["incremental", "medium_term"],
+    "nonNegotiables": ["Aislamiento por usuario", "Compatibilidad web y móvil"],
+    "assumptions": ["No se suministró un presupuesto medido de latencia o memoria."]
+  },
+  "opportunities": [{
+    "opportunityId": "perimetro-seguro",
+    "title": "Perímetro HTTP seguro y verificable",
+    "summary": "Unificar cabeceras, tamaño, correlación y validación de producción.",
+    "diagnosis": "Las defensas existían, pero algunos rechazos tempranos evitaban la política común.",
+    "evidence": [{
+      "claimType": "observed",
+      "sourceKind": "document",
+      "evidenceId": "E001",
+      "path": "api/main.py",
+      "claim": "La política requiere controles HTTP uniformes y límites de recursos."
+    }],
+    "desiredInvariants": [
+      "Toda respuesta recibe la misma política de seguridad.",
+      "Producción falla cerrada ante configuración incoherente."
+    ],
+    "proposalPath": "proposals/perimetro-seguro.md",
+    "options": [
+      {
+        "optionId": "guardas-locales",
+        "title": "Reforzar guardas locales",
+        "kind": "baseline",
+        "summary": "Corregir individualmente cada camino.",
+        "diagramPaths": {"before": "diagrams/perimetro-seguro-before.mmd", "after": "diagrams/perimetro-seguro-local-after.mmd"},
+        "evidenceCoverage": [{"evidenceId": "E001", "effect": "mitigates", "tacticalFixRequired": true, "rationale": "Corrige caminos actuales pero permite deriva."}],
+        "tradeoffs": [
+          {"dimension": "security", "direction": "improves", "confidence": "medium", "basis": "source-derived", "assessment": "Cubre retornos conocidos.", "validationPlan": "Enumerar respuestas."},
+          {"dimension": "performance", "direction": "neutral", "confidence": "medium", "basis": "source-derived", "assessment": "Sin saltos nuevos.", "validationPlan": "Medir p95."},
+          {"dimension": "memory", "direction": "neutral", "confidence": "medium", "basis": "source-derived", "assessment": "Sin buffers nuevos.", "validationPlan": "Comparar RSS."},
+          {"dimension": "reliability", "direction": "neutral", "confidence": "medium", "basis": "source-derived", "assessment": "Preserva estructura.", "validationPlan": "Suite completa."},
+          {"dimension": "operability", "direction": "regresses", "confidence": "medium", "basis": "source-derived", "assessment": "Más sitios para auditar.", "validationPlan": "Revisión de rutas."},
+          {"dimension": "migration", "direction": "neutral", "confidence": "high", "basis": "source-derived", "assessment": "Cambio localizado.", "validationPlan": "Pruebas de compatibilidad."}
+        ],
+        "residualRisks": ["Deriva entre endpoints."],
+        "implementationReadiness": {"affectedComponents": ["api/main.py"], "workPackages": ["Añadir guardas locales."], "acceptanceCriteria": ["Rutas conocidas protegidas."], "migrationNotes": [], "rollback": "Revertir guardas."}
+      },
+      {
+        "optionId": "perimetro-central",
+        "title": "Perímetro central y arranque fail-closed",
+        "kind": "structural",
+        "summary": "Una capa posee la política y producción valida sus invariantes.",
+        "diagramPaths": {"before": "diagrams/perimetro-seguro-before.mmd", "after": "diagrams/perimetro-seguro-central-after.mmd"},
+        "evidenceCoverage": [{"evidenceId": "E001", "effect": "mitigates", "tacticalFixRequired": true, "rationale": "Centraliza código; infraestructura externa sigue siendo necesaria."}],
+        "tradeoffs": [
+          {"dimension": "security", "direction": "improves", "confidence": "high", "basis": "source-derived", "assessment": "Las rutas heredan la política.", "validationPlan": "Probar respuestas 2xx y 4xx."},
+          {"dimension": "performance", "direction": "neutral", "confidence": "medium", "basis": "hypothetical", "assessment": "Operaciones acotadas por request.", "validationPlan": "Comparar p95."},
+          {"dimension": "memory", "direction": "neutral", "confidence": "medium", "basis": "source-derived", "assessment": "Solo retiene un ID corto.", "validationPlan": "Comparar RSS."},
+          {"dimension": "reliability", "direction": "improves", "confidence": "high", "basis": "source-derived", "assessment": "Configuración insegura no arranca.", "validationPlan": "Pruebas de startup."},
+          {"dimension": "operability", "direction": "improves", "confidence": "medium", "basis": "source-derived", "assessment": "Correlación uniforme.", "validationPlan": "Comprobar IDs en logs."},
+          {"dimension": "migration", "direction": "neutral", "confidence": "high", "basis": "source-derived", "assessment": "No cambia contratos API.", "validationPlan": "Suite web y móvil."}
+        ],
+        "residualRisks": ["Controles externos aún no implementados."],
+        "implementationReadiness": {"affectedComponents": ["api/main.py", "core/config.py", "compose.production.yml"], "workPackages": ["Centralizar política y validar producción."], "acceptanceCriteria": ["Todas las respuestas protegidas y suite verde."], "migrationNotes": ["Configurar secretos y orígenes válidos."], "rollback": "Revertir el cambio conservando Caddy."}
+      }
+    ],
+    "recommendedOptionId": "perimetro-central",
+    "recommendation": "Aplicar la opción central bajo el perfil equilibrado actual."
+  }],
+  "openQuestions": ["Proveedor de secretos, SIEM, respaldos, WAF/DDoS y pentest."]
+}

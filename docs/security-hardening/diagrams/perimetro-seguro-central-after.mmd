@@ -1,0 +1,7 @@
+flowchart LR
+    C[Web o móvil] --> P[Proxy con límite]
+    P --> M[Perímetro API central]
+    M -->|host, origen, sesión, tamaño| E[Endpoints]
+    M -->|cabeceras e ID también en rechazos| C
+    E --> D[(Datos)]
+

@@ -32,6 +32,7 @@ services:
       FINANCEOS_PRIVATE_NETWORK_ONLY: "false"
       FINANCEOS_HTTPS: "true"
       FINANCEOS_AUTH_REQUIRED: "true"
+      FINANCEOS_MAX_REQUEST_BYTES: "12582912"
       FINANCEOS_PUBLIC_SIGNUP: ${FINANCEOS_PUBLIC_SIGNUP:-false}
       FINANCEOS_SMTP_HOST: ${FINANCEOS_SMTP_HOST}
       FINANCEOS_SMTP_PORT: ${FINANCEOS_SMTP_PORT:-587}
@@ -48,6 +49,9 @@ services:
         ipv4_address: 172.30.0.3
     security_opt: [no-new-privileges:true]
     cap_drop: [ALL]
+    pids_limit: 256
+    mem_limit: 1g
+    cpus: 2.0
     read_only: true
     tmpfs: [/tmp]
     healthcheck:

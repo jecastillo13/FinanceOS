@@ -1,0 +1,6 @@
+flowchart LR
+    C[Web o móvil] --> P[Proxy con límite]
+    P --> A[API]
+    A --> E[Endpoints con guardas locales]
+    E --> D[(Datos)]
+

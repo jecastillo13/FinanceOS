@@ -1,15 +1,18 @@
 """Punto de entrada de la API local de FinanceOS."""
 
 import os
+import re
 from contextlib import asynccontextmanager
 from ipaddress import ip_address
 from pathlib import Path
 from urllib.parse import quote, urlsplit
+from uuid import uuid4
 
 from fastapi import FastAPI, File, HTTPException, Query, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 
@@ -102,6 +105,42 @@ LIMITES_PUBLICOS = {
     "/api/v1/auth/verificacion/reenviar": (5, 3600),
 }
 
+TAMANO_SOLICITUD_MAXIMO = int(os.getenv("FINANCEOS_MAX_REQUEST_BYTES", str(12 * 1024 * 1024)))
+PATRON_ID_SOLICITUD = re.compile(r"^[A-Za-z0-9._-]{8,64}$")
+
+
+def _id_solicitud(request: Request) -> str:
+    recibido = request.headers.get("x-request-id", "")
+    return recibido if PATRON_ID_SOLICITUD.fullmatch(recibido) else uuid4().hex
+
+
+def _aplicar_cabeceras_seguras(response: Response, request: Request, id_solicitud: str) -> Response:
+    """Aplica una política uniforme incluso a rechazos previos al enrutamiento."""
+    response.headers["X-Request-ID"] = id_solicitud
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+    response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
+    response.headers["Permissions-Policy"] = "camera=(self), microphone=(), geolocation=()"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: blob:; connect-src 'self'; font-src 'self' data:; "
+        "worker-src 'self' blob:; object-src 'none'; manifest-src 'self'; "
+        "frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    )
+    if request.url.path.startswith("/api/v1/"):
+        response.headers["Cache-Control"] = "no-store"
+    if os.getenv("FINANCEOS_HTTPS", "false").strip().lower() in {"1", "true", "yes", "si"}:
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
+
+
+def _rechazo_seguro(request: Request, id_solicitud: str, detalle: str, estado: int, headers=None):
+    return _aplicar_cabeceras_seguras(
+        JSONResponse({"detail": detalle}, status_code=estado, headers=headers), request, id_solicitud
+    )
+
 
 def _es_origen_de_la_aplicacion(request: Request, origen: str) -> bool:
     """Acepta formularios únicamente desde el mismo host que sirve la interfaz."""
@@ -120,6 +159,16 @@ def _es_origen_de_la_aplicacion(request: Request, origen: str) -> bool:
 @app.middleware("http")
 async def proteger_api_remota(request: Request, call_next):
     """Aplica red, abuso, origen y sesión antes de ejecutar reglas financieras."""
+    id_solicitud = _id_solicitud(request)
+    request.state.id_solicitud = id_solicitud
+    longitud = request.headers.get("content-length")
+    if longitud:
+        try:
+            longitud_numero = int(longitud)
+        except ValueError:
+            return _rechazo_seguro(request, id_solicitud, "Content-Length no válido", 400)
+        if longitud_numero < 0 or longitud_numero > TAMANO_SOLICITUD_MAXIMO:
+            return _rechazo_seguro(request, id_solicitud, "La solicitud supera el límite permitido", 413)
     cliente = request.client.host if request.client else ""
     if request.method in {"POST", "PUT", "PATCH", "DELETE"} and request.cookies.get(COOKIE_SESION):
         origen = request.headers.get("origin")
@@ -127,13 +176,13 @@ async def proteger_api_remota(request: Request, call_next):
         # autorizada. Los clientes móviles usan Bearer y no dependen de cookies.
         origen_publico = os.getenv("FINANCEOS_PUBLIC_URL", "").rstrip("/")
         if origen and not _es_origen_de_la_aplicacion(request, origen) and origen not in ORIGENES_PERMITIDOS and origen != origen_publico:
-            return Response(content='{"detail":"Origen no autorizado"}', status_code=403, media_type="application/json")
+            return _rechazo_seguro(request, id_solicitud, "Origen no autorizado", 403)
     if request.url.path in LIMITES_PUBLICOS and cliente != "testclient":
         maximo, ventana = LIMITES_PUBLICOS[request.url.path]
         accion = "login" if request.url.path in {"/api/v1/auth/login", "/api/v1/auth/mobile/login"} else request.url.path
         permitido, espera = limitador_compartido.permitir(f"ip:{cliente}:{accion}", maximo, ventana)
         if not permitido:
-            return Response(content='{"detail":"Demasiados intentos. Espera antes de continuar."}', status_code=429, media_type="application/json", headers={"Retry-After": str(espera)})
+            return _rechazo_seguro(request, id_solicitud, "Demasiados intentos. Espera antes de continuar.", 429, {"Retry-After": str(espera)})
     if SOLO_RED_PRIVADA and cliente:
         try:
             direccion = ip_address(cliente)
@@ -141,10 +190,10 @@ async def proteger_api_remota(request: Request, call_next):
             # Starlette usa nombres simbólicos en pruebas. En producción se exige
             # siempre una dirección IP real para no abrir accidentalmente la API.
             if ENTORNO == "production":
-                return Response(content='{"detail":"Origen no válido"}', status_code=403, media_type="application/json")
+                return _rechazo_seguro(request, id_solicitud, "Origen no válido", 403)
             direccion = None
         if direccion and not (direccion.is_private or direccion.is_loopback):
-            return Response(content='{"detail":"FinanceOS solo acepta conexiones privadas"}', status_code=403, media_type="application/json")
+            return _rechazo_seguro(request, id_solicitud, "FinanceOS solo acepta conexiones privadas", 403)
     contexto_usuario = None
     if AUTH_REQUERIDA and request.url.path.startswith("/api/v1/") and request.url.path not in RUTAS_PUBLICAS:
         service = AuthService()
@@ -157,7 +206,7 @@ async def proteger_api_remota(request: Request, call_next):
         finally:
             service.cerrar()
         if usuario is None:
-            return Response(content='{"detail":"Sesión requerida"}', status_code=401, media_type="application/json")
+            return _rechazo_seguro(request, id_solicitud, "Sesión requerida", 401)
         request.state.usuario_id = usuario.id
         contexto_usuario = usuario_actual_id.set(usuario.id)
     try:
@@ -165,20 +214,7 @@ async def proteger_api_remota(request: Request, call_next):
     finally:
         if contexto_usuario is not None:
             usuario_actual_id.reset(contexto_usuario)
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["Referrer-Policy"] = "no-referrer"
-    response.headers["X-Frame-Options"] = "DENY"
-    response.headers["Permissions-Policy"] = "camera=(self), microphone=(), geolocation=()"
-    response.headers["Content-Security-Policy"] = (
-        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
-        "img-src 'self' data: blob:; connect-src 'self'; font-src 'self' data:; "
-        "worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
-    )
-    if request.url.path.startswith("/api/v1/"):
-        response.headers["Cache-Control"] = "no-store"
-    if os.getenv("FINANCEOS_HTTPS", "false").strip().lower() in {"1", "true", "yes", "si"}:
-        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-    return response
+    return _aplicar_cabeceras_seguras(response, request, id_solicitud)
 
 
 def _error_negocio(error):

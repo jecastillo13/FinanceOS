@@ -36,3 +36,8 @@ de datos ajenos ni pruebas destructivas.
 
 Ejecuta `pytest -q`, `npm ci && npm run build`, `flutter test`, auditorías de
 dependencias y una restauración de respaldo en un ambiente de pruebas separado.
+
+La revisión de arquitectura, el modelo de amenazas, la respuesta ante incidentes
+y los controles que requieren infraestructura se mantienen en
+[`docs/SEGURIDAD_PRODUCCION.md`](docs/SEGURIDAD_PRODUCCION.md). Ninguna revisión
+automatizada sustituye un pentest independiente antes de manejar datos reales.
