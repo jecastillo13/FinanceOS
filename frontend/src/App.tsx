@@ -784,12 +784,14 @@ export default function App() {
     loading: boolean;
     configuracion: boolean;
     registroPublico: boolean;
+    tokenConfiguracionRequerido: boolean;
     autenticado: boolean;
     usuario?: Usuario;
   }>({
     loading: true,
     configuracion: false,
     registroPublico: false,
+    tokenConfiguracionRequerido: false,
     autenticado: false,
   });
   const check = async () => {
@@ -799,6 +801,7 @@ export default function App() {
         loading: false,
         configuracion: state.requiere_configuracion,
         registroPublico: state.registro_publico,
+        tokenConfiguracionRequerido: state.token_configuracion_requerido,
         autenticado: state.autenticado,
         usuario: state.usuario,
       });
@@ -807,6 +810,7 @@ export default function App() {
         loading: false,
         configuracion: false,
         registroPublico: false,
+        tokenConfiguracionRequerido: false,
         autenticado: false,
       });
     }
@@ -828,6 +832,7 @@ export default function App() {
       <AuthPage
         configuracionInicial={auth.configuracion}
         registroPublico={auth.registroPublico}
+        tokenConfiguracionRequerido={auth.tokenConfiguracionRequerido}
         onAuthenticated={() => void check()}
       />
     );

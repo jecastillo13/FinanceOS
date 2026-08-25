@@ -240,6 +240,7 @@ def estado_autenticacion(request: Request):
             "requiere_configuracion": requiere_configuracion,
             "registro_publico": registro_publico,
             "registro_disponible": requiere_configuracion or registro_publico,
+            "token_configuracion_requerido": requiere_configuracion and ENTORNO == "production" and not registro_publico,
             "autenticado": usuario is not None,
             "usuario": _usuario_publico(usuario) if usuario else None,
         }
@@ -251,11 +252,13 @@ def estado_autenticacion(request: Request):
 def registrar_propietario(datos: RegistroPropietario, response: Response):
     service = AuthService()
     try:
-        usuario = service.registrar(datos.nombre, datos.correo, datos.password)
+        usuario = service.registrar(datos.nombre, datos.correo, datos.password, datos.token_configuracion)
         if usuario.correo_verificado_en is not None:
             usuario, token = service.iniciar(datos.correo, datos.password)
             _guardar_cookie(response, token)
         return _usuario_publico(usuario)
+    except PermissionError as error:
+        raise HTTPException(status_code=403, detail=str(error)) from error
     except ValueError as error:
         _error_negocio(error)
     finally:
@@ -336,6 +339,8 @@ def preparar_mfa(request: Request):
     service = AuthService()
     try:
         return service.preparar_mfa(request.state.usuario_id)
+    except ValueError as error:
+        _error_negocio(error)
     finally:
         service.cerrar()
 

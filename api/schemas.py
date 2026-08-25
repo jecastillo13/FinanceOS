@@ -7,6 +7,7 @@ class RegistroPropietario(BaseModel):
     nombre: str = Field(min_length=2, max_length=100)
     correo: str = Field(min_length=5, max_length=254, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
     password: str = Field(min_length=12, max_length=128)
+    token_configuracion: str | None = Field(default=None, min_length=16, max_length=256)
 
 
 class InicioSesion(BaseModel):

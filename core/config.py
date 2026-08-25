@@ -22,6 +22,8 @@ def validar_produccion():
         errores.append("FINANCEOS_SMTP_HOST es obligatorio")
     if not os.getenv("FINANCEOS_MFA_ENCRYPTION_KEY", "").strip():
         errores.append("FINANCEOS_MFA_ENCRYPTION_KEY es obligatoria")
+    if not os.getenv("FINANCEOS_BOOTSTRAP_TOKEN", "").strip():
+        errores.append("FINANCEOS_BOOTSTRAP_TOKEN es obligatorio para proteger el primer administrador")
     hosts = os.getenv("FINANCEOS_ALLOWED_HOSTS", "")
     if not hosts or "*" in hosts:
         errores.append("FINANCEOS_ALLOWED_HOSTS debe ser explícito")
