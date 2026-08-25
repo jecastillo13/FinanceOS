@@ -15,7 +15,7 @@ from core.services.email_service import EmailService
 from core.services.mfa_service import MfaService
 from core.ownership import TABLAS_CON_PROPIETARIO
 from core.default_categories import CATEGORIAS_PREDETERMINADAS, COLORES_POR_TIPO
-from sqlalchemy import text
+from sqlalchemy import or_, text, update
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +70,27 @@ class AuthService:
             token_hash=self._hash_token(token), vence_en=ahora + duracion,
         ))
         return token
+
+    def _reclamar_codigo_mfa(self, usuario: Usuario, secreto: str, codigo: str):
+        """Valida y consume un paso TOTP una sola vez en cualquier operación sensible."""
+        contador = MfaService().contador_valido(secreto, codigo)
+        if contador is None:
+            raise ValueError("El código de verificación no es válido.")
+        reclamado = self.db.execute(
+            update(Usuario)
+            .where(
+                Usuario.id == usuario.id,
+                or_(
+                    Usuario.mfa_ultimo_contador_usado.is_(None),
+                    Usuario.mfa_ultimo_contador_usado < contador,
+                ),
+            )
+            .values(mfa_ultimo_contador_usado=contador)
+        )
+        if reclamado.rowcount != 1:
+            self.db.rollback()
+            raise ValueError("El código de verificación ya fue utilizado.")
+        return contador
 
     def _crear_identidad(self, nombre: str, correo: str, password: str, rol: str, crear_catalogo: bool = True):
         self._validar_password(password)
@@ -208,13 +229,15 @@ class AuthService:
             secreto = mfa.descifrar(usuario.mfa_secret_encrypted)
             if mfa.necesita_rotacion(usuario.mfa_secret_encrypted):
                 usuario.mfa_secret_encrypted = mfa.cifrar(secreto)
-            if not MfaService().verificar(secreto, mfa_codigo):
+            try:
+                self._reclamar_codigo_mfa(usuario, secreto, mfa_codigo)
+            except ValueError as error:
                 usuario.intentos_fallidos += 1
                 if usuario.intentos_fallidos >= self.MAX_INTENTOS_MFA:
                     usuario.bloqueado_hasta = ahora + self.BLOQUEO
                     usuario.intentos_fallidos = 0
                 self.db.commit()
-                raise ValueError("El código de verificación no es válido.")
+                raise error
         usuario.intentos_fallidos = 0; usuario.bloqueado_hasta = None
         if self.hasher.check_needs_rehash(usuario.password_hash):
             usuario.password_hash = self.hasher.hash(password)
@@ -238,6 +261,7 @@ class AuthService:
         secreto = MfaService.generar_secreto()
         usuario.mfa_secret_encrypted = MfaService().cifrar(secreto)
         usuario.mfa_habilitado = 0
+        usuario.mfa_ultimo_contador_usado = None
         self.db.commit()
         return {"secreto": secreto, "uri": MfaService.uri(secreto, usuario.correo)}
 
@@ -246,8 +270,7 @@ class AuthService:
         if not usuario or not usuario.mfa_secret_encrypted:
             raise ValueError("Primero inicia la configuración de MFA.")
         servicio = MfaService()
-        if not servicio.verificar(servicio.descifrar(usuario.mfa_secret_encrypted), codigo):
-            raise ValueError("El código de verificación no es válido.")
+        self._reclamar_codigo_mfa(usuario, servicio.descifrar(usuario.mfa_secret_encrypted), codigo)
         usuario.mfa_habilitado = 1
         self.db.commit()
 
@@ -260,10 +283,10 @@ class AuthService:
         except VerifyMismatchError as error:
             raise ValueError("Credenciales inválidas.") from error
         servicio = MfaService()
-        if not servicio.verificar(servicio.descifrar(usuario.mfa_secret_encrypted), codigo):
-            raise ValueError("El código de verificación no es válido.")
+        self._reclamar_codigo_mfa(usuario, servicio.descifrar(usuario.mfa_secret_encrypted), codigo)
         usuario.mfa_habilitado = 0
         usuario.mfa_secret_encrypted = None
+        usuario.mfa_ultimo_contador_usado = None
         self.db.commit()
 
     def solicitar_recuperacion(self, correo: str):

@@ -72,8 +72,16 @@ class MfaService:
         return f"{numero:06d}"
 
     def verificar(self, secreto: str, codigo: str):
-        actual = int(time.time())
-        return any(hmac.compare_digest(self.codigo(secreto, actual + desfase), codigo.strip()) for desfase in (-30, 0, 30))
+        return self.contador_valido(secreto, codigo) is not None
+
+    def contador_valido(self, secreto: str, codigo: str, instante: int | None = None):
+        """Devuelve el paso TOTP exacto aceptado para poder consumirlo atómicamente."""
+        instante = int(time.time()) if instante is None else instante
+        for desfase in (-30, 0, 30):
+            instante_candidato = instante + desfase
+            if hmac.compare_digest(self.codigo(secreto, instante_candidato), codigo.strip()):
+                return instante_candidato // 30
+        return None
 
     @staticmethod
     def uri(secreto: str, correo: str):

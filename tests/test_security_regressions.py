@@ -127,7 +127,13 @@ def test_mfa_fallido_bloquea_y_sesion_inactiva_expira(monkeypatch):
     usuario.bloqueado_hasta = None
     usuario.intentos_fallidos = 0
     service.db.commit()
-    _, token = service.iniciar(usuario.correo, "Clave-Mfa-Segura-2026", MfaService.codigo(preparacion["secreto"]))
+    siguiente = __import__("time").time_ns() // 1_000_000_000 + 30
+    monkeypatch.setattr("core.services.mfa_service.time.time", lambda: siguiente)
+    _, token = service.iniciar(
+        usuario.correo,
+        "Clave-Mfa-Segura-2026",
+        MfaService.codigo(preparacion["secreto"], siguiente),
+    )
     sesion = service.db.query(SesionUsuario).filter_by(token_hash=service._hash_token(token)).one()
     sesion.ultima_actividad = datetime.now() - service.INACTIVIDAD_MAXIMA - timedelta(seconds=1)
     service.db.commit()

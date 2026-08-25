@@ -2,6 +2,7 @@ from datetime import datetime, date
 
 from sqlalchemy import (
     Column,
+    BigInteger,
     Integer,
     String,
     Numeric,
@@ -32,6 +33,7 @@ class Usuario(Base):
     correo_verificado_en = Column(DateTime)
     mfa_secret_encrypted = Column(Text)
     mfa_habilitado = Column(Integer, nullable=False, default=0)
+    mfa_ultimo_contador_usado = Column(BigInteger)
     creado_en = Column(DateTime, default=datetime.now, nullable=False)
 
     sesiones = relationship("SesionUsuario", back_populates="usuario", cascade="all, delete-orphan")

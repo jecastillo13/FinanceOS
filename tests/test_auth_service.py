@@ -142,12 +142,28 @@ def test_mfa_exige_codigo_temporal_y_cifra_el_secreto(monkeypatch):
     usuario = service.registrar("Propietario", "mfa@financeos.local", "Clave-Mfa-Segura-2026")
     preparacion = service.preparar_mfa(usuario.id)
     assert preparacion["secreto"] not in service.db.get(type(usuario), usuario.id).mfa_secret_encrypted
-    codigo = MfaService.codigo(preparacion["secreto"])
+    instante = __import__("time").time_ns() // 1_000_000_000
+    monkeypatch.setattr("core.services.mfa_service.time.time", lambda: instante)
+    codigo = MfaService.codigo(preparacion["secreto"], instante)
     service.confirmar_mfa(usuario.id, codigo)
     with pytest.raises(ValueError, match="MFA_REQUIRED"):
         service.iniciar(usuario.correo, "Clave-Mfa-Segura-2026")
-    autenticado, _ = service.iniciar(usuario.correo, "Clave-Mfa-Segura-2026", codigo)
+    with pytest.raises(ValueError, match="ya fue utilizado"):
+        service.iniciar(usuario.correo, "Clave-Mfa-Segura-2026", codigo)
+    siguiente_instante = instante + 30
+    monkeypatch.setattr("core.services.mfa_service.time.time", lambda: siguiente_instante)
+    codigo_siguiente = MfaService.codigo(preparacion["secreto"], siguiente_instante)
+    autenticado, _ = service.iniciar(usuario.correo, "Clave-Mfa-Segura-2026", codigo_siguiente)
     assert autenticado.id == usuario.id
+    with pytest.raises(ValueError, match="ya fue utilizado"):
+        service.desactivar_mfa(usuario.id, "Clave-Mfa-Segura-2026", codigo_siguiente)
+    ultimo_instante = instante + 60
+    monkeypatch.setattr("core.services.mfa_service.time.time", lambda: ultimo_instante)
+    service.desactivar_mfa(
+        usuario.id,
+        "Clave-Mfa-Segura-2026",
+        MfaService.codigo(preparacion["secreto"], ultimo_instante),
+    )
     service.cerrar()
 
 
