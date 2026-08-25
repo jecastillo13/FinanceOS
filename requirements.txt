@@ -41,7 +41,7 @@ python-dotenv==1.2.2
 psycopg[binary]>=3.2,<4
 referencing==0.37.0
 requests==2.34.2
-reportlab==4.4.9
+reportlab==5.0.0
 rpds-py==2026.6.3
 six==1.17.0
 smmap==5.0.3
