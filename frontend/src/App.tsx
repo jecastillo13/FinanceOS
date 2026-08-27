@@ -157,7 +157,7 @@ function Metric({
         </span>
         <p>{label}</p>
       </div>
-      <strong>{cop.format(value)}</strong>
+      <strong title={cop.format(value)}>{cop.format(value)}</strong>
       <span className="metric-line" />
     </article>
   );
@@ -546,7 +546,7 @@ function FinanceApp({
                   ) : (
                     <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
                       <Metric
-                        label="Balance"
+                        label="Balance del mes"
                         value={summary?.balance ?? 0}
                         icon={TrendingUp}
                         accent="violet"
@@ -570,8 +570,15 @@ function FinanceApp({
                       <Sparkles size={15} />
                     </span>
                     <p>
-                      <strong>Así se calcula.</strong> Ingresos menos gastos
-                      produce el balance del mes.
+                      <strong>
+                        {(summary?.balance ?? 0) < 0
+                          ? "Balance mensual negativo."
+                          : "Así se calcula el balance."}
+                      </strong>{" "}
+                      Registraste {cop.format(summary?.ingresos ?? 0)} en
+                      ingresos menos {cop.format(summary?.gastos ?? 0)} en
+                      gastos: el resultado es {cop.format(summary?.balance ?? 0)}.
+                      Este valor no es tu patrimonio.
                     </p>
                     <ChevronRight size={17} />
                   </div>

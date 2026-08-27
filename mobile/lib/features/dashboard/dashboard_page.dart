@@ -107,6 +107,12 @@ class _DashboardContent extends StatelessWidget {
                     icon: Icons.north_east_rounded,
                     accent: FinanceColors.danger)),
           ]),
+          const SizedBox(height: 12),
+          _BalanceExplanation(
+              income: money(data.resumen['ingresos']),
+              expenses: money(data.resumen['gastos']),
+              balance: money(data.resumen['balance']),
+              negative: ((data.resumen['balance'] as num?) ?? 0) < 0),
           const SizedBox(height: 16),
           const _FinanceFlowCard(),
           const SizedBox(height: 16),
@@ -140,6 +146,30 @@ class _DashboardContent extends StatelessWidget {
       ),
     );
   }
+}
+
+class _BalanceExplanation extends StatelessWidget {
+  const _BalanceExplanation(
+      {required this.income,
+      required this.expenses,
+      required this.balance,
+      required this.negative});
+  final String income, expenses, balance;
+  final bool negative;
+  @override
+  Widget build(BuildContext context) => FinanceSurface(
+      padding: const EdgeInsets.all(14),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Icon(negative ? Icons.info_outline_rounded : Icons.calculate_outlined,
+            size: 20,
+            color: negative ? FinanceColors.danger : FinanceColors.cyan),
+        const SizedBox(width: 10),
+        Expanded(
+            child: Text(
+                '$income en ingresos − $expenses en gastos = $balance de balance mensual. No es tu patrimonio.',
+                style: const TextStyle(
+                    color: FinanceColors.muted, fontSize: 12, height: 1.45)))
+      ]));
 }
 
 List<_FinancialInsight> _buildInsights(Map<String, dynamic> summary,
