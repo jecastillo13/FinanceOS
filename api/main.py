@@ -277,7 +277,7 @@ def estado_autenticacion(request: Request):
             "requiere_configuracion": requiere_configuracion,
             "registro_publico": registro_publico,
             "registro_disponible": requiere_configuracion or registro_publico,
-            "token_configuracion_requerido": requiere_configuracion and ENTORNO == "production" and not registro_publico,
+            "aprovisionamiento_local_requerido": requiere_configuracion and ENTORNO == "production" and not registro_publico,
             "autenticado": usuario is not None,
             "usuario": _usuario_publico(usuario) if usuario else None,
         }
@@ -289,7 +289,7 @@ def estado_autenticacion(request: Request):
 def registrar_propietario(datos: RegistroPropietario, response: Response):
     service = AuthService()
     try:
-        usuario = service.registrar(datos.nombre, datos.correo, datos.password, datos.token_configuracion)
+        usuario = service.registrar(datos.nombre, datos.correo, datos.password)
         if usuario.correo_verificado_en is not None:
             usuario, token = service.iniciar(datos.correo, datos.password)
             _guardar_cookie(response, token)

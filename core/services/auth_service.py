@@ -106,21 +106,12 @@ class AuthService:
             self._agregar_catalogo(usuario.id)
         return usuario
 
-    @staticmethod
-    def _validar_token_configuracion(token: str | None):
-        if os.getenv("FINANCEOS_ENV", "development").strip().lower() != "production":
-            return
-        esperado = os.getenv("FINANCEOS_BOOTSTRAP_TOKEN", "").strip()
-        recibido = (token or "").strip()
-        if not esperado or not recibido or not secrets.compare_digest(esperado, recibido):
-            raise PermissionError("El código de instalación no es válido.")
-
-    def registrar(self, nombre: str, correo: str, password: str, token_configuracion: str | None = None):
+    def registrar(self, nombre: str, correo: str, password: str):
         configuracion_inicial = self.requiere_registro()
         if not configuracion_inicial and not self.registro_publico_habilitado():
             raise ValueError("El registro público no está habilitado.")
-        if configuracion_inicial and not self.registro_publico_habilitado():
-            self._validar_token_configuracion(token_configuracion)
+        if configuracion_inicial and not self.registro_publico_habilitado() and os.getenv("FINANCEOS_ENV", "development").strip().lower() == "production":
+            raise PermissionError("El primer administrador de producción debe crearse localmente con scripts/create_superadmin.py.")
         rol = "usuario" if self.registro_publico_habilitado() else "superadmin"
         usuario = self._crear_identidad(
             nombre, correo, password, rol,

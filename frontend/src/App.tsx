@@ -784,14 +784,14 @@ export default function App() {
     loading: boolean;
     configuracion: boolean;
     registroPublico: boolean;
-    tokenConfiguracionRequerido: boolean;
+    aprovisionamientoLocalRequerido: boolean;
     autenticado: boolean;
     usuario?: Usuario;
   }>({
     loading: true,
     configuracion: false,
     registroPublico: false,
-    tokenConfiguracionRequerido: false,
+    aprovisionamientoLocalRequerido: false,
     autenticado: false,
   });
   const check = async () => {
@@ -801,7 +801,7 @@ export default function App() {
         loading: false,
         configuracion: state.requiere_configuracion,
         registroPublico: state.registro_publico,
-        tokenConfiguracionRequerido: state.token_configuracion_requerido,
+        aprovisionamientoLocalRequerido: state.aprovisionamiento_local_requerido,
         autenticado: state.autenticado,
         usuario: state.usuario,
       });
@@ -810,7 +810,7 @@ export default function App() {
         loading: false,
         configuracion: false,
         registroPublico: false,
-        tokenConfiguracionRequerido: false,
+        aprovisionamientoLocalRequerido: false,
         autenticado: false,
       });
     }
@@ -832,7 +832,7 @@ export default function App() {
       <AuthPage
         configuracionInicial={auth.configuracion}
         registroPublico={auth.registroPublico}
-        tokenConfiguracionRequerido={auth.tokenConfiguracionRequerido}
+        aprovisionamientoLocalRequerido={auth.aprovisionamientoLocalRequerido}
         onAuthenticated={() => void check()}
       />
     );

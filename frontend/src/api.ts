@@ -61,8 +61,8 @@ async function remove(path: string): Promise<void> {
 }
 
 export const financeApi = {
-  authStatus: () => get<{ requiere_configuracion: boolean; registro_publico: boolean; registro_disponible: boolean; token_configuracion_requerido:boolean; autenticado: boolean; usuario?: Usuario }>("/auth/status"),
-  registrarPropietario: (body:{nombre:string;correo:string;password:string;token_configuracion?:string}) => post<{id:number;nombre:string;correo:string}>("/auth/registro",body),
+  authStatus: () => get<{ requiere_configuracion: boolean; registro_publico: boolean; registro_disponible: boolean; aprovisionamiento_local_requerido:boolean; autenticado: boolean; usuario?: Usuario }>("/auth/status"),
+  registrarPropietario: (body:{nombre:string;correo:string;password:string}) => post<{id:number;nombre:string;correo:string}>("/auth/registro",body),
   iniciarSesion: (body:{correo:string;password:string;mfa_codigo?:string}) => post<{id:number;nombre:string;correo:string}>("/auth/login",body),
   solicitarRecuperacion: (correo:string) => post<{mensaje:string}>("/auth/recuperacion/solicitar",{correo}),
   restablecerPassword: (token:string,password:string) => post<{mensaje:string}>("/auth/recuperacion/restablecer",{token,password}),

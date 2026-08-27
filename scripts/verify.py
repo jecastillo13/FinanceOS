@@ -22,6 +22,8 @@ FORBIDDEN_PARTS = {"__pycache__", ".venv", "node_modules", ".dart_tool", "upload
 FORBIDDEN_NAMES = {".env", "finance.db", "correo-desarrollo.txt", ".mfa_key"}
 FORBIDDEN_SUFFIXES = {".pyc", ".pyo", ".db", ".sqlite3", ".apk", ".aab", ".ipa"}
 SECRET_PATTERNS = (
+    re.compile(r"\bsk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{16,}\b"),
+    re.compile(r"(?i)\b(?:OPENAI|CODEX)_(?:API_)?KEY\b\s*[:=]\s*\S+"),
     re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
     re.compile(r"(?i)(?:api[_-]?key|secret|password|token)\s*[:=]\s*['\"][^'\"]{12,}['\"]"),
     re.compile(r"(?i)authorization\s*:\s*bearer\s+[a-z0-9._~-]{16,}"),

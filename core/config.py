@@ -40,9 +40,6 @@ def validar_produccion():
         Fernet(clave_mfa.encode())
     except (ValueError, TypeError):
         errores.append("FINANCEOS_MFA_ENCRYPTION_KEY es obligatoria")
-    token_inicio = os.getenv("FINANCEOS_BOOTSTRAP_TOKEN", "").strip()
-    if len(token_inicio) < 32 or token_inicio.lower() in {"cambiar", "changeme", "secret", "password"}:
-        errores.append("FINANCEOS_BOOTSTRAP_TOKEN es obligatorio para proteger el primer administrador")
     try:
         maximo_solicitud = int(os.getenv("FINANCEOS_MAX_REQUEST_BYTES", "12582912"))
         if not 1_048_576 <= maximo_solicitud <= 52_428_800:

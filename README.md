@@ -164,7 +164,7 @@ La aplicacion movil incluye el flujo de camara y OCR en `mobile/lib/features/rec
 
 FinanceOS separa el registro normal de la administración de la plataforma:
 
-- En una instalación privada (`FINANCEOS_PUBLIC_SIGNUP=false`), el primer registro configura el `superadmin`; en producción también exige el código secreto `FINANCEOS_BOOTSTRAP_TOKEN`. Después, el registro queda cerrado.
+- En desarrollo local, el primer registro configura el `superadmin`. En producción privada, créalo directamente en el servidor con `python scripts/create_superadmin.py --nombre "Administrador" --correo "tu@correo.com"`; la contraseña se solicita de forma oculta y ningún secreto de instalación llega al navegador. Después, el registro queda cerrado.
 - En una publicación (`FINANCEOS_PUBLIC_SIGNUP=true`), todo autorregistro crea únicamente un `usuario` con espacio financiero independiente.
 - El `superadmin` de una publicación se crea desde una terminal privada del servidor, nunca desde la web ni desde la app:
 

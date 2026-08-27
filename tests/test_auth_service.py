@@ -167,27 +167,17 @@ def test_mfa_exige_codigo_temporal_y_cifra_el_secreto(monkeypatch):
     service.cerrar()
 
 
-def test_produccion_protege_el_primer_superadmin_con_token(monkeypatch):
+def test_produccion_exige_aprovisionamiento_local_del_primer_superadmin(monkeypatch):
     monkeypatch.setenv("FINANCEOS_ENV", "production")
     monkeypatch.setenv("FINANCEOS_PUBLIC_SIGNUP", "false")
-    monkeypatch.setenv("FINANCEOS_BOOTSTRAP_TOKEN", "token-instalacion-super-seguro-2026")
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     Base.metadata.create_all(engine)
     session_factory = sessionmaker(bind=engine)
     monkeypatch.setattr(auth_service, "get_session", session_factory)
     service = AuthService()
-    with pytest.raises(PermissionError, match="código de instalación"):
+    with pytest.raises(PermissionError, match="create_superadmin.py"):
         service.registrar("Intruso", "intruso@financeos.local", "Clave-Intruso-Segura-2026")
-    with pytest.raises(PermissionError, match="código de instalación"):
-        service.registrar(
-            "Intruso", "intruso@financeos.local", "Clave-Intruso-Segura-2026", "token-equivocado-0000"
-        )
-    administrador = service.registrar(
-        "Administrador",
-        "admin@financeos.local",
-        "Clave-Administrador-Segura-2026",
-        "token-instalacion-super-seguro-2026",
-    )
+    administrador = service.crear_superadmin("Administrador", "admin@financeos.local", "Clave-Administrador-Segura-2026")
     assert administrador.rol == "superadmin"
     service.cerrar()
 

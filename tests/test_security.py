@@ -99,7 +99,6 @@ def test_produccion_acepta_configuracion_coherente(monkeypatch):
     monkeypatch.setenv("FINANCEOS_CORS_ORIGINS", "https://financeos.example.com")
     monkeypatch.setenv("FINANCEOS_SMTP_HOST", "smtp.example.com")
     monkeypatch.setenv("FINANCEOS_MFA_ENCRYPTION_KEY", Fernet.generate_key().decode())
-    monkeypatch.setenv("FINANCEOS_BOOTSTRAP_TOKEN", "token-seguro-de-inicio-con-32-caracteres")
     monkeypatch.setenv("FINANCEOS_ALLOWED_HOSTS", "financeos.example.com")
     monkeypatch.setenv("FINANCEOS_MAX_REQUEST_BYTES", "12582912")
 
@@ -115,7 +114,6 @@ def test_produccion_rechaza_origen_con_ruta_y_clave_mfa_invalida(monkeypatch):
     monkeypatch.setenv("FINANCEOS_CORS_ORIGINS", "https://financeos.example.com/ruta")
     monkeypatch.setenv("FINANCEOS_SMTP_HOST", "smtp.example.com")
     monkeypatch.setenv("FINANCEOS_MFA_ENCRYPTION_KEY", "no-es-una-clave-fernet")
-    monkeypatch.setenv("FINANCEOS_BOOTSTRAP_TOKEN", "token-seguro-de-inicio-con-32-caracteres")
     monkeypatch.setenv("FINANCEOS_ALLOWED_HOSTS", "financeos.example.com")
 
     with pytest.raises(RuntimeError, match="CORS|MFA"):

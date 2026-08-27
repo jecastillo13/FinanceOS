@@ -15,6 +15,7 @@ from dotenv import load_dotenv
 load_dotenv(PROJECT_ROOT / ".env")
 
 from core.database import create_database
+from core.models import Usuario
 from core.services.auth_service import AuthService
 
 
@@ -32,6 +33,8 @@ def main():
     create_database()
     service = AuthService()
     try:
+        if service.db.query(Usuario.id).filter(Usuario.rol == "superadmin").first():
+            raise SystemExit("FinanceOS ya tiene un superadministrador.")
         usuario = service.crear_superadmin(args.nombre, args.correo, password)
         print(f"Superadministrador creado: {usuario.correo}")
     except ValueError as error:
