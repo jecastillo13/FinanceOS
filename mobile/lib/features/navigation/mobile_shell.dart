@@ -4,6 +4,7 @@ import '../../core/api_client.dart';
 import '../../core/design_system.dart';
 import '../dashboard/dashboard_page.dart';
 import '../detections/detections_page.dart';
+import '../goals/goals_page.dart';
 import '../modules/collection_page.dart';
 import '../receipts/receipt_scan_page.dart';
 import '../reports/reports_page.dart';
@@ -163,8 +164,15 @@ class _MobileShellState extends State<MobileShell> {
                 title: Text(e.title),
                 subtitle: Text(e.description),
                 trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () =>
-                    _collection(e.title, e.icon, e.loader, e.resource))),
+                onTap: () {
+                  if (e.resource == 'metas') {
+                    Navigator.pop(context);
+                    Navigator.push(context, MaterialPageRoute(
+                        builder: (_) => const GoalsPage()));
+                  } else {
+                    _collection(e.title, e.icon, e.loader, e.resource);
+                  }
+                })),
             ListTile(
                 leading: const Icon(Icons.document_scanner_rounded),
                 title: const Text('Escanear factura'),
