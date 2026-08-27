@@ -30,6 +30,8 @@ import {
   UserPlus,
   HelpCircle,
   CheckCircle2,
+  Gauge,
+  Info,
 } from "lucide-react";
 import { Cuenta, financeApi, Graficas, Resumen, Usuario } from "./api";
 import AccountsPage from "./pages/AccountsPage";
@@ -67,6 +69,74 @@ const nav = [
   ["Reportes", FileChartColumn],
   ["Configuración", Settings],
 ] as const;
+
+type FinancialInsight = {
+  title: string;
+  detail: string;
+  metric: string;
+  tone: "good" | "watch" | "neutral";
+  page: string;
+  action: string;
+};
+
+function buildFinancialInsights(
+  summary: Resumen | null,
+  charts: Graficas | null,
+): FinancialInsight[] {
+  if (!summary) return [];
+
+  const insights: FinancialInsight[] = [];
+  const hasMonthlyActivity = summary.ingresos > 0 || summary.gastos > 0;
+  const spendingRate = summary.ingresos > 0 ? (summary.gastos / summary.ingresos) * 100 : null;
+  const investmentRate = summary.patrimonio > 0 ? (summary.inversiones_cop / summary.patrimonio) * 100 : 0;
+
+  if (!hasMonthlyActivity) {
+    insights.push({ title: "Aún no hay flujo para evaluar", detail: "Registra ingresos y gastos del mes para calcular capacidad de ahorro y detectar desviaciones.", metric: "0 movimientos del mes", tone: "neutral", page: "Movimientos", action: "Registrar actividad" });
+  } else if (summary.balance < 0) {
+    insights.push({ title: "Tus gastos superan tus ingresos", detail: `El déficit del mes es ${cop.format(Math.abs(summary.balance))}. Conviene revisar primero las categorías con mayor gasto.`, metric: `${Math.round(spendingRate ?? 0)}% de tus ingresos gastado`, tone: "watch", page: "Presupuestos", action: "Revisar presupuesto" });
+  } else {
+    const savingsRate = summary.ingresos > 0 ? (summary.balance / summary.ingresos) * 100 : 0;
+    insights.push({ title: "Tu flujo mensual está en positivo", detail: `Después de gastos conservas ${cop.format(summary.balance)}. Esta es tu capacidad de ahorro estimada del mes.`, metric: `${Math.round(savingsRate)}% de ahorro mensual`, tone: "good", page: "Metas", action: "Asignar a una meta" });
+  }
+
+  const distribution = [...(charts?.distribucion ?? [])].sort((a, b) => b.saldo_cop - a.saldo_cop);
+  const largest = distribution[0];
+  const liquidTotal = distribution.reduce((total, item) => total + Math.max(0, item.saldo_cop), 0);
+  const concentration = largest && liquidTotal > 0 ? (largest.saldo_cop / liquidTotal) * 100 : 0;
+
+  insights.push({
+    title: concentration >= 70 ? "Tu liquidez está concentrada" : "Tu liquidez está distribuida",
+    detail: largest ? `${largest.cuenta} representa aproximadamente ${Math.round(concentration)}% del dinero disponible entre tus cuentas.` : "Crea al menos una cuenta para medir liquidez y concentración de tu dinero.",
+    metric: largest ? `${Math.round(concentration)}% en ${largest.cuenta}` : "Sin cuentas para analizar",
+    tone: concentration >= 70 ? "watch" : "neutral",
+    page: "Cuentas",
+    action: "Ver cuentas",
+  });
+
+  const topExpense = [...(charts?.gastos_categoria ?? [])]
+    .map((item) => ({ name: item.categoria, value: item.total ?? item.valor ?? 0 }))
+    .sort((a, b) => b.value - a.value)[0];
+
+  insights.push({
+    title: topExpense ? "Esta categoría lidera tus gastos" : "Gastos por categorizar",
+    detail: topExpense ? `${topExpense.name} acumula ${cop.format(topExpense.value)} este mes. Compáralo con tu presupuesto antes de tomar decisiones.` : "Cuando registres gastos, FinanceOS mostrará cuál categoría consume más dinero.",
+    metric: topExpense ? topExpense.name : "Sin gastos clasificados",
+    tone: "neutral",
+    page: topExpense ? "Categorías" : "Movimientos",
+    action: topExpense ? "Ver categorías" : "Registrar un gasto",
+  });
+
+  insights.push({
+    title: investmentRate > 0 ? "Tu patrimonio también está invertido" : "No hay inversiones registradas",
+    detail: investmentRate > 0 ? `${cop.format(summary.inversiones_cop)} está registrado en inversiones y se incluye en tu patrimonio consolidado.` : "Puedes registrar posiciones iniciales sin inventar movimientos históricos y empezar el seguimiento desde hoy.",
+    metric: `${Math.round(investmentRate)}% del patrimonio invertido`,
+    tone: "neutral",
+    page: "Inversiones",
+    action: "Ver inversiones",
+  });
+
+  return insights;
+}
 
 function Metric({
   label,
@@ -273,6 +343,8 @@ function FinanceApp({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+  const financialInsights = buildFinancialInsights(summary, charts);
+  const primaryInsight = financialInsights[0];
   const navigate = (page: string, anchor?: string) => {
     setActive(page);
     setWelcome(false);
@@ -557,22 +629,26 @@ function FinanceApp({
                   </div>
                 </article>
                 <article className="ai-panel">
-                  <span className="ai-icon">
-                    <Sparkles size={21} />
-                  </span>
-                  <div>
+                  <div className="ai-panel-head">
+                    <span className="ai-icon"><Sparkles size={21} /></span>
+                    <span className="ai-engine-state"><i /> Motor local · datos privados</span>
+                  </div>
+                  <div className="ai-panel-copy">
                     <span className="eyebrow text-violet-200">
-                      FINANCEOS INTELLIGENCE
+                      ANÁLISIS FINANCIERO
                     </span>
-                    <h2>Tu resumen inteligente</h2>
+                    <h2>{primaryInsight?.title ?? "Preparando tu análisis"}</h2>
                     <p>
-                      Tu patrimonio está distribuido entre {accounts.length}{" "}
-                      cuentas. Consulta ahora un análisis basado en tus datos
-                      actuales.
+                      {primaryInsight?.detail ?? "FinanceOS está consolidando tu flujo, patrimonio, concentración y gastos."}
                     </p>
                   </div>
+                  <div className="ai-analysis-scope" aria-label="Indicadores analizados">
+                    <span><Gauge size={15} /> Flujo mensual</span>
+                    <span><WalletCards size={15} /> Patrimonio</span>
+                    <span><ReceiptText size={15} /> Gastos</span>
+                  </div>
                   <button onClick={() => setIntelligenceOpen(true)}>
-                    Descubrir <ChevronRight size={15} />
+                    Ver qué está analizando <ChevronRight size={17} />
                   </button>
                 </article>
               </section>
@@ -740,8 +816,8 @@ function FinanceApp({
           <section className="modern-modal">
             <div className="flex items-start justify-between">
               <div>
-                <span className="eyebrow">FINANCEOS INTELLIGENCE</span>
-                <h3>Lectura de tu situación actual</h3>
+                <span className="eyebrow">ANÁLISIS FINANCIERO LOCAL</span>
+                <h3>Qué está pasando con tu dinero</h3>
               </div>
               <button
                 className="icon-button"
@@ -750,28 +826,27 @@ function FinanceApp({
                 <X />
               </button>
             </div>
-            <div className="welcome-note">
-              <Sparkles />
+            <div className="ai-privacy-note">
+              <Info size={18} />
               <p>
-                <strong>
-                  {(summary?.balance ?? 0) >= 0
-                    ? "Balance positivo."
-                    : "Atención al balance."}
-                </strong>{" "}
-                Este mes ingresaste {cop.format(summary?.ingresos ?? 0)} y
-                gastaste {cop.format(summary?.gastos ?? 0)}. Tu patrimonio
-                consolidado es {cop.format(summary?.patrimonio ?? 0)}.
+                <strong>Análisis explicable y privado.</strong> FinanceOS calcula estos resultados con reglas financieras sobre tus datos actuales. No los envía a un proveedor externo de IA.
               </p>
             </div>
-            <button
-              className="modal-submit"
-              onClick={() => {
-                navigate("Reportes");
-                setIntelligenceOpen(false);
-              }}
-            >
-              <FileChartColumn /> Ver análisis completo
-            </button>
+            <div className="ai-insight-list">
+              {financialInsights.map((insight) => (
+                <article className={`ai-insight ${insight.tone}`} key={insight.title}>
+                  <span className="ai-insight-marker">{insight.tone === "good" ? <CheckCircle2 /> : <Gauge />}</span>
+                  <div>
+                    <small>{insight.metric}</small>
+                    <strong>{insight.title}</strong>
+                    <p>{insight.detail}</p>
+                    <button onClick={() => { navigate(insight.page); setIntelligenceOpen(false); }}>
+                      {insight.action} <ChevronRight size={16} />
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
           </section>
         </div>
       )}
