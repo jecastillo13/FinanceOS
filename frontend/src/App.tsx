@@ -339,6 +339,11 @@ function FinanceApp({
         event.preventDefault();
         setSearchOpen(true);
       }
+      if (event.key === "Escape") {
+        setSearchOpen(false);
+        setNotificationsOpen(false);
+        setIntelligenceOpen(false);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -714,8 +719,8 @@ function FinanceApp({
             aria-label="Cerrar búsqueda"
             onClick={() => setSearchOpen(false)}
           />
-          <section className="modern-modal">
-            <div className="flex items-start justify-between">
+          <section className="modern-modal navigation-modal">
+            <div className="navigation-modal-head flex items-start justify-between">
               <div>
                 <span className="eyebrow">NAVEGACIÓN RÁPIDA</span>
                 <h3>¿Qué quieres abrir?</h3>
@@ -727,7 +732,7 @@ function FinanceApp({
                 <X />
               </button>
             </div>
-            <label>
+            <label className="navigation-search">
               Buscar módulo
               <input
                 autoFocus
@@ -736,7 +741,7 @@ function FinanceApp({
                 placeholder="Cuentas, metas, reportes…"
               />
             </label>
-            <div className="welcome-grid">
+            <div className="welcome-grid navigation-results">
               {nav
                 .filter((item) => `${item.label} ${item.description}`.toLowerCase().includes(search.toLowerCase()))
                 .map((item) => (
