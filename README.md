@@ -43,6 +43,8 @@ powershell -ExecutionPolicy Bypass -File scripts/verificar_completo.ps1
 
 Si Flutter no está en `PATH`, el verificador reconoce la instalación estable de Puro en Windows o permite indicar su ejecutable mediante `FLUTTER_BIN`.
 
+La estrategia completa de hooks, CI y análisis estructural opcional con Codebase Memory MCP está documentada en [`docs/OPTIMIZACION_DESARROLLO.md`](docs/OPTIMIZACION_DESARROLLO.md).
+
 Aplicación personal de finanzas construida con Streamlit y SQLite. Permite administrar cuentas, categorías, movimientos y tasas de cambio en una interfaz local.
 
 ## Estado actual
