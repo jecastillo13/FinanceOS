@@ -32,6 +32,8 @@ class CardService:
         cuenta = self.db.get(Cuenta, cuenta_id) if cuenta_id else None
         if tipo == "Debito" and cuenta is None:
             raise ValueError("Una tarjeta debito debe vincularse a una cuenta bancaria.")
+        if cuenta is not None and not cuenta.activa:
+            raise ValueError("La cuenta vinculada está desactivada.")
         if tipo == "Credito" and cuenta is None:
             cuenta = Cuenta(nombre=f"Deuda {nombre}", tipo="Tarjeta de credito", saldo=0,
                             moneda=moneda, color="#6D5DFB", icono="💳")
@@ -120,6 +122,8 @@ class CardService:
         categoria = self.db.get(Categoria, categoria_id)
         if cuenta is None:
             raise ValueError("Selecciona la cuenta o tarjeta utilizada.")
+        if not cuenta.activa:
+            raise ValueError("La cuenta seleccionada está desactivada y no admite movimientos nuevos.")
         if categoria is None or categoria.tipo != "Gasto":
             raise ValueError("Selecciona una categoria de gasto.")
         if tarjeta and tarjeta.moneda.upper() != operacion.moneda.upper():
@@ -153,6 +157,8 @@ class CardService:
         origen = self.db.get(Cuenta, cuenta_origen_id)
         if origen is None:
             raise ValueError("La cuenta de pago no existe.")
+        if not origen.activa or not deuda.activa:
+            raise ValueError("La cuenta de pago o la cuenta de deuda está desactivada.")
         if origen.id == deuda.id:
             raise ValueError("Selecciona una cuenta bancaria distinta a la cuenta de deuda.")
         if origen.moneda.upper() != deuda.moneda.upper():

@@ -29,8 +29,11 @@ class MovementService:
 
         descripcion = texto_requerido(descripcion, "La descripcion", 250)
         valor_firmado = self._valor_firmado(valor, categoria_id)
-        if self.db.get(Cuenta, cuenta_id) is None:
+        cuenta = self.db.get(Cuenta, cuenta_id)
+        if cuenta is None:
             raise ValueError("La cuenta seleccionada no existe.")
+        if not cuenta.activa:
+            raise ValueError("La cuenta seleccionada está desactivada y no admite movimientos nuevos.")
 
         huella = (huella or "").strip().lower() or None
         if huella:
@@ -90,8 +93,11 @@ class MovementService:
 
         descripcion = texto_requerido(descripcion, "La descripcion", 250)
         valor_firmado = self._valor_firmado(valor, categoria_id)
-        if self.db.get(Cuenta, cuenta_id) is None:
+        cuenta_destino = self.db.get(Cuenta, cuenta_id)
+        if cuenta_destino is None:
             raise ValueError("La cuenta seleccionada no existe.")
+        if not cuenta_destino.activa and cuenta_id != movimiento.cuenta_id:
+            raise ValueError("La cuenta seleccionada está desactivada y no admite movimientos nuevos.")
         cuenta_anterior_id = movimiento.cuenta_id
         valor_anterior = movimiento.valor
 

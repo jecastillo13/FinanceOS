@@ -78,6 +78,32 @@ class FinancialServicesTest(unittest.TestCase):
 
         self.assertEqual(self._saldo(cuenta_id), 1375)
 
+    def test_cuenta_desactivada_conserva_saldo_y_rechaza_movimientos(self):
+        cuenta_id = self._crear_cuenta("Cuenta histórica", 1000)
+        accounts = AccountService()
+        try:
+            cuenta = accounts.obtener_cuenta(cuenta_id)
+            accounts.actualizar_cuenta(
+                cuenta_id, cuenta.nombre, cuenta.tipo, cuenta.saldo,
+                cuenta.moneda, cuenta.color, cuenta.icono,
+                institucion="Banco prueba", activa=False,
+            )
+            self.assertFalse(accounts.obtener_cuenta(cuenta_id).activa)
+            self.assertEqual(accounts.saldo_total(), 0)
+        finally:
+            accounts.cerrar()
+
+        movements = MovementService()
+        try:
+            with self.assertRaisesRegex(ValueError, "desactivada"):
+                movements.registrar_movimiento(
+                    date.today(), "Movimiento rechazado", 10,
+                    cuenta_id, self.ingreso_id,
+                )
+        finally:
+            movements.cerrar()
+        self.assertEqual(self._saldo(cuenta_id), 1000)
+
     def test_factura_repetida_no_duplica_movimiento_ni_saldo(self):
         cuenta_id = self._crear_cuenta(saldo=1_000_000)
         service = MovementService()

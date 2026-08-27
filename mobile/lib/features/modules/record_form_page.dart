@@ -18,6 +18,7 @@ class _RecordFormPageState extends State<RecordFormPage> {
   List<dynamic> _accounts = [], _categories = [];
   bool _busy = false, _loading = true;
   bool _initialPosition = true;
+  bool _active = true;
   String? _error;
   int? _account, _destination, _category;
   String _type = 'Gasto', _currency = 'COP', _frequency = 'Mensual';
@@ -34,6 +35,7 @@ class _RecordFormPageState extends State<RecordFormPage> {
       _currency = '${initial['moneda'] ?? _currency}';
       _frequency = '${initial['frecuencia'] ?? _frequency}';
       _initialPosition = initial['es_posicion_inicial'] != false;
+      _active = initial['activa'] != false;
     }
     _load();
   }
@@ -90,6 +92,10 @@ class _RecordFormPageState extends State<RecordFormPage> {
           initialValue: destination ? _destination : _account,
           decoration: InputDecoration(labelText: label),
           items: _accounts
+              .where((x) =>
+                  x['activa'] != false ||
+                  x['id'] == _account ||
+                  x['id'] == _destination)
               .map((x) => DropdownMenuItem<int>(
                   value: x['id'] as int,
                   child: Text('${x['nombre']} (${x['moneda']})')))
@@ -113,16 +119,27 @@ class _RecordFormPageState extends State<RecordFormPage> {
       case 'cuentas':
         return [
           field('Nombre', 'nombre', initial: initial('nombre')),
+          field('Entidad o institución', 'institucion',
+              initial: initial('institucion'), required: false),
           select(
               'Tipo',
-              'Ahorros',
+              _type,
               ['Ahorros', 'Corriente', 'Efectivo', 'Inversión'],
               (x) => _type = x),
           select('Moneda', _currency, ['COP', 'USD', 'EUR'],
               (x) => setState(() => _currency = x)),
           if (widget.initial == null)
             field('Saldo inicial', 'valor',
-                keyboard: TextInputType.number, initial: '0')
+                keyboard: TextInputType.number, initial: '0'),
+          if (widget.initial != null)
+            SwitchListTile.adaptive(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Cuenta activa'),
+              subtitle: const Text(
+                  'Las cuentas desactivadas conservan su historial, pero no reciben movimientos.'),
+              value: _active,
+              onChanged: (value) => setState(() => _active = value),
+            )
         ];
       case 'categorias':
         return [
@@ -245,6 +262,8 @@ class _RecordFormPageState extends State<RecordFormPage> {
             'moneda': _currency,
             'color': '${widget.initial?['color'] ?? '#6255e7'}',
             'icono': '${widget.initial?['icono'] ?? '🏦'}',
+            'institucion': c('institucion').text,
+            'activa': _active,
           };
           if (widget.initial == null) {
             await _api.crearCuenta({...body, 'saldo': number('valor')});

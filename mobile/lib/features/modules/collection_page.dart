@@ -66,6 +66,9 @@ class _CollectionPageState extends State<CollectionPage> {
       if (item['fecha'] != null) '${item['fecha']}',
       if (item['categoria'] != null && item['nombre'] != null)
         '${item['categoria']}',
+      if (item['institucion'] != null && '${item['institucion']}'.isNotEmpty)
+        '${item['institucion']}',
+      if (item['activa'] == false) 'Histórica · sin movimientos nuevos',
     ];
     return parts.join(' · ');
   }

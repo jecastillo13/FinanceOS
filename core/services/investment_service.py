@@ -194,6 +194,8 @@ class InvestmentService:
         cuenta = self.db.get(Cuenta, cuenta_id)
         if cuenta is None:
             raise ValueError("La cuenta seleccionada no existe.")
+        if not cuenta.activa:
+            raise ValueError("La cuenta seleccionada está desactivada y no admite movimientos nuevos.")
         if cuenta.moneda.upper() != moneda.upper():
             raise ValueError("La cuenta y la inversión deben usar la misma moneda.")
         if cuenta.saldo < costo:

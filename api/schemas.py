@@ -85,6 +85,7 @@ class CuentaCrear(BaseModel):
     moneda: str = "COP"
     color: str = "#2563EB"
     icono: str = "🏦"
+    institucion: str = Field(default="", max_length=100)
 
 
 class CuentaRespuesta(ORMResponse):
@@ -95,6 +96,9 @@ class CuentaRespuesta(ORMResponse):
     moneda: str
     color: str
     icono: str
+    institucion: str
+    activa: bool
+    actualizada_en: datetime
 
 
 class CuentaActualizar(BaseModel):
@@ -103,6 +107,8 @@ class CuentaActualizar(BaseModel):
     moneda: str = "COP"
     color: str = "#2563EB"
     icono: str = "🏦"
+    institucion: str = Field(default="", max_length=100)
+    activa: bool = True
 
 
 class CategoriaGuardar(BaseModel):

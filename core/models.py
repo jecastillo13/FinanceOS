@@ -130,6 +130,10 @@ class Cuenta(PropiedadUsuario, Base):
         cascade="all, delete-orphan"
     )
 
+    institucion = Column(String(100), nullable=False, default="")
+    activa = Column(Integer, nullable=False, default=1)
+    actualizada_en = Column(DateTime, default=datetime.now, onupdate=datetime.now, nullable=False)
+
     tarjetas = relationship("Tarjeta", back_populates="cuenta")
 
 

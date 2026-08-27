@@ -90,6 +90,7 @@ def create_database():
             _migrar_sesiones_seguras(conexion)
             _migrar_dinero_decimal(conexion)
             _migrar_inversiones_trazables(conexion)
+            _migrar_cuentas_producto(conexion)
 
 
 def _migrar_categoria(conexion):
@@ -286,6 +287,21 @@ def _migrar_inversiones_trazables(conexion):
     conexion.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ux_inversiones_movimiento_aporte_id ON inversiones (movimiento_aporte_id) WHERE movimiento_aporte_id IS NOT NULL"))
 
 
+def _migrar_cuentas_producto(conexion):
+    """Conserva el histórico al permitir desactivar productos financieros."""
+    if "cuentas" not in set(inspect(engine).get_table_names()):
+        return
+    columnas = {columna["name"] for columna in inspect(engine).get_columns("cuentas")}
+    cambios = {
+        "institucion": "VARCHAR(100) NOT NULL DEFAULT ''",
+        "activa": "INTEGER NOT NULL DEFAULT 1",
+        "actualizada_en": "DATETIME DEFAULT CURRENT_TIMESTAMP",
+    }
+    for nombre, definicion in cambios.items():
+        if nombre not in columnas:
+            conexion.execute(text(f"ALTER TABLE cuentas ADD COLUMN {nombre} {definicion}"))
+
+
 def _ejecutar_migraciones():
     """Aplica migraciones idempotentes y registra la version local."""
     migraciones = (
@@ -302,6 +318,7 @@ def _ejecutar_migraciones():
         ("011_dinero_decimal", _migrar_dinero_decimal),
         ("012_mfa_antireplay", _migrar_mfa_antireplay),
         ("013_inversiones_trazables", _migrar_inversiones_trazables),
+        ("014_cuentas_producto", _migrar_cuentas_producto),
     )
     with engine.begin() as conexion:
         conexion.execute(text("""

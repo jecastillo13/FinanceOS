@@ -71,6 +71,8 @@ class RecurringExpenseService:
             raise ValueError("El gasto recurrente no está disponible.")
         if cuenta is None:
             raise ValueError("La cuenta seleccionada no existe.")
+        if not cuenta.activa:
+            raise ValueError("La cuenta seleccionada está desactivada y no admite movimientos nuevos.")
         descripcion = f"Pago recurrente: {gasto.nombre}"
         existente = self.db.query(Movimiento).filter(
             Movimiento.fecha == fecha_pago,

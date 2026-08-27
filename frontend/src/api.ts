@@ -1,4 +1,4 @@
-export type Cuenta = { id: number; nombre: string; tipo: string; saldo: number; moneda: string; color?: string; icono?: string };
+export type Cuenta = { id: number; nombre: string; tipo: string; saldo: number; moneda: string; color?: string; icono?: string; institucion: string; activa: boolean; actualizada_en: string };
 export type Categoria = { id: number; nombre: string; tipo: string; color: string; icono?: string; grupo?: string; activa: boolean };
 export type TasaCambio = { id: number; moneda_origen: string; moneda_destino: string; tasa: number; fuente?: string; fecha_actualizacion: string };
 export type Conversion = { valor_origen: number; origen: string; destino: string; valor_convertido: number };
@@ -80,8 +80,8 @@ export const financeApi = {
   resumen: () => get<Resumen>("/dashboard/resumen"),
   graficas: () => get<Graficas>("/dashboard/graficas"),
   cuentas: () => get<Cuenta[]>("/cuentas"),
-  crearCuenta: (body: { nombre: string; tipo: string; saldo: number; moneda: string }) => post<Cuenta>("/cuentas", body),
-  actualizarCuenta: (id: number, body: { nombre: string; tipo: string; moneda: string; color: string; icono: string }) => put<Cuenta>(`/cuentas/${id}`, body),
+  crearCuenta: (body: { nombre: string; tipo: string; saldo: number; moneda: string; institucion: string }) => post<Cuenta>("/cuentas", body),
+  actualizarCuenta: (id: number, body: { nombre: string; tipo: string; moneda: string; color: string; icono: string; institucion: string; activa: boolean }) => put<Cuenta>(`/cuentas/${id}`, body),
   eliminarCuenta: (id: number) => remove(`/cuentas/${id}`),
   categorias: () => get<Categoria[]>("/categorias"),
   crearCategoria: (body: { nombre: string; tipo: string; color: string; icono: string; grupo: string; orden: number }) => post<Categoria>("/categorias", body),

@@ -21,6 +21,8 @@ class TransferService:
         destino = self.db.get(Cuenta, cuenta_destino_id)
         if origen is None or destino is None:
             raise ValueError("Selecciona cuentas válidas.")
+        if not origen.activa or not destino.activa:
+            raise ValueError("Las transferencias solo pueden usar cuentas activas.")
         if origen.moneda.upper() != destino.moneda.upper():
             raise ValueError("Por ahora las transferencias solo se permiten entre cuentas de la misma moneda.")
 

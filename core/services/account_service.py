@@ -9,8 +9,11 @@ class AccountService:
     def __init__(self):
         self.db = get_session()
 
-    def obtener_cuentas(self):
-        return self.db.query(Cuenta).order_by(Cuenta.nombre).all()
+    def obtener_cuentas(self, incluir_inactivas=True):
+        consulta = self.db.query(Cuenta)
+        if not incluir_inactivas:
+            consulta = consulta.filter(Cuenta.activa == 1)
+        return consulta.order_by(Cuenta.nombre).all()
 
     def obtener_cuenta(self, cuenta_id):
         return self.db.get(Cuenta, cuenta_id)
@@ -23,7 +26,7 @@ class AccountService:
         servicio_tasas = exchange or ExchangeService()
         datos, pendientes = [], []
         try:
-            for cuenta in self.obtener_cuentas():
+            for cuenta in self.obtener_cuentas(incluir_inactivas=False):
                 convertido = servicio_tasas.convertir(cuenta.saldo, cuenta.moneda, moneda_base)
                 if convertido is None:
                     pendientes.append(cuenta)
@@ -38,19 +41,20 @@ class AccountService:
         datos, _ = self.saldos_consolidados(moneda_base, exchange)
         return round(sum(dato["saldo_base"] for dato in datos), 2)
 
-    def crear_cuenta(self, nombre, tipo, saldo, moneda="COP", color="#2563EB", icono="🏦"):
+    def crear_cuenta(self, nombre, tipo, saldo, moneda="COP", color="#2563EB", icono="🏦", institucion=""):
         nombre = texto_requerido(nombre, "El nombre de la cuenta", 100)
         tipo = texto_requerido(tipo, "El tipo de cuenta", 50)
         moneda = moneda_valida(moneda)
         saldo = monto_decimal(saldo, "El saldo", permitir_cero=True, permitir_negativo=True)
-        cuenta = Cuenta(nombre=nombre, tipo=tipo, saldo=saldo, moneda=moneda, color=color, icono=icono)
+        institucion = (institucion or "").strip()[:100]
+        cuenta = Cuenta(nombre=nombre, tipo=tipo, saldo=saldo, moneda=moneda, color=color, icono=icono, institucion=institucion, activa=1)
         self.db.add(cuenta)
         registrar_auditoria(self.db, "CUENTA_CREADA", f"Cuenta creada: {nombre} ({moneda.upper()}).")
         self.db.commit()
         self.db.refresh(cuenta)
         return cuenta
 
-    def actualizar_cuenta(self, cuenta_id, nombre, tipo, saldo, moneda, color, icono):
+    def actualizar_cuenta(self, cuenta_id, nombre, tipo, saldo, moneda, color, icono, institucion="", activa=True):
         cuenta = self.db.get(Cuenta, cuenta_id)
         if cuenta is None:
             return None
@@ -62,6 +66,8 @@ class AccountService:
             raise ValueError("No puedes cambiar el saldo ni la moneda de una cuenta con movimientos. Registra un ajuste como movimiento.")
         cuenta.nombre, cuenta.tipo, cuenta.saldo = nombre, tipo, saldo
         cuenta.moneda, cuenta.color, cuenta.icono = moneda, color, icono
+        cuenta.institucion = (institucion or "").strip()[:100]
+        cuenta.activa = 1 if activa else 0
         registrar_auditoria(self.db, "CUENTA_ACTUALIZADA", f"Cuenta #{cuenta.id} actualizada: {nombre} ({moneda}).")
         self.db.commit()
         self.db.refresh(cuenta)

@@ -82,6 +82,8 @@ class GoalService:
         categoria = self.db.get(Categoria, categoria_id)
         if cuenta is None:
             raise ValueError("La cuenta seleccionada no existe.")
+        if not cuenta.activa:
+            raise ValueError("La cuenta seleccionada está desactivada y no admite movimientos nuevos.")
         if categoria is None or categoria.tipo != "Gasto":
             raise ValueError("Selecciona una categoria de gasto para registrar el pago.")
 
