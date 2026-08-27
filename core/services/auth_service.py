@@ -40,7 +40,9 @@ class AuthService:
         return self.db.query(Usuario.id).first() is None
 
     def registro_publico_habilitado(self) -> bool:
-        return os.getenv("FINANCEOS_PUBLIC_SIGNUP", "false").strip().lower() in {"1", "true", "yes", "si"}
+        entorno = os.getenv("FINANCEOS_ENV", "development").strip().lower()
+        predeterminado = "true" if entorno == "development" else "false"
+        return os.getenv("FINANCEOS_PUBLIC_SIGNUP", predeterminado).strip().lower() in {"1", "true", "yes", "si"}
 
     def _agregar_catalogo(self, usuario_id: int):
         for orden, (tipo, grupo, icono, categoria) in enumerate(CATEGORIAS_PREDETERMINADAS, start=1):
@@ -110,9 +112,9 @@ class AuthService:
         configuracion_inicial = self.requiere_registro()
         if not configuracion_inicial and not self.registro_publico_habilitado():
             raise ValueError("El registro público no está habilitado.")
-        if configuracion_inicial and not self.registro_publico_habilitado() and os.getenv("FINANCEOS_ENV", "development").strip().lower() == "production":
+        if configuracion_inicial and os.getenv("FINANCEOS_ENV", "development").strip().lower() == "production":
             raise PermissionError("El primer administrador de producción debe crearse localmente con scripts/create_superadmin.py.")
-        rol = "usuario" if self.registro_publico_habilitado() else "superadmin"
+        rol = "superadmin" if configuracion_inicial else "usuario"
         usuario = self._crear_identidad(
             nombre, correo, password, rol,
             crear_catalogo=not (configuracion_inicial and rol == "superadmin"),
@@ -126,6 +128,10 @@ class AuthService:
                 self._agregar_catalogo(usuario.id)
             usuario.correo_verificado_en = datetime.now()
         if rol == "usuario" and self.registro_publico_habilitado():
+            if os.getenv("FINANCEOS_ENV", "development").strip().lower() == "development" and not os.getenv("FINANCEOS_SMTP_HOST", "").strip():
+                usuario.correo_verificado_en = datetime.now()
+                self.db.commit(); self.db.refresh(usuario)
+                return usuario
             token = self._crear_token_seguridad(usuario.id, "verificar_correo", timedelta(hours=24))
             self.db.commit(); self.db.refresh(usuario)
             try:
@@ -286,9 +292,10 @@ class AuthService:
             token = self._crear_token_seguridad(usuario.id, "recuperar_password", timedelta(minutes=30))
             self.db.commit()
             try:
-                EmailService().enviar_recuperacion(usuario.correo, token)
+                return EmailService().enviar_recuperacion(usuario.correo, token)
             except Exception:
                 logger.exception("No fue posible entregar el correo de recuperación")
+        return None
 
     def reenviar_verificacion(self, correo: str):
         usuario = self.db.query(Usuario).filter(Usuario.correo == correo.strip().lower(), Usuario.activo == 1).first()

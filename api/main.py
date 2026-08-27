@@ -277,7 +277,7 @@ def estado_autenticacion(request: Request):
             "requiere_configuracion": requiere_configuracion,
             "registro_publico": registro_publico,
             "registro_disponible": requiere_configuracion or registro_publico,
-            "aprovisionamiento_local_requerido": requiere_configuracion and ENTORNO == "production" and not registro_publico,
+            "aprovisionamiento_local_requerido": requiere_configuracion and ENTORNO == "production",
             "autenticado": usuario is not None,
             "usuario": _usuario_publico(usuario) if usuario else None,
         }
@@ -331,7 +331,9 @@ def iniciar_sesion_movil(datos: InicioSesion, request: Request):
 def solicitar_recuperacion(datos: SolicitudRecuperacion):
     service = AuthService()
     try:
-        service.solicitar_recuperacion(datos.correo)
+        entrega = service.solicitar_recuperacion(datos.correo)
+        if ENTORNO == "development" and not os.getenv("FINANCEOS_SMTP_HOST", "").strip():
+            return {"mensaje": "Modo local: no hay correo configurado. Si la cuenta existe, el enlace quedó en database/correo-desarrollo.txt."}
         return {"mensaje": "Si la cuenta existe, recibirás instrucciones para continuar."}
     finally:
         service.cerrar()
