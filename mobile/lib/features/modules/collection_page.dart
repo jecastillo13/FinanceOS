@@ -26,6 +26,24 @@ class _CollectionPageState extends State<CollectionPage> {
   late Future<List<dynamic>> _items = widget.loader(_api);
 
   void _reload() => setState(() => _items = widget.loader(_api));
+  bool get _canEdit => const {
+        'cuentas',
+        'categorias',
+        'movimientos',
+        'gastos-recurrentes',
+        'inversiones'
+      }.contains(widget.deleteResource);
+
+  Future<void> _edit(Map<String, dynamic> item) async {
+    final changed = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+            builder: (_) => RecordFormPage(
+                resource: widget.deleteResource!,
+                title: widget.title,
+                initial: item)));
+    if (changed == true) _reload();
+  }
 
   String _headline(Map<String, dynamic> item) =>
       '${item['nombre'] ?? item['descripcion'] ?? item['activo'] ?? item['categoria'] ?? 'Registro'}';
@@ -181,6 +199,11 @@ class _CollectionPageState extends State<CollectionPage> {
                                             style: const TextStyle(
                                                 color: FinanceColors.muted))
                                       ])),
+                                  if (_canEdit)
+                                    IconButton(
+                                        tooltip: 'Editar',
+                                        onPressed: () => _edit(item),
+                                        icon: const Icon(Icons.edit_outlined)),
                                   if (widget.deleteResource != null &&
                                       item['id'] != null)
                                     IconButton(

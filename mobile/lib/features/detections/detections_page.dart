@@ -12,7 +12,23 @@ class DetectionsPage extends StatefulWidget {
 class _DetectionsPageState extends State<DetectionsPage> {
   final _api = ApiClient(), _text = TextEditingController();
   late Future<List<dynamic>> _items = _api.detecciones();
+  List<dynamic> _categories = [], _cards = [], _accounts = [];
   bool _busy = false;
+  @override
+  void initState() {
+    super.initState();
+    Future.wait([_api.categorias(), _api.tarjetas(), _api.cuentas()])
+        .then((values) {
+      if (mounted) {
+        setState(() {
+          _categories = values[0];
+          _cards = values[1];
+          _accounts = values[2];
+        });
+      }
+    });
+  }
+
   void _reload() => setState(() => _items = _api.detecciones());
   Future<void> _analyze() async {
     if (_text.text.trim().isEmpty) return;
@@ -29,6 +45,103 @@ class _DetectionsPageState extends State<DetectionsPage> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  Future<void> _confirm(Map<String, dynamic> detection) async {
+    if (_categories.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Primero crea al menos una categoría.')));
+      return;
+    }
+    var categoryId = _categories.first['id'] as int;
+    int? cardId = detection['tarjeta_id'] as int?;
+    int? accountId;
+    final description = TextEditingController(text: '${detection['comercio']}');
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialog) => AlertDialog(
+          title: const Text('Confirmar compra'),
+          content: SingleChildScrollView(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Text('${detection['moneda']} ${detection['valor']}',
+                  style: const TextStyle(
+                      fontSize: 24, fontWeight: FontWeight.w900)),
+              const SizedBox(height: 12),
+              TextField(
+                  controller: description,
+                  decoration: const InputDecoration(labelText: 'Descripción')),
+              const SizedBox(height: 10),
+              DropdownButtonFormField<int>(
+                initialValue: categoryId,
+                decoration: const InputDecoration(labelText: 'Categoría'),
+                items: _categories
+                    .map((item) => DropdownMenuItem<int>(
+                        value: item['id'] as int,
+                        child: Text('${item['nombre']}')))
+                    .toList(),
+                onChanged: (value) =>
+                    setDialog(() => categoryId = value ?? categoryId),
+              ),
+              const SizedBox(height: 10),
+              DropdownButtonFormField<int?>(
+                initialValue: cardId,
+                decoration:
+                    const InputDecoration(labelText: 'Tarjeta (opcional)'),
+                items: [
+                  const DropdownMenuItem<int?>(
+                      value: null, child: Text('Ninguna')),
+                  ..._cards.map((item) => DropdownMenuItem<int?>(
+                      value: item['id'] as int,
+                      child: Text('${item['nombre']}'))),
+                ],
+                onChanged: (value) => setDialog(() => cardId = value),
+              ),
+              const SizedBox(height: 10),
+              DropdownButtonFormField<int?>(
+                initialValue: accountId,
+                decoration: const InputDecoration(
+                    labelText: 'Cuenta (si no usas tarjeta)'),
+                items: [
+                  const DropdownMenuItem<int?>(
+                      value: null, child: Text('Ninguna')),
+                  ..._accounts.map((item) => DropdownMenuItem<int?>(
+                      value: item['id'] as int,
+                      child: Text('${item['nombre']}'))),
+                ],
+                onChanged: (value) => setDialog(() => accountId = value),
+              ),
+            ]),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancelar')),
+            FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Crear movimiento')),
+          ],
+        ),
+      ),
+    );
+    if (accepted == true) {
+      try {
+        await _api.confirmarDeteccion(
+          deteccionId: detection['id'] as int,
+          categoriaId: categoryId,
+          tarjetaId: cardId,
+          cuentaId: accountId,
+          descripcion: description.text,
+        );
+        _reload();
+      } catch (error) {
+        if (mounted) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text('$error')));
+        }
+      }
+    }
+    description.dispose();
   }
 
   @override
@@ -110,6 +223,11 @@ class _DetectionsPageState extends State<DetectionsPage> {
                                 style: const TextStyle(
                                     color: FinanceColors.muted, fontSize: 12))
                           ])),
+                      IconButton(
+                          tooltip: 'Confirmar y crear movimiento',
+                          onPressed: () => _confirm(d),
+                          icon: const Icon(Icons.check_circle_outline_rounded,
+                              color: FinanceColors.success)),
                       IconButton(
                           tooltip: 'Descartar',
                           onPressed: () async {

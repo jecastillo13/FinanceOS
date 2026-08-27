@@ -5,8 +5,9 @@ import '../../core/design_system.dart';
 
 class RecordFormPage extends StatefulWidget {
   const RecordFormPage(
-      {super.key, required this.resource, required this.title});
+      {super.key, required this.resource, required this.title, this.initial});
   final String resource, title;
+  final Map<String, dynamic>? initial;
   @override
   State<RecordFormPage> createState() => _RecordFormPageState();
 }
@@ -27,7 +28,19 @@ class _RecordFormPageState extends State<RecordFormPage> {
   @override
   void initState() {
     super.initState();
+    final initial = widget.initial;
+    if (initial != null) {
+      _type = '${initial['tipo'] ?? _type}';
+      _currency = '${initial['moneda'] ?? _currency}';
+      _frequency = '${initial['frecuencia'] ?? _frequency}';
+      _initialPosition = initial['es_posicion_inicial'] != false;
+    }
     _load();
+  }
+
+  String initial(String key, [String fallback = '']) {
+    final value = widget.initial?[key];
+    return value == null ? fallback : '$value';
   }
 
   Future<void> _load() async {
@@ -36,10 +49,13 @@ class _RecordFormPageState extends State<RecordFormPage> {
       final result = await Future.wait([_api.cuentas(), _api.categorias()]);
       _accounts = result[0];
       _categories = result[1];
-      _account = _accounts.isEmpty ? null : _accounts.first['id'] as int;
+      _account = widget.initial?['cuenta_id'] as int? ??
+          widget.initial?['cuenta_origen_id'] as int? ??
+          (_accounts.isEmpty ? null : _accounts.first['id'] as int);
       _destination =
           _accounts.length > 1 ? _accounts[1]['id'] as int : _account;
-      _category = _categories.isEmpty ? null : _categories.first['id'] as int;
+      _category = widget.initial?['categoria_id'] as int? ??
+          (_categories.isEmpty ? null : _categories.first['id'] as int);
     } catch (error) {
       _error = '$error';
     }
@@ -96,7 +112,7 @@ class _RecordFormPageState extends State<RecordFormPage> {
     switch (widget.resource) {
       case 'cuentas':
         return [
-          field('Nombre', 'nombre'),
+          field('Nombre', 'nombre', initial: initial('nombre')),
           select(
               'Tipo',
               'Ahorros',
@@ -104,39 +120,47 @@ class _RecordFormPageState extends State<RecordFormPage> {
               (x) => _type = x),
           select('Moneda', _currency, ['COP', 'USD', 'EUR'],
               (x) => setState(() => _currency = x)),
-          field('Saldo inicial', 'valor',
-              keyboard: TextInputType.number, initial: '0')
+          if (widget.initial == null)
+            field('Saldo inicial', 'valor',
+                keyboard: TextInputType.number, initial: '0')
         ];
       case 'categorias':
         return [
-          field('Nombre', 'nombre'),
-          field('Grupo', 'grupo', initial: 'Otros'),
+          field('Nombre', 'nombre', initial: initial('nombre')),
+          field('Grupo', 'grupo', initial: initial('grupo', 'Otros')),
           select(
               'Tipo',
               _type,
               ['Gasto', 'Ingreso', 'Ahorro', 'Inversión', 'Transferencia'],
               (x) => setState(() => _type = x)),
-          field('Icono', 'icono', initial: '🏷️')
+          field('Icono', 'icono', initial: initial('icono', '🏷️'))
         ];
       case 'movimientos':
         return [
-          field('Descripción', 'nombre'),
-          field('Valor', 'valor', keyboard: TextInputType.number),
-          field('Fecha', 'fecha', initial: today),
+          field('Descripción', 'nombre', initial: initial('descripcion')),
+          field('Valor', 'valor',
+              keyboard: TextInputType.number,
+              initial: widget.initial == null
+                  ? ''
+                  : '${((widget.initial!['valor'] as num?) ?? 0).abs()}'),
+          field('Fecha', 'fecha', initial: initial('fecha', today)),
           accountSelect('Cuenta'),
           categorySelect(),
-          field('Observaciones', 'nota', required: false)
+          field('Observaciones', 'nota',
+              initial: initial('observaciones'), required: false)
         ];
       case 'gastos-recurrentes':
         return [
-          field('Nombre', 'nombre'),
-          field('Valor', 'valor', keyboard: TextInputType.number),
+          field('Nombre', 'nombre', initial: initial('nombre')),
+          field('Valor', 'valor',
+              keyboard: TextInputType.number, initial: initial('valor')),
           select(
               'Frecuencia',
               _frequency,
               ['Mensual', 'Quincenal', 'Semanal', 'Anual'],
               (x) => setState(() => _frequency = x)),
-          field('Próximo pago', 'fecha', initial: today),
+          field('Próximo pago', 'fecha',
+              initial: initial('proxima_fecha_pago', today)),
           categorySelect()
         ];
       case 'transferencias':
@@ -172,15 +196,21 @@ class _RecordFormPageState extends State<RecordFormPage> {
               value: _initialPosition,
               onChanged: (value) => setState(() => _initialPosition = value)),
           if (!_initialPosition) accountSelect('Cuenta que paga'),
-          field('Fecha de compra o saldo inicial', 'fecha', initial: today),
-          field('Activo', 'nombre'),
-          field('Tipo de activo', 'tipo', initial: 'ETF'),
-          field('Cantidad', 'cantidad', keyboard: TextInputType.number),
-          field('Costo de compra', 'compra', keyboard: TextInputType.number),
-          field('Valor actual', 'actual', keyboard: TextInputType.number),
+          field('Fecha de compra o saldo inicial', 'fecha',
+              initial: initial('fecha_apertura', today)),
+          field('Activo', 'nombre', initial: initial('activo')),
+          field('Tipo de activo', 'tipo', initial: initial('tipo', 'ETF')),
+          field('Cantidad', 'cantidad',
+              keyboard: TextInputType.number, initial: initial('cantidad')),
+          field('Costo de compra', 'compra',
+              keyboard: TextInputType.number,
+              initial: initial('precio_compra')),
+          field('Valor actual', 'actual',
+              keyboard: TextInputType.number,
+              initial: initial('precio_actual')),
           select('Moneda', _currency, ['USD', 'COP', 'EUR'],
               (x) => setState(() => _currency = x)),
-          field('Broker', 'nota', required: false)
+          field('Broker', 'nota', initial: initial('broker'), required: false)
         ];
       case 'tarjetas':
         return [
@@ -209,40 +239,72 @@ class _RecordFormPageState extends State<RecordFormPage> {
     try {
       switch (widget.resource) {
         case 'cuentas':
-          await _api.crearCuenta({
+          final body = {
             'nombre': c('nombre').text,
             'tipo': _type,
-            'saldo': number('valor'),
-            'moneda': _currency
-          });
+            'moneda': _currency,
+            'color': '${widget.initial?['color'] ?? '#6255e7'}',
+            'icono': '${widget.initial?['icono'] ?? '🏦'}',
+          };
+          if (widget.initial == null) {
+            await _api.crearCuenta({...body, 'saldo': number('valor')});
+          } else {
+            await _api.actualizar(
+                'cuentas', widget.initial!['id'] as int, body);
+          }
           break;
         case 'categorias':
-          await _api.crearCategoria({
+          final body = {
             'nombre': c('nombre').text,
             'grupo': c('grupo').text,
             'tipo': _type,
             'icono': c('icono').text,
-            'color': '#7767F5',
-            'orden': 0
-          });
+            'color': '${widget.initial?['color'] ?? '#7767F5'}',
+            'orden': widget.initial?['orden'] ?? 0,
+            'activa': widget.initial?['activa'] ?? true,
+          };
+          if (widget.initial == null) {
+            await _api.crearCategoria(body);
+          } else {
+            await _api.actualizar(
+                'categorias', widget.initial!['id'] as int, body);
+          }
           break;
         case 'movimientos':
-          await _api.crearMovimiento(
-              fecha: DateTime.parse(c('fecha').text),
-              descripcion: c('nombre').text,
-              valor: number('valor'),
-              cuentaId: _account!,
-              categoriaId: _category!,
-              observaciones: c('nota').text);
+          if (widget.initial == null) {
+            await _api.crearMovimiento(
+                fecha: DateTime.parse(c('fecha').text),
+                descripcion: c('nombre').text,
+                valor: number('valor'),
+                cuentaId: _account!,
+                categoriaId: _category!,
+                observaciones: c('nota').text);
+          } else {
+            await _api.actualizar('movimientos', widget.initial!['id'] as int, {
+              'fecha': c('fecha').text,
+              'descripcion': c('nombre').text,
+              'valor': number('valor'),
+              'cuenta_id': _account,
+              'categoria_id': _category,
+              'observaciones': c('nota').text,
+            });
+          }
           break;
         case 'gastos-recurrentes':
-          await _api.crearRecurrente({
+          final body = {
             'nombre': c('nombre').text,
             'valor': number('valor'),
             'frecuencia': _frequency,
             'proxima_fecha_pago': c('fecha').text,
-            'categoria_id': _category
-          });
+            'categoria_id': _category,
+            'activa': widget.initial?['activa'] ?? true,
+          };
+          if (widget.initial == null) {
+            await _api.crearRecurrente(body);
+          } else {
+            await _api.actualizar(
+                'gastos-recurrentes', widget.initial!['id'] as int, body);
+          }
           break;
         case 'transferencias':
           await _api.crearTransferencia({
@@ -272,7 +334,7 @@ class _RecordFormPageState extends State<RecordFormPage> {
           });
           break;
         case 'inversiones':
-          await _api.crearInversion({
+          final body = {
             'activo': c('nombre').text,
             'tipo': c('tipo').text,
             'cantidad': number('cantidad'),
@@ -284,7 +346,13 @@ class _RecordFormPageState extends State<RecordFormPage> {
             'fecha_apertura': c('fecha').text,
             'es_posicion_inicial': _initialPosition,
             'cuenta_origen_id': _initialPosition ? null : _account
-          });
+          };
+          if (widget.initial == null) {
+            await _api.crearInversion(body);
+          } else {
+            await _api.actualizar(
+                'inversiones', widget.initial!['id'] as int, body);
+          }
           break;
         case 'tarjetas':
           await _api.crearTarjeta({
@@ -293,7 +361,7 @@ class _RecordFormPageState extends State<RecordFormPage> {
             'ultimos_cuatro': c('ultimos').text,
             'tipo': _type == 'Crédito' ? 'Credito' : 'Debito',
             'moneda': _currency,
-            'cuenta_id': _account
+            'cuenta_id': _type == 'Crédito' ? null : _account
           });
           break;
       }
@@ -307,7 +375,9 @@ class _RecordFormPageState extends State<RecordFormPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-      appBar: AppBar(title: Text('Nuevo · ${widget.title}')),
+      appBar: AppBar(
+          title: Text(
+              '${widget.initial == null ? 'Nuevo' : 'Editar'} · ${widget.title}')),
       body: FinanceAurora(
           child: SafeArea(
               child: _loading
@@ -322,7 +392,8 @@ class _RecordFormPageState extends State<RecordFormPage> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.stretch,
                                     children: [
-                                  Text('Crear ${widget.title.toLowerCase()}',
+                                  Text(
+                                      '${widget.initial == null ? 'Crear' : 'Editar'} ${widget.title.toLowerCase()}',
                                       style: const TextStyle(
                                           fontSize: 23,
                                           fontWeight: FontWeight.w900)),

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
@@ -31,15 +32,30 @@ class ApiClient {
 
   Future<Map<String, dynamic>> authStatus() =>
       _getObject('/api/v1/auth/status');
+  Future<Map<String, dynamic>> registrar(
+          String nombre, String correo, String password) =>
+      _postObject('/api/v1/auth/registro',
+          {'nombre': nombre, 'correo': correo, 'password': password});
+  Future<Map<String, dynamic>> solicitarRecuperacion(String correo) =>
+      _postObject('/api/v1/auth/recuperacion/solicitar', {'correo': correo});
+  Future<Map<String, dynamic>> restablecerPassword(
+          String token, String password) =>
+      _postObject('/api/v1/auth/recuperacion/restablecer',
+          {'token': token, 'password': password});
   Future<Map<String, dynamic>> prepararMfa() =>
       _postObject('/api/v1/auth/mfa/preparar', {});
   Future<Map<String, dynamic>> confirmarMfa(String codigo) =>
       _postObject('/api/v1/auth/mfa/confirmar', {'codigo': codigo});
+  Future<Map<String, dynamic>> desactivarMfa(String password, String codigo) =>
+      _postObject('/api/v1/auth/mfa/desactivar',
+          {'password': password, 'codigo': codigo});
   Future<List<dynamic>> usuarios() => _getList('/api/v1/auth/usuarios');
   Future<List<dynamic>> sesiones() => _getList('/api/v1/auth/sesiones');
   Future<void> revocarSesion(int id) => _delete('/api/v1/auth/sesiones/$id');
   Future<Map<String, dynamic>> crearUsuario(Map<String, dynamic> body) =>
       _postObject('/api/v1/auth/usuarios', body);
+  Future<Map<String, dynamic>> actualizarUsuario(int id, bool activo) =>
+      _putObject('/api/v1/auth/usuarios/$id', {'activo': activo});
   Future<void> logout() async {
     await _postObject('/api/v1/auth/logout', {});
     sessionToken = null;
@@ -73,6 +89,9 @@ class ApiClient {
   Future<List<dynamic>> tasas() => _getList('/api/v1/monedas/tasas');
   Future<Map<String, dynamic>> reporte({required int anio, required int mes}) =>
       _getObject('/api/v1/reportes/$anio/$mes/resumen');
+  Future<Uint8List> descargarReporte(
+          {required int anio, required int mes, required String formato}) =>
+      _download('/api/v1/reportes/$anio/$mes/$formato');
   Future<Map<String, dynamic>> estadoRespaldo() =>
       _getObject('/api/v1/configuracion/respaldo');
 
@@ -105,6 +124,10 @@ class ApiClient {
       });
   Future<Map<String, dynamic>> actualizarTasas() =>
       _postObject('/api/v1/monedas/tasas/actualizar', {});
+  Future<Map<String, dynamic>> convertir(
+          double valor, String origen, String destino) =>
+      _getObject(
+          '/api/v1/monedas/convertir?valor=$valor&origen=$origen&destino=$destino');
 
   Future<void> eliminar(String recurso, int id) =>
       _delete('/api/v1/$recurso/$id');
@@ -140,11 +163,13 @@ class ApiClient {
     required int categoriaId,
     int? tarjetaId,
     int? cuentaId,
+    String? descripcion,
   }) =>
       _postObject('/api/v1/detecciones/$deteccionId/confirmar', {
         'categoria_id': categoriaId,
         'tarjeta_id': tarjetaId,
         'cuenta_id': cuentaId,
+        'descripcion': descripcion,
       });
 
   Future<Map<String, dynamic>> descartarDeteccion(int deteccionId) =>
@@ -247,6 +272,15 @@ class ApiClient {
     if (response.statusCode >= 400) {
       throw ApiException(response.statusCode, response.body);
     }
+  }
+
+  Future<Uint8List> _download(String path) async {
+    final response =
+        await _client.get(Uri.parse('$apiBaseUrl$path'), headers: _headers);
+    if (response.statusCode >= 400) {
+      throw ApiException(response.statusCode, response.body);
+    }
+    return response.bodyBytes;
   }
 
   String _fecha(DateTime value) => value.toIso8601String().split('T').first;

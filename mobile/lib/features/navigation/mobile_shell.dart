@@ -5,6 +5,9 @@ import '../../core/design_system.dart';
 import '../dashboard/dashboard_page.dart';
 import '../detections/detections_page.dart';
 import '../goals/goals_page.dart';
+import '../cards/cards_page.dart';
+import '../currencies/currencies_page.dart';
+import '../recurring/recurring_page.dart';
 import '../modules/collection_page.dart';
 import '../receipts/receipt_scan_page.dart';
 import '../reports/reports_page.dart';
@@ -167,8 +170,27 @@ class _MobileShellState extends State<MobileShell> {
                 onTap: () {
                   if (e.resource == 'metas') {
                     Navigator.pop(context);
-                    Navigator.push(context, MaterialPageRoute(
-                        builder: (_) => const GoalsPage()));
+                    Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const GoalsPage()));
+                  } else if (e.resource == 'tarjetas') {
+                    Navigator.pop(context);
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const MobileCardsPage()));
+                  } else if (e.resource == 'gastos-recurrentes') {
+                    Navigator.pop(context);
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const RecurringPage()));
+                  } else if (e.resource == null &&
+                      e.title == 'Monedas y tasas') {
+                    Navigator.pop(context);
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const MobileCurrenciesPage()));
                   } else {
                     _collection(e.title, e.icon, e.loader, e.resource);
                   }

@@ -128,6 +128,54 @@ class _SettingsPageState extends State<SettingsPage> {
     if (saved == true) setState(() => users = load());
   }
 
+  Future<void> deactivateMfa() async {
+    final password = TextEditingController(), code = TextEditingController();
+    final accepted = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+              title: const Text('Desactivar MFA'),
+              content: Column(mainAxisSize: MainAxisSize.min, children: [
+                const Text(
+                    'Esto reduce la protección de tu cuenta. Confirma con tu contraseña y el código actual.'),
+                const SizedBox(height: 12),
+                TextField(
+                    controller: password,
+                    obscureText: true,
+                    decoration: const InputDecoration(labelText: 'Contraseña')),
+                const SizedBox(height: 10),
+                TextField(
+                    controller: code,
+                    keyboardType: TextInputType.number,
+                    maxLength: 6,
+                    decoration: const InputDecoration(labelText: 'Código MFA')),
+              ]),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('Cancelar')),
+                FilledButton(
+                    onPressed: () async {
+                      try {
+                        await _api.desactivarMfa(password.text, code.text);
+                        if (context.mounted) Navigator.pop(context, true);
+                      } catch (error) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context)
+                              .showSnackBar(SnackBar(content: Text('$error')));
+                        }
+                      }
+                    },
+                    child: const Text('Desactivar')),
+              ],
+            ));
+    if (accepted == true && mounted) {
+      setState(() => message =
+          'MFA desactivado. Puedes volver a activarlo cuando quieras.');
+    }
+    password.dispose();
+    code.dispose();
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('Configuración')),
@@ -153,6 +201,11 @@ class _SettingsPageState extends State<SettingsPage> {
                       onPressed: activateMfa,
                       icon: const Icon(Icons.shield_rounded),
                       label: const Text('Activar autenticación MFA')),
+                  const SizedBox(height: 8),
+                  TextButton.icon(
+                      onPressed: deactivateMfa,
+                      icon: const Icon(Icons.shield_outlined),
+                      label: const Text('Desactivar MFA')),
                   const SizedBox(height: 10),
                   OutlinedButton.icon(
                       onPressed: createUser,
@@ -192,9 +245,11 @@ class _SettingsPageState extends State<SettingsPage> {
                               : IconButton(
                                   icon: const Icon(Icons.logout_rounded),
                                   onPressed: () async {
-                                    await _api.revocarSesion(session['id'] as int);
+                                    await _api
+                                        .revocarSesion(session['id'] as int);
                                     if (mounted) {
-                                      setState(() => sessions = _api.sesiones());
+                                      setState(
+                                          () => sessions = _api.sesiones());
                                     }
                                   }),
                         )),
@@ -215,7 +270,24 @@ class _SettingsPageState extends State<SettingsPage> {
                           const CircleAvatar(child: Icon(Icons.person_rounded)),
                       title: Text('${u['nombre']}'),
                       subtitle: Text('${u['correo']}'),
-                      trailing: Text('${u['rol']}')))
+                      trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Text('${u['rol']}'),
+                        Switch(
+                          value: u['activo'] == true,
+                          onChanged: (active) async {
+                            try {
+                              await _api.actualizarUsuario(
+                                  u['id'] as int, active);
+                              if (mounted) setState(() => users = load());
+                            } catch (error) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('$error')));
+                              }
+                            }
+                          },
+                        ),
+                      ])))
                 ])),
           ]),
         ))),

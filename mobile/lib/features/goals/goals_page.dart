@@ -45,8 +45,8 @@ class _GoalsPageState extends State<GoalsPage> {
     final changed = await Navigator.push<bool>(
         context,
         MaterialPageRoute(
-            builder: (_) => const RecordFormPage(
-                resource: 'metas', title: 'Meta')));
+            builder: (_) =>
+                const RecordFormPage(resource: 'metas', title: 'Meta')));
     if (changed == true) _reload();
   }
 
@@ -140,12 +140,13 @@ class _GoalsPageState extends State<GoalsPage> {
                     const SizedBox(height: 10),
                     DropdownButtonFormField<int>(
                         initialValue: account,
-                        decoration:
-                            const InputDecoration(labelText: 'Cuenta que pagará'),
+                        decoration: const InputDecoration(
+                            labelText: 'Cuenta que pagará'),
                         items: _accounts
                             .map((item) => DropdownMenuItem<int>(
                                 value: item['id'] as int,
-                                child: Text('${item['nombre']} (${item['moneda']})')))
+                                child: Text(
+                                    '${item['nombre']} (${item['moneda']})')))
                             .toList(),
                         onChanged: (id) => setDialogState(() => account = id!)),
                     const SizedBox(height: 10),
@@ -158,7 +159,8 @@ class _GoalsPageState extends State<GoalsPage> {
                                 value: item['id'] as int,
                                 child: Text('${item['nombre']}')))
                             .toList(),
-                        onChanged: (id) => setDialogState(() => category = id!)),
+                        onChanged: (id) =>
+                            setDialogState(() => category = id!)),
                   ])),
                   actions: [
                     TextButton(
@@ -215,7 +217,8 @@ class _GoalsPageState extends State<GoalsPage> {
                             children: [
                               FinanceSurface(
                                   child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                     Text('Dos acciones diferentes',
                                         style: Theme.of(context)
@@ -233,7 +236,8 @@ class _GoalsPageState extends State<GoalsPage> {
                                 const FinanceSurface(
                                     child: Padding(
                                         padding: EdgeInsets.all(20),
-                                        child: Text('Crea tu primera meta para comenzar.')))
+                                        child: Text(
+                                            'Crea tu primera meta para comenzar.')))
                               else
                                 ...goals.map((raw) => _GoalCard(
                                     goal: raw as Map<String, dynamic>,
@@ -262,7 +266,8 @@ class _GoalCard extends StatelessWidget {
         padding: const EdgeInsets.only(bottom: 14),
         child: FinanceSurface(
             accent: FinanceColors.primary,
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
                 const Icon(Icons.track_changes_rounded,
                     color: FinanceColors.cyan),
@@ -283,15 +288,22 @@ class _GoalCard extends StatelessWidget {
               ],
               const SizedBox(height: 15),
               LinearProgressIndicator(
-                  value: percentage.toDouble(), minHeight: 8,
+                  value: percentage.toDouble(),
+                  minHeight: 8,
                   borderRadius: BorderRadius.circular(20)),
               const SizedBox(height: 16),
               Row(children: [
-                Expanded(child: _Amount('Ahorro anotado',
-                    money(goal['aportado'], currency), 'No modifica cuentas')),
+                Expanded(
+                    child: _Amount(
+                        'Ahorro anotado',
+                        money(goal['aportado'], currency),
+                        'No modifica cuentas')),
                 const SizedBox(width: 10),
-                Expanded(child: _Amount('Pagado realmente',
-                    money(goal['pagado'], currency), 'Sí descuenta una cuenta')),
+                Expanded(
+                    child: _Amount(
+                        'Pagado realmente',
+                        money(goal['pagado'], currency),
+                        'Sí descuenta una cuenta')),
               ]),
               const SizedBox(height: 10),
               _Amount('Falta por pagar', money(goal['pendiente'], currency),
@@ -300,7 +312,8 @@ class _GoalCard extends StatelessWidget {
               FilledButton.tonalIcon(
                   onPressed: contribute,
                   icon: const Icon(Icons.savings_outlined),
-                  label: const Text('Anotar ahorro reservado · no mueve dinero')),
+                  label:
+                      const Text('Anotar ahorro reservado · no mueve dinero')),
               const SizedBox(height: 9),
               FilledButton.icon(
                   onPressed: pay,

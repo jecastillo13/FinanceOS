@@ -195,14 +195,19 @@ List<_FinancialInsight> _buildInsights(Map<String, dynamic> summary,
 
   final distribution = (charts['distribucion'] as List<dynamic>? ?? const [])
       .cast<Map<String, dynamic>>();
-  final positiveTotal = distribution.fold<double>(0, (total, item) =>
-      total + math.max(0, (item['saldo_cop'] as num?)?.toDouble() ?? 0));
+  final positiveTotal = distribution.fold<double>(
+      0,
+      (total, item) =>
+          total + math.max(0, (item['saldo_cop'] as num?)?.toDouble() ?? 0));
   if (distribution.isNotEmpty && positiveTotal > 0) {
     final sorted = [...distribution]..sort((a, b) =>
-        ((b['saldo_cop'] as num?) ?? 0).compareTo((a['saldo_cop'] as num?) ?? 0));
+        ((b['saldo_cop'] as num?) ?? 0)
+            .compareTo((a['saldo_cop'] as num?) ?? 0));
     final largest = sorted.first;
     final percentage = (((largest['saldo_cop'] as num?)?.toDouble() ?? 0) /
-            positiveTotal * 100).round();
+            positiveTotal *
+            100)
+        .round();
     result.add(_FinancialInsight('Distribución de tus cuentas',
         '${largest['cuenta'] ?? 'Tu cuenta principal'} concentra $percentage% de tu dinero disponible.'));
   } else {
@@ -223,17 +228,24 @@ class _FinanceFlowCard extends StatelessWidget {
   const _FinanceFlowCard();
   @override
   Widget build(BuildContext context) => FinanceSurface(
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const Text('CÓMO FUNCIONA FINANCEOS',
-            style: TextStyle(color: FinanceColors.cyan, fontSize: 11,
-                letterSpacing: 1.1, fontWeight: FontWeight.w800)),
+            style: TextStyle(
+                color: FinanceColors.cyan,
+                fontSize: 11,
+                letterSpacing: 1.1,
+                fontWeight: FontWeight.w800)),
         const SizedBox(height: 6),
         Text('Un solo flujo, no módulos aislados',
             style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 14),
-        const _FlowStep(1, 'Crea tus cuentas', 'Registra los saldos con los que empiezas.'),
-        const _FlowStep(2, 'Registra ingresos y gastos', 'Se actualizan cuentas, categorías y presupuestos.'),
-        const _FlowStep(3, 'Planea y revisa', 'Usa metas, inversiones y reportes para decidir.'),
+        const _FlowStep(
+            1, 'Crea tus cuentas', 'Registra los saldos con los que empiezas.'),
+        const _FlowStep(2, 'Registra ingresos y gastos',
+            'Se actualizan cuentas, categorías y presupuestos.'),
+        const _FlowStep(3, 'Planea y revisa',
+            'Usa metas, inversiones y reportes para decidir.'),
       ]));
 }
 
@@ -245,13 +257,21 @@ class _FlowStep extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        CircleAvatar(radius: 16, backgroundColor: FinanceColors.primary.withValues(alpha: .2),
-            child: Text('$number', style: const TextStyle(color: FinanceColors.cyan, fontWeight: FontWeight.w800))),
+        CircleAvatar(
+            radius: 16,
+            backgroundColor: FinanceColors.primary.withValues(alpha: .2),
+            child: Text('$number',
+                style: const TextStyle(
+                    color: FinanceColors.cyan, fontWeight: FontWeight.w800))),
         const SizedBox(width: 11),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Expanded(
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
           const SizedBox(height: 3),
-          Text(detail, style: const TextStyle(color: FinanceColors.muted, fontSize: 12, height: 1.35)),
+          Text(detail,
+              style: const TextStyle(
+                  color: FinanceColors.muted, fontSize: 12, height: 1.35)),
         ]))
       ]));
 }
@@ -266,34 +286,61 @@ class _FinancialAnalysisCard extends StatelessWidget {
         const Row(children: [
           Icon(Icons.auto_awesome_rounded, color: FinanceColors.cyan),
           SizedBox(width: 9),
-          Expanded(child: Text('Análisis financiero local', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900))),
+          Expanded(
+              child: Text('Análisis financiero local',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900))),
         ]),
         const SizedBox(height: 5),
-        const Text('Calculado en FinanceOS; tus datos no se envían a una IA externa.',
-            style: TextStyle(color: FinanceColors.muted, fontSize: 12, height: 1.4)),
+        const Text(
+            'Calculado en FinanceOS; tus datos no se envían a una IA externa.',
+            style: TextStyle(
+                color: FinanceColors.muted, fontSize: 12, height: 1.4)),
         const SizedBox(height: 14),
         ...insights.take(2).map((item) => Padding(
-          padding: const EdgeInsets.only(bottom: 11),
-          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Icon(Icons.insights_rounded, size: 18, color: FinanceColors.primary),
-            const SizedBox(width: 9),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(item.title, style: const TextStyle(fontWeight: FontWeight.w800)),
-              const SizedBox(height: 3),
-              Text(item.detail, style: const TextStyle(color: FinanceColors.muted, fontSize: 12, height: 1.4)),
-            ]))
-          ]))),
-        TextButton.icon(onPressed: () => showModalBottomSheet<void>(
-          context: context, showDragHandle: true, builder: (context) => SafeArea(
-            child: ListView(padding: const EdgeInsets.fromLTRB(20, 8, 20, 28), children: [
-              const Text('Qué está pasando con tu dinero', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
-              const SizedBox(height: 6),
-              const Text('Flujo, concentración y patrimonio invertido.', style: TextStyle(color: FinanceColors.muted)),
-              const SizedBox(height: 16),
-              ...insights.map((item) => ListTile(contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.analytics_outlined, color: FinanceColors.cyan),
-                title: Text(item.title), subtitle: Text(item.detail))),
-            ]))), icon: const Icon(Icons.open_in_full_rounded), label: const Text('Ver análisis completo')),
+            padding: const EdgeInsets.only(bottom: 11),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Icon(Icons.insights_rounded,
+                  size: 18, color: FinanceColors.primary),
+              const SizedBox(width: 9),
+              Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                    Text(item.title,
+                        style: const TextStyle(fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 3),
+                    Text(item.detail,
+                        style: const TextStyle(
+                            color: FinanceColors.muted,
+                            fontSize: 12,
+                            height: 1.4)),
+                  ]))
+            ]))),
+        TextButton.icon(
+            onPressed: () => showModalBottomSheet<void>(
+                context: context,
+                showDragHandle: true,
+                builder: (context) => SafeArea(
+                        child: ListView(
+                            padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+                            children: [
+                          const Text('Qué está pasando con tu dinero',
+                              style: TextStyle(
+                                  fontSize: 22, fontWeight: FontWeight.w900)),
+                          const SizedBox(height: 6),
+                          const Text(
+                              'Flujo, concentración y patrimonio invertido.',
+                              style: TextStyle(color: FinanceColors.muted)),
+                          const SizedBox(height: 16),
+                          ...insights.map((item) => ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: const Icon(Icons.analytics_outlined,
+                                  color: FinanceColors.cyan),
+                              title: Text(item.title),
+                              subtitle: Text(item.detail))),
+                        ]))),
+            icon: const Icon(Icons.open_in_full_rounded),
+            label: const Text('Ver análisis completo')),
       ]));
 }
 

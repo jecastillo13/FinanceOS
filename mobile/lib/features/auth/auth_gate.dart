@@ -23,6 +23,7 @@ class _AuthGateState extends State<AuthGate> {
       _authenticated = false,
       _busy = false,
       _needsMfa = false;
+  bool _registrationAvailable = false;
   String? _error;
 
   @override
@@ -32,6 +33,10 @@ class _AuthGateState extends State<AuthGate> {
   }
 
   Future<void> _restore() async {
+    try {
+      final publicState = await _api.authStatus();
+      _registrationAvailable = publicState['registro_disponible'] == true;
+    } catch (_) {}
     final token = await _storage.read(key: 'financeos_session');
     if (token != null) {
       ApiClient.sessionToken = token;
@@ -46,6 +51,138 @@ class _AuthGateState extends State<AuthGate> {
       }
     }
     if (mounted) setState(() => _loading = false);
+  }
+
+  Future<void> _register() async {
+    final name = TextEditingController();
+    final email = TextEditingController();
+    final password = TextEditingController();
+    final accepted = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+              title: const Text('Crear tu espacio privado'),
+              content: SingleChildScrollView(
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                const Text(
+                    'Este usuario será propietario solo si es la primera cuenta o si el registro público está habilitado.'),
+                const SizedBox(height: 12),
+                TextField(
+                    controller: name,
+                    decoration: const InputDecoration(labelText: 'Nombre')),
+                const SizedBox(height: 10),
+                TextField(
+                    controller: email,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: const InputDecoration(labelText: 'Correo')),
+                const SizedBox(height: 10),
+                TextField(
+                    controller: password,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                        labelText: 'Contraseña segura (mínimo 12)')),
+              ])),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('Cancelar')),
+                FilledButton(
+                    onPressed: () async {
+                      try {
+                        await _api.registrar(
+                            name.text.trim(), email.text.trim(), password.text);
+                        if (context.mounted) Navigator.pop(context, true);
+                      } catch (error) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context)
+                              .showSnackBar(SnackBar(content: Text('$error')));
+                        }
+                      }
+                    },
+                    child: const Text('Crear cuenta')),
+              ],
+            ));
+    if (accepted == true && mounted) {
+      setState(() {
+        _email.text = email.text;
+        _error =
+            'Cuenta creada. Revisa tu correo si se solicita verificación y luego inicia sesión.';
+      });
+    }
+    name.dispose();
+    email.dispose();
+    password.dispose();
+  }
+
+  Future<void> _recover() async {
+    final email = TextEditingController(text: _email.text);
+    final token = TextEditingController();
+    final password = TextEditingController();
+    var requested = false;
+    await showDialog<void>(
+        context: context,
+        builder: (context) => StatefulBuilder(
+            builder: (context, setDialog) => AlertDialog(
+                  title: const Text('Recuperar contraseña'),
+                  content: SingleChildScrollView(
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    TextField(
+                        controller: email,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: const InputDecoration(labelText: 'Correo')),
+                    if (requested) ...[
+                      const SizedBox(height: 12),
+                      const Text(
+                          'Abre el enlace recibido. Si la aplicación no lo abre, pega aquí el token del enlace.'),
+                      const SizedBox(height: 10),
+                      TextField(
+                          controller: token,
+                          decoration: const InputDecoration(
+                              labelText: 'Token de recuperación')),
+                      const SizedBox(height: 10),
+                      TextField(
+                          controller: password,
+                          obscureText: true,
+                          decoration: const InputDecoration(
+                              labelText: 'Nueva contraseña (mínimo 12)')),
+                    ],
+                  ])),
+                  actions: [
+                    TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Cerrar')),
+                    FilledButton(
+                        onPressed: () async {
+                          try {
+                            if (!requested) {
+                              final response = await _api
+                                  .solicitarRecuperacion(email.text.trim());
+                              setDialog(() => requested = true);
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                        content:
+                                            Text('${response['mensaje']}')));
+                              }
+                            } else {
+                              await _api.restablecerPassword(
+                                  token.text.trim(), password.text);
+                              if (context.mounted) Navigator.pop(context);
+                            }
+                          } catch (error) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('$error')));
+                            }
+                          }
+                        },
+                        child: Text(requested
+                            ? 'Cambiar contraseña'
+                            : 'Enviar instrucciones')),
+                  ],
+                )));
+    email.dispose();
+    token.dispose();
+    password.dispose();
   }
 
   Future<void> _login() async {
@@ -166,6 +303,15 @@ class _AuthGateState extends State<AuthGate> {
                             : const Icon(Icons.login_rounded),
                         label: Text(
                             _busy ? 'Verificando…' : 'Entrar de forma segura')),
+                    const SizedBox(height: 8),
+                    TextButton(
+                        onPressed: _recover,
+                        child: const Text('¿Olvidaste tu contraseña?')),
+                    if (_registrationAvailable)
+                      OutlinedButton.icon(
+                          onPressed: _register,
+                          icon: const Icon(Icons.person_add_alt_1_rounded),
+                          label: const Text('Crear una cuenta nueva')),
                     const SizedBox(height: 14),
                     const Row(children: [
                       Icon(Icons.verified_user_rounded,
