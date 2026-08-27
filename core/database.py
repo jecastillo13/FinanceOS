@@ -295,11 +295,20 @@ def _migrar_cuentas_producto(conexion):
     cambios = {
         "institucion": "VARCHAR(100) NOT NULL DEFAULT ''",
         "activa": "INTEGER NOT NULL DEFAULT 1",
-        "actualizada_en": "DATETIME DEFAULT CURRENT_TIMESTAMP",
+        # SQLite rechaza funciones como CURRENT_TIMESTAMP al añadir columnas.
+        # Se añade sin default y se completa en una segunda sentencia segura.
+        "actualizada_en": (
+            "DATETIME" if engine.dialect.name == "sqlite"
+            else "TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP"
+        ),
     }
     for nombre, definicion in cambios.items():
         if nombre not in columnas:
             conexion.execute(text(f"ALTER TABLE cuentas ADD COLUMN {nombre} {definicion}"))
+    conexion.execute(text(
+        "UPDATE cuentas SET actualizada_en = CURRENT_TIMESTAMP "
+        "WHERE actualizada_en IS NULL"
+    ))
 
 
 def _ejecutar_migraciones():

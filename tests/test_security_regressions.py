@@ -9,12 +9,13 @@ from openpyxl import load_workbook
 from pydantic import ValidationError
 from PIL import Image
 from pypdf import PdfReader, PdfWriter
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from api.schemas import CuentaCrear
 from core.database import Base
+from core import database as database_module
 from core.models import SesionUsuario
 from core.services import auth_service
 from core.services.attachment_service import AttachmentService
@@ -152,3 +153,31 @@ def test_mfa_descifra_clave_anterior_y_recifra_con_actual(monkeypatch):
     servicio = MfaService()
     assert servicio.descifrar(cifrado) == "SECRETO"
     assert servicio.necesita_rotacion(cifrado)
+
+
+def test_migracion_cuentas_legacy_es_compatible_con_sqlite(tmp_path, monkeypatch):
+    legacy_engine = create_engine(f"sqlite:///{tmp_path / 'legacy.db'}")
+    with legacy_engine.begin() as conexion:
+        conexion.execute(text(
+            "CREATE TABLE cuentas (id INTEGER PRIMARY KEY, nombre VARCHAR(100), "
+            "tipo VARCHAR(50), saldo NUMERIC, moneda VARCHAR(10), "
+            "color VARCHAR(20), icono VARCHAR(50))"
+        ))
+        conexion.execute(text(
+            "INSERT INTO cuentas (id, nombre, tipo, saldo, moneda) "
+            "VALUES (1, 'Cuenta existente', 'Ahorros', 100, 'COP')"
+        ))
+    monkeypatch.setattr(database_module, "engine", legacy_engine)
+    with legacy_engine.begin() as conexion:
+        database_module._migrar_cuentas_producto(conexion)
+
+    columnas = {item["name"] for item in inspect(legacy_engine).get_columns("cuentas")}
+    assert {"institucion", "activa", "actualizada_en"}.issubset(columnas)
+    with legacy_engine.connect() as conexion:
+        fila = conexion.execute(text(
+            "SELECT nombre, saldo, activa, actualizada_en FROM cuentas WHERE id = 1"
+        )).mappings().one()
+    assert fila["nombre"] == "Cuenta existente"
+    assert fila["saldo"] == 100
+    assert fila["activa"] == 1
+    assert fila["actualizada_en"] is not None
