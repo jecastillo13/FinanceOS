@@ -66,11 +66,10 @@ export default function InvestmentsPage() {
     <section className="module-page">
       <div className="investment-head">
         <div>
-          <span className="eyebrow text-cyan-200">WEALTH · PORTAFOLIO</span>
-          <h2>Capital en movimiento</h2>
+          <span className="eyebrow text-cyan-200">DINERO QUE HAS INVERTIDO</span>
+          <h2>Inversiones y rendimiento</h2>
           <p>
-            Rendimiento consolidado en pesos, posiciones conservadas en su
-            moneda original.
+            Registra posiciones iniciales o nuevas compras. El valor se conserva en su moneda y se consolida en COP.
           </p>
         </div>
         <button className="primary-action" onClick={() => {setEditing(null);setInitialPosition(true);setOpen(true)}}>

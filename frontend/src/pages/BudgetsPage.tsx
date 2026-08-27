@@ -103,10 +103,10 @@ export default function BudgetsPage() {
       <div className="module-hero budget-hero">
         <div>
           <span className="eyebrow text-cyan-200">
-            PLANIFICACIÓN INTELIGENTE
+            CUÁNTO PUEDES GASTAR
           </span>
-          <h2>Presupuestos vivos</h2>
-          <p>Decide antes de gastar y observa el avance en tiempo real.</p>
+          <h2>Presupuestos mensuales</h2>
+          <p>Define un límite por categoría. Cada gasto registrado descuenta automáticamente el valor disponible.</p>
         </div>
         <button
           className="primary-action"

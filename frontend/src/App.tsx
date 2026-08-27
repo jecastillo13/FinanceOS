@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { Fragment, lazy, Suspense, useEffect, useState } from "react";
 import {
   ArrowDownRight,
   ArrowLeftRight,
@@ -55,19 +55,19 @@ const cop = new Intl.NumberFormat("es-CO", {
   maximumFractionDigits: 0,
 });
 const nav = [
-  ["Centro", LayoutDashboard],
-  ["Cuentas", WalletCards],
-  ["Tarjetas", CreditCard],
-  ["Categorías", Tags],
-  ["Movimientos", ReceiptText],
-  ["Recurrentes", Repeat2],
-  ["Transferencias", ArrowLeftRight],
-  ["Presupuestos", ChartNoAxesCombined],
-  ["Metas", Target],
-  ["Inversiones", TrendingUp],
-  ["Monedas", Globe2],
-  ["Reportes", FileChartColumn],
-  ["Configuración", Settings],
+  { key: "Centro", label: "Inicio", description: "Resumen y próximos pasos", group: "Resumen", Icon: LayoutDashboard },
+  { key: "Cuentas", label: "Cuentas y saldos", description: "Dónde está tu dinero", group: "Registrar", Icon: WalletCards },
+  { key: "Tarjetas", label: "Tarjetas y compras", description: "Medios de pago y avisos", group: "Registrar", Icon: CreditCard },
+  { key: "Movimientos", label: "Ingresos y gastos", description: "Todo lo que entra y sale", group: "Registrar", Icon: ReceiptText },
+  { key: "Recurrentes", label: "Pagos recurrentes", description: "Obligaciones que se repiten", group: "Registrar", Icon: Repeat2 },
+  { key: "Transferencias", label: "Transferencias", description: "Mover dinero entre cuentas", group: "Registrar", Icon: ArrowLeftRight },
+  { key: "Presupuestos", label: "Presupuestos", description: "Límites mensuales de gasto", group: "Planear", Icon: ChartNoAxesCombined },
+  { key: "Metas", label: "Metas", description: "Ahorros y pagos futuros", group: "Planear", Icon: Target },
+  { key: "Inversiones", label: "Inversiones", description: "Portafolio y rendimiento", group: "Planear", Icon: TrendingUp },
+  { key: "Categorías", label: "Categorías", description: "Clasificar ingresos y gastos", group: "Revisar", Icon: Tags },
+  { key: "Monedas", label: "Monedas y tasas", description: "Conversión a COP", group: "Revisar", Icon: Globe2 },
+  { key: "Reportes", label: "Reportes", description: "Resumen y exportación", group: "Revisar", Icon: FileChartColumn },
+  { key: "Configuración", label: "Configuración", description: "Seguridad, usuarios y datos", group: "Sistema", Icon: Settings },
 ] as const;
 
 type FinancialInsight = {
@@ -371,27 +371,25 @@ function FinanceApp({
           onClick={() => setMenu(false)}
         />
       )}
-      <aside className={`nav-rail ${menu ? "nav-open" : ""}`}>
-        <div className="brand-orb">
-          <CircleDollarSign size={25} />
-          <span className="brand-tooltip">FinanceOS</span>
+      <aside className={`nav-rail ${menu ? "nav-open" : ""}`} aria-label="Navegación principal">
+        <div className="nav-brand">
+          <div className="brand-orb"><CircleDollarSign size={25} /></div>
+          <div className="nav-brand-copy"><strong>FinanceOS</strong><span>Finanzas claras</span></div>
         </div>
         <nav>
-          {nav.map(([label, Icon]) => (
-            <button
-              key={label}
-              className={active === label ? "active" : ""}
-              aria-label={label}
-              title={label}
-              onClick={() => {
-                setActive(label);
-                setMenu(false);
-              }}
-            >
-              <Icon size={20} />
-              <span>{label}</span>
-              {active === label && <i />}
-            </button>
+          {nav.map((item, index) => (
+            <Fragment key={item.key}>
+              {(index === 0 || nav[index - 1].group !== item.group) && <span className="nav-group">{item.group}</span>}
+              <button
+                className={active === item.key ? "active" : ""}
+                aria-label={`${item.label}: ${item.description}`}
+                onClick={() => { setActive(item.key); setMenu(false); }}
+              >
+                <item.Icon size={19} />
+                <span><strong>{item.label}</strong><small>{item.description}</small></span>
+                {active === item.key && <i />}
+              </button>
+            </Fragment>
           ))}
         </nav>
         <div className="mt-auto flex flex-col items-center gap-3">
@@ -425,7 +423,7 @@ function FinanceApp({
         </div>
       </aside>
 
-      <main className="relative z-10 min-h-screen px-4 pb-20 lg:ml-24 lg:px-8 xl:px-12">
+      <main className="relative z-10 min-h-screen px-4 pb-20 lg:px-8 xl:px-12">
         <header className="topbar mx-auto max-w-[1480px]">
           <div className="flex items-center gap-3">
             <button
@@ -437,7 +435,7 @@ function FinanceApp({
             </button>
             <div>
               <span className="eyebrow">FINANCEOS · EN LÍNEA</span>
-              <h1>{active}</h1>
+              <h1>{nav.find((item) => item.key === active)?.label ?? active}</h1>
             </div>
           </div>
           <button className="command-bar" onClick={() => setSearchOpen(true)}>
@@ -531,8 +529,8 @@ function FinanceApp({
                 <div className="pulse-panel">
                   <div className="panel-heading">
                     <div>
-                      <span className="eyebrow">PULSO DEL MES</span>
-                      <h2>Tu actividad</h2>
+                      <span className="eyebrow">ESTE MES</span>
+                      <h2>Ingresos y gastos</h2>
                     </div>
                     <span className="pulse-ring">
                       <i />
@@ -567,11 +565,33 @@ function FinanceApp({
                       <Sparkles size={15} />
                     </span>
                     <p>
-                      <strong>Todo bajo control.</strong> No tienes alertas
-                      críticas este mes.
+                      <strong>Así se calcula.</strong> Ingresos menos gastos
+                      produce el balance del mes.
                     </p>
                     <ChevronRight size={17} />
                   </div>
+                </div>
+              </section>
+
+              <section className="finance-flow" aria-labelledby="finance-flow-title">
+                <div className="finance-flow-heading">
+                  <span className="eyebrow">CÓMO FUNCIONA FINANCEOS</span>
+                  <h2 id="finance-flow-title">Empieza aquí y sigue estos pasos</h2>
+                  <p>Cada paso alimenta al siguiente; no son módulos aislados.</p>
+                </div>
+                <div className="finance-flow-steps">
+                  <button onClick={() => navigate("Cuentas")}>
+                    <i>1</i><span><strong>Crea tus cuentas</strong><small>Registra los saldos con los que empiezas.</small></span><ChevronRight />
+                  </button>
+                  <button onClick={() => navigate("Movimientos")}>
+                    <i>2</i><span><strong>Registra lo que entra y sale</strong><small>Cada operación actualiza cuentas y categorías.</small></span><ChevronRight />
+                  </button>
+                  <button onClick={() => navigate("Presupuestos")}>
+                    <i>3</i><span><strong>Planea tu dinero</strong><small>Define presupuestos, pagos y metas.</small></span><ChevronRight />
+                  </button>
+                  <button onClick={() => navigate("Reportes")}>
+                    <i>4</i><span><strong>Revisa los resultados</strong><small>Comprende el mes y exporta cuando lo necesites.</small></span><ChevronRight />
+                  </button>
                 </div>
               </section>
 
@@ -593,7 +613,7 @@ function FinanceApp({
                 <article className="accounts-panel">
                   <div className="panel-heading">
                     <div>
-                      <span className="eyebrow">LIQUIDEZ</span>
+                      <span className="eyebrow">DÓNDE ESTÁ TU DINERO</span>
                       <h2>Tus cuentas</h2>
                     </div>
                     <button
@@ -718,24 +738,22 @@ function FinanceApp({
             </label>
             <div className="welcome-grid">
               {nav
-                .filter(([label]) =>
-                  label.toLowerCase().includes(search.toLowerCase()),
-                )
-                .map(([label, Icon]) => (
+                .filter((item) => `${item.label} ${item.description}`.toLowerCase().includes(search.toLowerCase()))
+                .map((item) => (
                   <button
-                    key={label}
+                    key={item.key}
                     onClick={() => {
-                      navigate(label);
+                      navigate(item.key);
                       setSearchOpen(false);
                       setSearch("");
                     }}
                   >
                     <span className="welcome-action violet">
-                      <Icon />
+                      <item.Icon />
                     </span>
                     <div>
-                      <strong>{label}</strong>
-                      <p>Abrir módulo de FinanceOS</p>
+                      <strong>{item.label}</strong>
+                      <p>{item.description}</p>
                     </div>
                     <ChevronRight />
                   </button>

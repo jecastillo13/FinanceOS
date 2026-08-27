@@ -148,8 +148,8 @@ export default function SettingsPage() {
     <section className="module-page">
       <div className="settings-title">
         <div>
-          <span className="eyebrow text-violet-200">SISTEMA · CONTROL</span>
-          <h2>Tu espacio, tus reglas</h2>
+          <span className="eyebrow text-violet-200">SEGURIDAD, USUARIOS Y DATOS</span>
+          <h2>Configuración</h2>
           <p>
             Estado técnico, seguridad, usuarios y preferencias de FinanceOS.
           </p>

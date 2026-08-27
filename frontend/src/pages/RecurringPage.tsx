@@ -84,11 +84,11 @@ export default function RecurringPage({ accounts }: { accounts: Cuenta[] }) {
       <div className="module-hero recurring-hero">
         <div>
           <span className="eyebrow text-cyan-200">
-            AUTOMATIZACIÓN FINANCIERA
+            LO QUE DEBES PAGAR DE NUEVO
           </span>
-          <h2>Pagos bajo control</h2>
+          <h2>Pagos recurrentes</h2>
           <p>
-            Anticipa obligaciones y regístralas como movimientos con un toque.
+            Programa servicios, suscripciones y cuotas. Al marcar un pago, se crea el gasto correspondiente.
           </p>
         </div>
         <button className="primary-action" onClick={() => {setEditing(null);setOpen(true)}}>
