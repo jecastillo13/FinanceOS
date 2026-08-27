@@ -16,6 +16,7 @@ class _RecordFormPageState extends State<RecordFormPage> {
   final Map<String, TextEditingController> _values = {};
   List<dynamic> _accounts = [], _categories = [];
   bool _busy = false, _loading = true;
+  bool _initialPosition = true;
   String? _error;
   int? _account, _destination, _category;
   String _type = 'Gasto', _currency = 'COP', _frequency = 'Mensual';
@@ -31,6 +32,7 @@ class _RecordFormPageState extends State<RecordFormPage> {
 
   Future<void> _load() async {
     try {
+      if (widget.resource == 'inversiones') _currency = 'USD';
       final result = await Future.wait([_api.cuentas(), _api.categorias()]);
       _accounts = result[0];
       _categories = result[1];
@@ -161,12 +163,22 @@ class _RecordFormPageState extends State<RecordFormPage> {
         ];
       case 'inversiones':
         return [
+          SwitchListTile.adaptive(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Ya tenía esta inversión'),
+              subtitle: Text(_initialPosition
+                  ? 'Saldo inicial: no descontará una cuenta.'
+                  : 'Compra nueva: el costo saldrá de una cuenta y no será un gasto.'),
+              value: _initialPosition,
+              onChanged: (value) => setState(() => _initialPosition = value)),
+          if (!_initialPosition) accountSelect('Cuenta que paga'),
+          field('Fecha de compra o saldo inicial', 'fecha', initial: today),
           field('Activo', 'nombre'),
           field('Tipo de activo', 'tipo', initial: 'ETF'),
           field('Cantidad', 'cantidad', keyboard: TextInputType.number),
           field('Costo de compra', 'compra', keyboard: TextInputType.number),
           field('Valor actual', 'actual', keyboard: TextInputType.number),
-          select('Moneda', 'USD', ['USD', 'COP', 'EUR'],
+          select('Moneda', _currency, ['USD', 'COP', 'EUR'],
               (x) => setState(() => _currency = x)),
           field('Broker', 'nota', required: false)
         ];
@@ -268,7 +280,10 @@ class _RecordFormPageState extends State<RecordFormPage> {
             'precio_actual': number('actual'),
             'broker': c('nota').text,
             'moneda': _currency,
-            'valores_totales': false
+            'valores_totales': false,
+            'fecha_apertura': c('fecha').text,
+            'es_posicion_inicial': _initialPosition,
+            'cuenta_origen_id': _initialPosition ? null : _account
           });
           break;
         case 'tarjetas':

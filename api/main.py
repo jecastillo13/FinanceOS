@@ -784,6 +784,8 @@ def eliminar_movimiento(movimiento_id: int):
             raise HTTPException(status_code=404, detail="El movimiento no existe.")
         service.eliminar_movimiento(movimiento_id)
         return Response(status_code=204)
+    except ValueError as error:
+        _error_negocio(error)
     finally:
         service.cerrar()
 
@@ -1083,6 +1085,8 @@ def eliminar_inversion(inversion_id: int):
         if not service.eliminar_inversion(inversion_id):
             raise HTTPException(status_code=404, detail="La inversión no existe.")
         return Response(status_code=204)
+    except ValueError as error:
+        _error_negocio(error)
     finally:
         service.cerrar()
 
@@ -1258,6 +1262,11 @@ def _serializar_inversion(item):
         broker=inversion.broker,
         moneda=inversion.moneda,
         valores_totales=inversion.valores_totales,
+        fecha_apertura=inversion.fecha_apertura,
+        es_posicion_inicial=inversion.es_posicion_inicial,
+        cuenta_origen_id=inversion.cuenta_origen_id,
+        cuenta_origen=inversion.cuenta_origen.nombre if inversion.cuenta_origen else None,
+        movimiento_aporte_id=inversion.movimiento_aporte_id,
         costo=item["costo"],
         valor=item["valor"],
         ganancia=item["ganancia"],

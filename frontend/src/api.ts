@@ -8,7 +8,7 @@ export type Tarjeta = { id: number; nombre: string; banco: string; ultimos_cuatr
 export type Deteccion = { id: number; origen: string; comercio: string; valor: number; moneda: string; fecha: string; banco: string; ultimos_cuatro?: string; tipo_sugerido?: "Credito"|"Debito"; estado: string; tarjeta_id?: number; movimiento_id?: number; duplicada: boolean };
 export type Presupuesto = { id: number; anio: number; mes: number; valor: number; categoria_id: number; categoria: string; gastado: number };
 export type Meta = { id: number; nombre: string; objetivo: number; moneda: string; fecha_limite?: string; descripcion?: string; pagado: number; aportado: number; pendiente: number; porcentaje: number };
-export type Inversion = { id: number; activo: string; tipo: string; cantidad: number; precio_compra: number; precio_actual: number; broker?: string; moneda: string; valores_totales: boolean; costo: number; valor: number; ganancia: number; rentabilidad: number; costo_cop?: number; valor_cop?: number };
+export type Inversion = { id: number; activo: string; tipo: string; cantidad: number; precio_compra: number; precio_actual: number; broker?: string; moneda: string; valores_totales: boolean; fecha_apertura: string; es_posicion_inicial: boolean; cuenta_origen_id?: number; cuenta_origen?: string; movimiento_aporte_id?: number; costo: number; valor: number; ganancia: number; rentabilidad: number; costo_cop?: number; valor_cop?: number };
 export type Portafolio = { costo_total_cop: number; valor_total_cop: number; ganancia_total_cop: number; rentabilidad: number; posiciones: Inversion[]; monedas_sin_tasa: string[] };
 export type RespaldoEstado = { motor: string; tamano: number; modificado?: string; disponible: boolean };
 export type Usuario = { id: number; nombre: string; correo: string; rol: "usuario"|"superadmin"; activo: boolean; mfa_habilitado:boolean };
@@ -112,7 +112,7 @@ export const financeApi = {
   pagarMeta: (metaId: number, body: { fecha: string; valor: number; descripcion: string; cuenta_id: number; categoria_id: number; observaciones: string }) => post(`/metas/${metaId}/pagos`, body),
   eliminarMeta: (metaId: number) => remove(`/metas/${metaId}`),
   inversiones: () => get<Portafolio>("/inversiones"),
-  crearInversion: (body: { activo: string; tipo: string; cantidad: number; precio_compra: number; precio_actual: number; broker: string; moneda: string; valores_totales: boolean }) => post<Inversion>("/inversiones", body),
+  crearInversion: (body: { activo: string; tipo: string; cantidad: number; precio_compra: number; precio_actual: number; broker: string; moneda: string; valores_totales: boolean; fecha_apertura: string; es_posicion_inicial: boolean; cuenta_origen_id: number|null }) => post<Inversion>("/inversiones", body),
   health: () => get<{ estado: string; servicio: string; version: string }>("/health"),
   estadoRespaldo: () => get<RespaldoEstado>("/configuracion/respaldo"),
   descargarRespaldo: async () => { const response = await fetch(`${BASE_URL}/configuracion/respaldo/descargar`,{headers:authHeaders(),...requestOptions}); if (!response.ok) throw new Error("No fue posible crear el respaldo"); return response.blob(); },
@@ -127,6 +127,6 @@ export const financeApi = {
   reporte: (anio: number, mes: number) => get<ReporteResumen>(`/reportes/${anio}/${mes}/resumen`),
   descargarReporte: async (anio: number, mes: number, formato: "csv"|"xlsx"|"pdf") => { const response=await fetch(`${BASE_URL}/reportes/${anio}/${mes}/${formato}`,{headers:authHeaders(),...requestOptions}); if(!response.ok) throw new Error("No fue posible generar el reporte"); return response.blob(); },
   eliminarPresupuesto: (id: number) => remove(`/presupuestos/${id}`),
-  actualizarInversion: (id: number, body: { activo: string; tipo: string; cantidad: number; precio_compra: number; precio_actual: number; broker: string; moneda: string; valores_totales: boolean }) => put<Inversion>(`/inversiones/${id}`, body),
+  actualizarInversion: (id: number, body: { activo: string; tipo: string; cantidad: number; precio_compra: number; precio_actual: number; broker: string; moneda: string; valores_totales: boolean; fecha_apertura: string; es_posicion_inicial: boolean; cuenta_origen_id: number|null }) => put<Inversion>(`/inversiones/${id}`, body),
   eliminarInversion: (id: number) => remove(`/inversiones/${id}`),
 };

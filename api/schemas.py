@@ -366,6 +366,9 @@ class InversionGuardar(BaseModel):
     broker: str = ""
     moneda: str = "USD"
     valores_totales: bool = False
+    fecha_apertura: date = Field(default_factory=date.today)
+    es_posicion_inicial: bool = True
+    cuenta_origen_id: int | None = None
 
 
 class InversionRespuesta(ORMResponse):
@@ -378,6 +381,11 @@ class InversionRespuesta(ORMResponse):
     broker: str | None
     moneda: str
     valores_totales: bool
+    fecha_apertura: date
+    es_posicion_inicial: bool
+    cuenta_origen_id: int | None
+    cuenta_origen: str | None
+    movimiento_aporte_id: int | None
     costo: float
     valor: float
     ganancia: float

@@ -1,7 +1,7 @@
 from sqlalchemy import func, or_
 
 from core.database import get_session
-from core.models import Categoria, Movimiento, Cuenta
+from core.models import Categoria, Cuenta, Inversion, Movimiento
 from core.services.audit_service import registrar_auditoria
 from core.services.attachment_service import eliminar_archivos_adjuntos
 from core.services.validation import monto_positivo, texto_requerido
@@ -85,6 +85,9 @@ class MovementService:
         if movimiento is None:
             return None
 
+        if self.db.query(Inversion.id).filter(Inversion.movimiento_aporte_id == movimiento.id).first():
+            raise ValueError("Este movimiento pertenece a una inversión; edita la inversión para conservar la coherencia contable.")
+
         descripcion = texto_requerido(descripcion, "La descripcion", 250)
         valor_firmado = self._valor_firmado(valor, categoria_id)
         if self.db.get(Cuenta, cuenta_id) is None:
@@ -133,6 +136,9 @@ class MovementService:
 
         if movimiento is None:
             return
+
+        if self.db.query(Inversion.id).filter(Inversion.movimiento_aporte_id == movimiento.id).first():
+            raise ValueError("Este movimiento pertenece a una inversión; elimina la inversión para revertir la compra correctamente.")
 
         self.actualizar_saldo(
             movimiento.cuenta_id,

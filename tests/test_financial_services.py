@@ -13,7 +13,7 @@ os.environ["FINANCEOS_DATABASE_URL"] = f"sqlite:///{_TEST_DATABASE.as_posix()}"
 from sqlalchemy import text  # noqa: E402
 
 from core.database import Base, create_database, engine, get_session  # noqa: E402
-from core.models import Categoria  # noqa: E402
+from core.models import Categoria, Movimiento  # noqa: E402
 from core.services import (  # noqa: E402
     AccountService,
     BackupService,
@@ -323,6 +323,60 @@ class FinancialServicesTest(unittest.TestCase):
         self.assertEqual(resumen["cuentas_cop"], 1000)
         self.assertEqual(resumen["inversiones_cop"], 300)
         self.assertEqual(resumen["patrimonio"], 1300)
+
+    def test_compra_inversion_convierte_efectivo_sin_duplicar_patrimonio(self):
+        cuenta_id = self._crear_cuenta("Hapi USD", 1000, "Inversión", "USD")
+        service = InvestmentService()
+        try:
+            inversion = service.crear_inversion(
+                "VOO", "ETF", 2, 100, 105, "Hapi", "USD",
+                fecha_apertura=date.today(), es_posicion_inicial=False,
+                cuenta_origen_id=cuenta_id,
+            )
+            movimiento_id = inversion.movimiento_aporte_id
+            self.assertEqual(self._saldo(cuenta_id), 800)
+            movimiento = service.db.get(Movimiento, movimiento_id)
+            self.assertEqual(movimiento.valor, Decimal("-200"))
+            self.assertEqual(movimiento.categoria.tipo, "Inversion")
+            movimientos = MovementService()
+            try:
+                with self.assertRaisesRegex(ValueError, "pertenece a una inversión"):
+                    movimientos.eliminar_movimiento(movimiento_id)
+            finally:
+                movimientos.cerrar()
+            self.assertTrue(service.eliminar_inversion(inversion.id))
+            self.assertEqual(self._saldo(cuenta_id), 1000)
+            self.assertIsNone(service.db.get(Movimiento, movimiento_id))
+        finally:
+            service.cerrar()
+
+    def test_compra_inversion_valida_saldo_y_moneda(self):
+        cuenta_id = self._crear_cuenta("Banco COP", 100, "Ahorros", "COP")
+        service = InvestmentService()
+        try:
+            with self.assertRaisesRegex(ValueError, "misma moneda"):
+                service.crear_inversion("VOO", "ETF", 1, 10, 10, "Hapi", "USD", es_posicion_inicial=False, cuenta_origen_id=cuenta_id)
+            with self.assertRaisesRegex(ValueError, "Saldo insuficiente"):
+                service.crear_inversion("CDT", "CDT", 2, 100, 100, "Banco", "COP", es_posicion_inicial=False, cuenta_origen_id=cuenta_id)
+            self.assertEqual(self._saldo(cuenta_id), 100)
+        finally:
+            service.cerrar()
+
+    def test_editar_compra_ajusta_efectivo_y_movimiento(self):
+        cuenta_id = self._crear_cuenta("Broker COP", 1000, "Inversión", "COP")
+        service = InvestmentService()
+        try:
+            inversion = service.crear_inversion("Fondo", "Fondo", 2, 100, 110, "Broker", "COP", es_posicion_inicial=False, cuenta_origen_id=cuenta_id)
+            actualizada = service.actualizar_inversion(
+                inversion.id, activo="Fondo", tipo="Fondo", cantidad=3,
+                precio_compra=100, precio_actual=115, broker="Broker", moneda="COP",
+                valores_totales=False, fecha_apertura=date.today(),
+                es_posicion_inicial=False, cuenta_origen_id=cuenta_id,
+            )
+            self.assertEqual(self._saldo(cuenta_id), 700)
+            self.assertEqual(service.db.get(Movimiento, actualizada.movimiento_aporte_id).valor, Decimal("-300"))
+        finally:
+            service.cerrar()
 
     def test_reporte_mensual_resume_y_exporta_movimientos(self):
         cuenta_id = self._crear_cuenta()

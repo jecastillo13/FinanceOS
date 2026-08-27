@@ -89,6 +89,7 @@ def create_database():
             _migrar_mfa_antireplay(conexion)
             _migrar_sesiones_seguras(conexion)
             _migrar_dinero_decimal(conexion)
+            _migrar_inversiones_trazables(conexion)
 
 
 def _migrar_categoria(conexion):
@@ -263,6 +264,28 @@ def _migrar_dinero_decimal(conexion):
                 ))
 
 
+def _migrar_inversiones_trazables(conexion):
+    """Añade procedencia contable sin reinterpretar posiciones históricas."""
+    if "inversiones" not in set(inspect(engine).get_table_names()):
+        return
+    columnas = {columna["name"] for columna in inspect(engine).get_columns("inversiones")}
+    booleano = "BOOLEAN" if engine.dialect.name == "postgresql" else "INTEGER"
+    verdadero = "TRUE" if engine.dialect.name == "postgresql" else "1"
+    cambios = {
+        "fecha_apertura": "DATE",
+        "es_posicion_inicial": f"{booleano} NOT NULL DEFAULT {verdadero}",
+        "valores_totales": f"{booleano} NOT NULL DEFAULT {'FALSE' if engine.dialect.name == 'postgresql' else '0'}",
+        "cuenta_origen_id": "INTEGER REFERENCES cuentas(id)",
+        "movimiento_aporte_id": "INTEGER REFERENCES movimientos(id)",
+    }
+    for nombre, definicion in cambios.items():
+        if nombre not in columnas:
+            conexion.execute(text(f"ALTER TABLE inversiones ADD COLUMN {nombre} {definicion}"))
+    conexion.execute(text("UPDATE inversiones SET fecha_apertura = CURRENT_DATE WHERE fecha_apertura IS NULL"))
+    conexion.execute(text("CREATE INDEX IF NOT EXISTS ix_inversiones_cuenta_origen_id ON inversiones (cuenta_origen_id)"))
+    conexion.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ux_inversiones_movimiento_aporte_id ON inversiones (movimiento_aporte_id) WHERE movimiento_aporte_id IS NOT NULL"))
+
+
 def _ejecutar_migraciones():
     """Aplica migraciones idempotentes y registra la version local."""
     migraciones = (
@@ -278,6 +301,7 @@ def _ejecutar_migraciones():
         ("010_sesiones_seguras", _migrar_sesiones_seguras),
         ("011_dinero_decimal", _migrar_dinero_decimal),
         ("012_mfa_antireplay", _migrar_mfa_antireplay),
+        ("013_inversiones_trazables", _migrar_inversiones_trazables),
     )
     with engine.begin() as conexion:
         conexion.execute(text("""

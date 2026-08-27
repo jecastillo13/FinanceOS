@@ -3,6 +3,7 @@ from datetime import datetime, date
 from sqlalchemy import (
     Column,
     BigInteger,
+    Boolean,
     Integer,
     String,
     Numeric,
@@ -445,6 +446,15 @@ class Inversion(PropiedadUsuario, Base):
         String(10),
         default="USD"
     )
+
+    fecha_apertura = Column(Date, default=date.today, nullable=False)
+    es_posicion_inicial = Column(Boolean, default=True, nullable=False)
+    valores_totales = Column(Boolean, default=False, nullable=False)
+    cuenta_origen_id = Column(Integer, ForeignKey("cuentas.id"), nullable=True, index=True)
+    movimiento_aporte_id = Column(Integer, ForeignKey("movimientos.id"), nullable=True, unique=True)
+
+    cuenta_origen = relationship("Cuenta", foreign_keys=[cuenta_origen_id])
+    movimiento_aporte = relationship("Movimiento", foreign_keys=[movimiento_aporte_id])
 
 
 # =====================================================

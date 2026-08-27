@@ -10,7 +10,7 @@ import {
   TrendingUp,
   X,
 } from "lucide-react";
-import { financeApi, Inversion, Portafolio } from "../api";
+import { Cuenta, financeApi, Inversion, Portafolio } from "../api";
 import ConfirmDialog from "../components/ConfirmDialog";
 
 const cop = new Intl.NumberFormat("es-CO", {
@@ -25,7 +25,9 @@ export default function InvestmentsPage() {
   const [deleting, setDeleting] = useState<Inversion | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const load = async () => setData(await financeApi.inversiones());
+  const [accounts, setAccounts] = useState<Cuenta[]>([]);
+  const [initialPosition, setInitialPosition] = useState(true);
+  const load = async () => { const [portfolio, cuentas] = await Promise.all([financeApi.inversiones(), financeApi.cuentas()]); setData(portfolio); setAccounts(cuentas); };
   useEffect(() => {
     void load();
   }, []);
@@ -44,6 +46,9 @@ export default function InvestmentsPage() {
         broker: String(d.get("broker") || ""),
         moneda: String(d.get("moneda")),
         valores_totales: d.get("totales") === "on",
+        fecha_apertura: String(d.get("fecha_apertura")),
+        es_posicion_inicial: initialPosition,
+        cuenta_origen_id: initialPosition ? null : Number(d.get("cuenta_origen_id")),
       };
       if(editing) await financeApi.actualizarInversion(editing.id,body);
       else await financeApi.crearInversion(body);
@@ -68,7 +73,7 @@ export default function InvestmentsPage() {
             moneda original.
           </p>
         </div>
-        <button className="primary-action" onClick={() => {setEditing(null);setOpen(true)}}>
+        <button className="primary-action" onClick={() => {setEditing(null);setInitialPosition(true);setOpen(true)}}>
           <Plus /> Nueva posición
         </button>
         <div className="market-wave" />
@@ -146,7 +151,8 @@ export default function InvestmentsPage() {
                 }).format(item.ganancia)}
               </strong>
             </div>
-            <div className="flex gap-2"><button className="ghost-action flex-1" onClick={()=>{setEditing(item);setOpen(true)}}><Edit3/> Editar</button><button className="ghost-action" title="Eliminar" onClick={()=>setDeleting(item)}><Trash2/></button></div>
+            <small>{item.es_posicion_inicial ? "Posición inicial" : `Pagada desde ${item.cuenta_origen}`}</small>
+            <div className="flex gap-2"><button className="ghost-action flex-1" onClick={()=>{setEditing(item);setInitialPosition(item.es_posicion_inicial);setOpen(true)}}><Edit3/> Editar</button><button className="ghost-action" title="Eliminar" onClick={()=>setDeleting(item)}><Trash2/></button></div>
           </article>
         ))}
         {!data?.posiciones.length && (
@@ -179,6 +185,13 @@ export default function InvestmentsPage() {
               </button>
             </div>
             {error && <p className="form-error">{error}</p>}
+            <div className="form-grid">
+              <label><input type="radio" checked={initialPosition} disabled={Boolean(editing)} onChange={()=>setInitialPosition(true)}/> Ya la tenía antes de usar FinanceOS</label>
+              <label><input type="radio" checked={!initialPosition} disabled={Boolean(editing)} onChange={()=>setInitialPosition(false)}/> Comprar con dinero de una cuenta</label>
+            </div>
+            <p className="form-hint">{initialPosition ? "Úsalo para saldos históricos. Evita dejar el mismo dinero también como efectivo en otra cuenta." : "FinanceOS descontará el costo de la cuenta, pero no lo contará como gasto: el efectivo se convierte en inversión."}</p>
+            {!initialPosition && <label>Cuenta que paga<select name="cuenta_origen_id" required defaultValue={editing?.cuenta_origen_id}>{accounts.map(account=><option key={account.id} value={account.id}>{account.nombre} · {account.saldo} {account.moneda}</option>)}</select></label>}
+            <label>Fecha de compra o saldo inicial<input name="fecha_apertura" type="date" required defaultValue={editing?.fecha_apertura || new Date().toISOString().slice(0,10)}/></label>
             <div className="form-grid">
               <label>
                 Activo
@@ -255,7 +268,7 @@ export default function InvestmentsPage() {
           </form>
         </div>
       )}
-      {deleting&&<ConfirmDialog title="Eliminar inversión" description={`Se eliminará ${deleting.activo} del portafolio. No se crearán ni borrarán movimientos.`} busy={saving} onCancel={()=>setDeleting(null)} onConfirm={()=>void remove()}/>}
+      {deleting&&<ConfirmDialog title="Eliminar inversión" description={deleting.es_posicion_inicial ? `Se eliminará ${deleting.activo} del portafolio.` : `Se eliminará ${deleting.activo} y el costo de compra volverá a ${deleting.cuenta_origen}.`} busy={saving} onCancel={()=>setDeleting(null)} onConfirm={()=>void remove()}/>}
     </section>
   );
 }
