@@ -51,10 +51,28 @@ Ctrl + C
 4. EJECUTAR PRUEBAS
 -------------------
 
-python -m unittest discover -s tests -v
+Validación rápida de lo preparado para commit:
+
+powershell -ExecutionPolicy Bypass -File scripts/verificar_commit.ps1
+
+Pruebas de backend, web y móvil antes de subir:
+
+powershell -ExecutionPolicy Bypass -File scripts/verificar_push.ps1
+
+Validación integral con auditoría de dependencias:
+
+powershell -ExecutionPolicy Bypass -File scripts/verificar_completo.ps1
+
+Solo pruebas Python:
+
+python -m pytest -q
 
 El resultado correcto termina con:
 OK
+
+Instalar los hooks automáticos una sola vez:
+
+powershell -ExecutionPolicy Bypass -File scripts/install_hooks.ps1
 
 
 5. REVISAR CAMBIOS DE GIT

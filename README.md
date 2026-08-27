@@ -22,6 +22,27 @@ python -m unittest discover -s tests -v
 
 La conexión puede configurarse con `FINANCEOS_DATABASE_URL`. Esto permite ejecutar pruebas aisladas y prepara la migración futura a PostgreSQL.
 
+## Validaciones automáticas de Git
+
+FinanceOS incluye validaciones locales versionadas para detectar errores antes de consumir tiempo en una revisión remota:
+
+```powershell
+# Ejecutar una sola vez después de clonar el repositorio
+powershell -ExecutionPolicy Bypass -File scripts/install_hooks.ps1
+
+# Ejecución manual
+powershell -ExecutionPolicy Bypass -File scripts/verificar_commit.ps1
+powershell -ExecutionPolicy Bypass -File scripts/verificar_push.ps1
+powershell -ExecutionPolicy Bypass -File scripts/verificar_completo.ps1
+```
+
+- `pre-commit` revisa solo los cambios preparados: archivos locales prohibidos, posibles secretos y sintaxis Python.
+- `pre-push` valida únicamente las áreas modificadas: backend, React o Flutter, sin iniciar un emulador.
+- La validación `full` añade auditorías de dependencias de Python y npm.
+- GitHub Actions repite las pruebas de backend, frontend y móvil en un entorno limpio.
+
+Si Flutter no está en `PATH`, el verificador reconoce la instalación estable de Puro en Windows o permite indicar su ejecutable mediante `FLUTTER_BIN`.
+
 Aplicación personal de finanzas construida con Streamlit y SQLite. Permite administrar cuentas, categorías, movimientos y tasas de cambio en una interfaz local.
 
 ## Estado actual
